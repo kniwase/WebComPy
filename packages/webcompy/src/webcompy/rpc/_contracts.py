@@ -6,6 +6,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from webcompy.rpc._errors import SERVER_ERROR, RpcError
+from webcompy.rpc._middleware import RpcBatchEntry, RpcContext, run_rpc_middlewares
 
 if TYPE_CHECKING:
     from webcompy.rpc._stream import RpcStream
@@ -569,41 +570,60 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> t
 
     registry = _reg()
     if isinstance(transport, RpcHttpClient):
-        envelopes: list[dict[str, Any]] = []
-        entries: list[tuple[int, Any]] = []
-        for c in calls:
-            req_id = registry.next_id()
-            envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": c._name, "id": req_id}
-            _http_encode(registry, envelope, c._params)
-            envelopes.append(envelope)
-            entries.append((req_id, c._result_type))
         from webcompy.rpc._client import _post_envelope as _post
         from webcompy.rpc._client import _resolve_single as _resolve
+        from webcompy.rpc._client import _rpc_middlewares as _mws
 
-        data = await _post(registry, envelopes)
-        if not isinstance(data, list):
-            raise RpcError(SERVER_ERROR, "Malformed batch response")
-        by_id: dict[Any, Any] = {}
-        for response in data:
-            if isinstance(response, dict) and "id" in response:
-                by_id[response["id"]] = response
-        results: list[Any] = []
-        for req_id, result_type in entries:
-            response = by_id.get(req_id)
-            if response is None:
-                missing = f"Missing batch response for id {req_id}"
-                if return_exceptions:
-                    results.append(RpcError(SERVER_ERROR, missing))
-                    continue
-                raise RpcError(SERVER_ERROR, missing)
-            try:
-                results.append(_resolve(response, result_type, registry))
-            except RpcError as err:
-                if return_exceptions:
-                    results.append(err)
+        middlewares = _mws()
+        if not middlewares:
+            return await _dispatch_http_batch(
+                registry,
+                [(c._name, c._params, c._result_type) for c in calls],
+                {},
+                return_exceptions,
+                _http_encode,
+                _post,
+                _resolve,
+            )
+
+        entries = [RpcBatchEntry(method=c._name, params=c._params, result_type=c._result_type) for c in calls]
+        context = RpcContext(is_batch=True, batch_entries=entries)
+
+        async def terminal(context: RpcContext) -> tuple[Any, ...]:
+            return await _dispatch_http_batch(
+                registry,
+                [(entry.method, entry.params, entry.result_type) for entry in (context.batch_entries or [])],
+                context.headers,
+                return_exceptions,
+                _http_encode,
+                _post,
+                _resolve,
+            )
+
+        async def synthesize(fragments: Any, context: RpcContext) -> tuple[Any, ...]:
+            batch_entries = context.batch_entries or []
+            fragment_list = fragments if isinstance(fragments, list) else [fragments]
+            results: list[Any] = []
+            for index, entry in enumerate(batch_entries):
+                if index < len(fragment_list):
+                    fragment = fragment_list[index]
                 else:
-                    raise
-        return tuple(results)
+                    fragment = {"error": {"code": SERVER_ERROR, "message": "Missing batch synthesis entry"}}
+                normalized = (
+                    {"jsonrpc": "2.0", **fragment}
+                    if isinstance(fragment, dict) and "jsonrpc" not in fragment
+                    else fragment
+                )
+                try:
+                    results.append(_resolve(normalized, entry.result_type, registry))
+                except RpcError as err:
+                    if return_exceptions:
+                        results.append(err)
+                    else:
+                        raise
+            return tuple(results)
+
+        return await run_rpc_middlewares(middlewares, context, terminal, synthesize)
     from webcompy.rpc._ws_client import RpcWsClient as _Ws
 
     if isinstance(transport, _Ws):
@@ -704,16 +724,37 @@ async def notify(*calls: RpcCall[Any, Any]) -> None:  # pyright: ignore[reportIn
 
     registry = _reg()
     if isinstance(transport, RpcHttpClient):
-        envelopes: list[dict[str, Any]] = []
-        for c in calls:
-            envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": c._name}
-            from webcompy.rpc._client import _encode_params as _http_encode
-
-            _http_encode(registry, envelope, c._params)
-            envelopes.append(envelope)
+        from webcompy.rpc._client import _encode_params as _http_encode
         from webcompy.rpc._client import _post_envelope as _post
+        from webcompy.rpc._client import _rpc_middlewares as _mws
 
-        await _post(registry, envelopes)
+        middlewares = _mws()
+        if not middlewares:
+            envelopes: list[dict[str, Any]] = []
+            for c in calls:
+                envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": c._name}
+                _http_encode(registry, envelope, c._params)
+                envelopes.append(envelope)
+
+            await _post(registry, envelopes)
+            return None
+
+        entries = [RpcBatchEntry(method=c._name, params=c._params, result_type=c._result_type) for c in calls]
+        context = RpcContext(is_batch=True, batch_entries=entries)
+
+        async def terminal(context: RpcContext) -> None:
+            envelopes: list[dict[str, Any]] = []
+            for entry in context.batch_entries or []:
+                envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": entry.method}
+                if entry.params is not None:
+                    _http_encode(registry, envelope, entry.params)
+                envelopes.append(envelope)
+            await _post(registry, envelopes, extra_headers=context.headers)
+
+        async def synthesize(_fragments: Any, _context: RpcContext) -> None:
+            return None
+
+        await run_rpc_middlewares(middlewares, context, terminal, synthesize)
         return None
     from webcompy.rpc._ws_client import RpcWsClient as _Ws
 
@@ -749,3 +790,63 @@ __all__ = [
     "batch",
     "notify",
 ]
+
+
+async def _dispatch_http_batch(
+    registry: Any,
+    entries: list[tuple[str, Any, Any]],
+    extra_headers: dict[str, str],
+    return_exceptions: bool,
+    encode: Any,
+    post: Any,
+    resolve: Any,
+) -> tuple[Any, ...]:
+    """Encode, post, and per-entry resolve one HTTP JSON-RPC batch.
+
+    Args:
+        registry: Registry supplying ids and meta codecs.
+        entries: ``(method, params, result_type)`` triples in call order.
+        extra_headers: Headers merged onto the fixed transport headers.
+        return_exceptions: Collect failures instead of raising.
+        encode: ``_encode_params`` from the client module.
+        post: ``_post_envelope`` from the client module.
+        resolve: ``_resolve_single`` from the client module.
+
+    Returns:
+        Resolved results in call order; ``RpcError`` entries when
+        ``return_exceptions`` is ``True``.
+
+    """
+    envelopes: list[dict[str, Any]] = []
+    pairs: list[tuple[int, Any]] = []
+    for method, params, result_type in entries:
+        request_id = registry.next_id()
+        envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": request_id}
+        if params is not None:
+            encode(registry, envelope, params)
+        envelopes.append(envelope)
+        pairs.append((request_id, result_type))
+    data = await post(registry, envelopes, extra_headers=extra_headers)
+    if not isinstance(data, list):
+        raise RpcError(SERVER_ERROR, "Malformed batch response")
+    by_id: dict[Any, Any] = {}
+    for response in data:
+        if isinstance(response, dict) and "id" in response:
+            by_id[response["id"]] = response
+    results: list[Any] = []
+    for request_id, result_type in pairs:
+        response = by_id.get(request_id)
+        if response is None:
+            missing = f"Missing batch response for id {request_id}"
+            if return_exceptions:
+                results.append(RpcError(SERVER_ERROR, missing))
+                continue
+            raise RpcError(SERVER_ERROR, missing)
+        try:
+            results.append(resolve(response, result_type, registry))
+        except RpcError as err:
+            if return_exceptions:
+                results.append(err)
+            else:
+                raise
+    return tuple(results)

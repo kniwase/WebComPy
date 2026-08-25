@@ -9,10 +9,10 @@
 
 ## 2. RPC Middleware Foundation
 
-- [ ] 2.1 Define `RpcMiddleware` type and context (`method`/`params`/mutable `headers`/`result_type`, batch metadata), plus `RpcMiddlewareRegistry`; add `RPC_MIDDLEWARE_KEY`
-- [ ] 2.2 Thread per-call headers through `_call_impl` / `_notify_impl` / batch HTTP path / `_stream_impl` in `rpc/_client.py`, merging onto fixed headers with `Content-Type` forced to `application/json`
-- [ ] 2.3 Implement validated short-circuit: `next(ctx, response={"result":..., "meta":...})` routes through `_resolve_single`; streaming variant routes items through `_decode_stream_item`
-- [ ] 2.4 Add unit tests: typed params visibility, header merge/clobber-protection, selective scoping by `ctx.method`, batch-level middleware invocation, mocked result validation, malformed synthesis raising `RpcError`, SSE stream substitution with item decoding preserved
+- [x] 2.1 Define `RpcMiddleware` type and context (`method`/`params`/mutable `headers`/`result_type`, batch metadata), plus `RpcMiddlewareRegistry`; add `RPC_MIDDLEWARE_KEY`
+- [x] 2.2 Thread per-call headers through `_call_impl` / `_notify_impl` / batch HTTP path / `_stream_impl` in `rpc/_client.py`, merging onto fixed headers with `Content-Type` forced to `application/json`
+- [x] 2.3 Implement validated short-circuit: `next(ctx, response={"result":..., "meta":...})` routes through `_resolve_single`; streaming variant routes items through `_decode_stream_item`
+- [x] 2.4 Add unit tests: typed params visibility, header merge/clobber-protection, selective scoping by `ctx.method`, batch-level middleware invocation, mocked result validation, malformed synthesis raising `RpcError`, SSE stream substitution with item decoding preserved
 
 ## 3. Assembly and Plugin Hooks
 
