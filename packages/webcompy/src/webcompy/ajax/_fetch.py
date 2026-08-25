@@ -7,6 +7,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Literal, TypeVar, overload
 
+from webcompy.ajax._multipart import encode_multipart
 from webcompy.ajax._serde import TypedResponseError, from_json
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
@@ -172,6 +173,16 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
         raise TypedResponseError(f"Response does not match schema: {err}; body excerpt: {res.text[:200]!r}") from err
 
 
+def _port_response_to_client(ports_res: Any) -> Response:
+    return Response(
+        text=ports_res.text,
+        headers=ports_res.headers,
+        status_code=ports_res.status_code,
+        reason=ports_res.status_text,
+        ok=ports_res.ok,
+    )
+
+
 class HttpClient:
     """Static HTTP client whose requests are routed through the ``FetchPort``.
 
@@ -200,8 +211,8 @@ class HttpClient:
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
-            form_data: Multipart form fields sent through the browser ``FormData`` API.
-            form_element: A form DOM node whose fields are submitted.
+            form_data: Multipart form fields encoded and sent through the fetch port.
+            form_element: A form DOM node whose fields are submitted (browser only).
 
         Returns:
             The parsed :class:`Response`.
@@ -213,9 +224,9 @@ class HttpClient:
         # query
         send_url = url + "?" + urllib.parse.urlencode(query_params) if query_params is not None else url
         # header
-        req_headers = {
-            urllib.parse.quote(str(k)): urllib.parse.quote(str(v)) for k, v in (headers if headers else {}).items()
-        }
+        raw_headers = dict(headers) if headers else {}
+        req_headers = {urllib.parse.quote(str(k)): urllib.parse.quote(str(v)) for k, v in raw_headers.items()}
+        has_content_type = any(name.lower() == "content-type" for name in raw_headers)
         # body
         has_body = any(
             (
@@ -225,22 +236,25 @@ class HttpClient:
                 form_element is not None,
             )
         )
-        if form_data is not None or form_element is not None:
+        if form_data is not None:
+            body, media_type = encode_multipart(form_data)
+            if not has_content_type:
+                req_headers["Content-Type"] = media_type
+            try:
+                ports_res = await inject(FETCH_PORT_KEY).fetch(send_url, method=method, headers=req_headers, body=body)
+            except Exception as err:
+                raise WebComPyHttpClientException(str(err)) from err
+            else:
+                ret = _port_response_to_client(ports_res)
+        elif form_element is not None:
             from webcompy.ports._browser._raw import browser as _raw_browser
 
             if _raw_browser is None:
-                raise WebComPyHttpClientException
+                raise WebComPyHttpClientException("form_element requires a browser environment")
             ffi_port = inject(FFI_PORT_KEY)
             req_headers_proxy = ffi_port.create_proxy(req_headers)
             try:
-                if form_data is not None:
-                    form_body = _raw_browser.FormData.new()
-                    for key, value in form_data.items():
-                        form_body.set(key, value)
-                elif form_element is not None:
-                    form_body = _raw_browser.FormData.new(form_element.node)
-                else:
-                    form_body = None  # unreachable; kept for pyright type narrowing
+                form_body = _raw_browser.FormData.new(form_element.node)
                 res = await _raw_browser.fetch(send_url, method=method, headers=req_headers_proxy, body=form_body)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
@@ -278,13 +292,7 @@ class HttpClient:
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
-                ret = Response(
-                    text=ports_res.text,
-                    headers=ports_res.headers,
-                    status_code=ports_res.status_code,
-                    reason=ports_res.status_text,
-                    ok=ports_res.ok,
-                )
+                ret = _port_response_to_client(ports_res)
         return ret
 
     @overload
@@ -494,8 +502,8 @@ class HttpClient:
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
-            form_data: Multipart form fields sent through the browser ``FormData`` API.
-            form_element: A form DOM node whose fields are submitted.
+            form_data: Multipart form fields encoded and sent through the fetch port.
+            form_element: A form DOM node whose fields are submitted (browser only).
             response_type: When given, deserialize the JSON response body as
                 this type instead of returning a :class:`Response`.
 
@@ -566,8 +574,8 @@ class HttpClient:
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
-            form_data: Multipart form fields sent through the browser ``FormData`` API.
-            form_element: A form DOM node whose fields are submitted.
+            form_data: Multipart form fields encoded and sent through the fetch port.
+            form_element: A form DOM node whose fields are submitted (browser only).
             response_type: When given, deserialize the JSON response body as
                 this type instead of returning a :class:`Response`.
 
@@ -638,8 +646,8 @@ class HttpClient:
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
-            form_data: Multipart form fields sent through the browser ``FormData`` API.
-            form_element: A form DOM node whose fields are submitted.
+            form_data: Multipart form fields encoded and sent through the fetch port.
+            form_element: A form DOM node whose fields are submitted (browser only).
             response_type: When given, deserialize the JSON response body as
                 this type instead of returning a :class:`Response`.
 
@@ -710,8 +718,8 @@ class HttpClient:
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
-            form_data: Multipart form fields sent through the browser ``FormData`` API.
-            form_element: A form DOM node whose fields are submitted.
+            form_data: Multipart form fields encoded and sent through the fetch port.
+            form_element: A form DOM node whose fields are submitted (browser only).
             response_type: When given, deserialize the JSON response body as
                 this type instead of returning a :class:`Response`.
 
