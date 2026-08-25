@@ -107,7 +107,7 @@ jobs:
           exit "${PIPESTATUS[0]}"
       - name: Check browser test import invariant
         run: |
-          python3 scripts/check-browser-imports.py 2>&1 | tee ci-lint-browser-imports.log
+          uv run python scripts/check-browser-imports.py 2>&1 | tee ci-lint-browser-imports.log
           exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()

@@ -248,12 +248,15 @@ and use distinct invocation paths:
   - Browser tests are excluded from default discovery even when
     `WEBCOMPY_RUN_BROWSER=1` is set, unless a path argument explicitly selects
     `tests/browser/**` (a gated bare `uv run pytest` stays on the unit tier)
-  - Browser test functions must be plain module-level functions: class-based
-    tests are not supported, and stacked `@pytest.mark.parametrize` marks are
-    rejected by both the driver and the in-page runner; duplicate parameter
-    values within a single mark are also rejected (ambiguous payload dispatch)
+  - Browser test functions are plain module-level functions in pilots;
+    class-based tests are technically supported via `::` qualname resolution
+    but not exercised, while stacked `@pytest.mark.parametrize` marks and
+    duplicate parameter values within a single mark are rejected by both the
+    driver and the in-page runner (ambiguous payload dispatch)
   - Top-level imports in browser test modules must be CPython-importable;
     `import js` / `from pyscript import ...` belong inside function bodies
+    and `Fake*` symbol imports from `webcompy_testing` are forbidden at top
+    level (`webcompy_testing.browser_runner` is allowed as the tier API)
     (enforced by `scripts/check-browser-imports.py`)
 - E2E tests: `scripts/run-e2e-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_E2E=1`)
 - E2E for a single group: `scripts/run-e2e-tests.sh <group-name>`
