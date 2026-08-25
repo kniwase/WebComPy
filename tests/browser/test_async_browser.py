@@ -25,7 +25,7 @@ async def test_scheduler_microtask(app):
     done = []
 
     async def work():
-        await asyncio_sleep(0)
+        await _asyncio_sleep(0)
         done.append(1)
 
     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
@@ -39,7 +39,7 @@ async def test_skip_helper_maps_to_skipped(app):
     skip("skip path is exercised intentionally")
 
 
-async def asyncio_sleep(delay):
+async def _asyncio_sleep(delay):
     import asyncio
 
     await asyncio.sleep(delay)

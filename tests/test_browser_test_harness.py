@@ -9,6 +9,7 @@ from webcompy_cli._browser_test_harness import (
     collect_framework_source_files,
     discover_test_modules,
     generate_harness_html,
+    report_uninstallable_packages,
     resolve_supply_mode,
 )
 
@@ -153,3 +154,12 @@ def test_bootstrap_lines_source_mode():
 
     assert 'sys.path.insert(0, "/home/pyodide/_wc_src")' in lines
     assert 'sys.path.insert(0, "/home/pyodide")' in lines
+
+
+def test_report_uninstallable_packages_warns_only_for_skipped(capsys):
+    report_uninstallable_packages(("anyio", "nativepkg"), ("anyio",))
+    captured = capsys.readouterr()
+
+    assert "nativepkg" in captured.out
+    assert "pure-Python wheel" in captured.out
+    assert "anyio" not in captured.out

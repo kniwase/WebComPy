@@ -226,6 +226,23 @@ def _installable_pyodide_packages(
     )
 
 
+def report_uninstallable_packages(closure: tuple[str, ...], installable: tuple[str, ...]) -> None:
+    """Warn about lock packages skipped because they lack a pure-Python wheel.
+
+    Entries without a ``py3-none-any.whl`` cannot be installed by name via
+    micropip and are silently absent from the harness page; a warning makes
+    the resulting in-page ImportError diagnosable.
+    """
+    installable_set = set(installable)
+    for name in closure:
+        if name not in installable_set:
+            print(
+                f"Warning: pyodide package '{name}' has no pure-Python wheel in the "
+                "lock and will NOT be available inside the harness page.",
+                flush=True,
+            )
+
+
 def _ensure_pyodide_package_files(
     runtime_assets: dict[str, tuple[Path, str]],
     pyodide_version: str,
@@ -301,6 +318,7 @@ def create_harness_app(
         package_names=_HARNESS_PYODIDE_PACKAGES,
     )
     installable = _installable_pyodide_packages(cache_dir, pyodide_version, package_closure)
+    report_uninstallable_packages(package_closure, installable)
     _ensure_pyodide_package_files(
         runtime_assets,
         pyodide_version,

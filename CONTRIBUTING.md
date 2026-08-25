@@ -250,7 +250,8 @@ and use distinct invocation paths:
     `tests/browser/**` (a gated bare `uv run pytest` stays on the unit tier)
   - Browser test functions must be plain module-level functions: class-based
     tests are not supported, and stacked `@pytest.mark.parametrize` marks are
-    rejected by both the driver and the in-page runner
+    rejected by both the driver and the in-page runner; duplicate parameter
+    values within a single mark are also rejected (ambiguous payload dispatch)
   - Top-level imports in browser test modules must be CPython-importable;
     `import js` / `from pyscript import ...` belong inside function bodies
     (enforced by `scripts/check-browser-imports.py`)

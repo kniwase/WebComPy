@@ -60,12 +60,20 @@ def _parametrize_index(pyfuncitem: pytest.Function) -> int | None:
     raw_names, values = marks[0].args
     names = [name.strip() for name in raw_names.split(",")] if isinstance(raw_names, str) else list(raw_names)
     actual = tuple(callspec.params[name] for name in names)
+    matches: list[int] = []
     for index, value in enumerate(values):
         candidate = (value,) if len(names) == 1 else tuple(value)
         expected = (actual[0],) if len(names) == 1 else actual
         if candidate == expected:
-            return index
-    raise RuntimeError(f"could not match callspec params {actual!r} to parametrize values")
+            matches.append(index)
+    if len(matches) > 1:
+        raise RuntimeError(
+            f"ambiguous parametrize match for {actual!r}; duplicate parameter values "
+            "are not supported in the browser test tier"
+        )
+    if not matches:
+        raise RuntimeError(f"could not match callspec params {actual!r} to parametrize values")
+    return matches[0]
 
 
 def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
