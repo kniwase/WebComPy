@@ -1,7 +1,7 @@
 ## 1. Multipart encoder
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/ajax/_multipart.py` with `encode_multipart(fields: dict[str, str | bytes]) -> tuple[bytes, str]` (stdlib only, `secrets.token_hex(16)` boundary, UTF-8 encoding for str values, docstrings on the public function)
-- [ ] 1.2 Add unit tests covering: field ordering, str and bytes values, CRLF framing, boundary uniqueness, and the returned `Content-Type` media type
+- [x] 1.1 Create `packages/webcompy/src/webcompy/ajax/_multipart.py` with `encode_multipart(fields: dict[str, str | bytes]) -> tuple[bytes, str]` (stdlib only, `secrets.token_hex(16)` boundary, UTF-8 encoding for str values, docstrings on the public function)
+- [x] 1.2 Add unit tests covering: field ordering, str and bytes values, CRLF framing, boundary uniqueness, and the returned `Content-Type` media type
 
 ## 2. FetchPort body type extension
 

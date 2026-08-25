@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 from typing import Any
 
 from webcompy.exception import WebComPyException
@@ -65,10 +66,16 @@ class BrowserFetchPort(FetchPort):
         self._browser = _raw_browser
         self._response_cache: dict[str, Response] = {}
 
-    def _cache_key(self, url: str, method: str, body: str | None = None) -> str:
+    def _cache_key(self, url: str, method: str, body: str | bytes | None = None) -> str:
         if method == "GET":
             return url
-        return f"{method}:{url}:{body or ''}"
+        if body is None:
+            key_body = ""
+        elif isinstance(body, str):
+            key_body = body
+        else:
+            key_body = hashlib.sha256(body).hexdigest()
+        return f"{method}:{url}:{key_body}"
 
     def populate_from_transfer(self, data: dict[str, TransferFetchEntry]) -> None:
         for key, entry in data.items():
@@ -86,7 +93,7 @@ class BrowserFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> Response:
         cache_key = self._cache_key(url, method, body)
         if cache_key in self._response_cache:
@@ -129,7 +136,7 @@ class BrowserFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> FetchStream:
         controller = self._browser.AbortController.new()
         req_headers: Any = None

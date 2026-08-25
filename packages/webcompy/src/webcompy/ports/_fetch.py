@@ -100,7 +100,7 @@ class FetchPort(ABC):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> Response:
         """Perform an HTTP request.
 
@@ -108,7 +108,7 @@ class FetchPort(ABC):
             url: Target URL.
             method: HTTP method (default ``"GET"``).
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             A ``Response`` object with text, headers, and status.
@@ -122,7 +122,7 @@ class FetchPort(ABC):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> FetchStream:
         """Open a streaming HTTP request.
 
@@ -134,7 +134,7 @@ class FetchPort(ABC):
             url: Target URL.
             method: HTTP method (default ``"GET"``).
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             A ``FetchStream`` with response metadata and an async iterator of

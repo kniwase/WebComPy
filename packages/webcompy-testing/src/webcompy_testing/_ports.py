@@ -7,6 +7,7 @@ import contextlib
 import logging
 import re
 from collections.abc import Callable, Coroutine
+from dataclasses import dataclass
 from typing import Any, Literal
 from unittest.mock import MagicMock
 
@@ -496,6 +497,24 @@ class _FakeFetchStream(FetchStream):
         self._port.aborted_streams.append(self._key)
 
 
+@dataclass
+class RecordedRequest:
+    """A fetch request observed by a fake fetch port.
+
+    Attributes:
+        method: HTTP method of the observed request.
+        url: Target URL of the observed request.
+        headers: Request headers mapping.
+        body: Request body (text or bytes), or ``None``.
+
+    """
+
+    method: str
+    url: str
+    headers: dict[str, str]
+    body: str | bytes | None
+
+
 class FakeFetchPort(FetchPort):
     """Serve canned fetch responses and streams for assertions.
 
@@ -506,6 +525,7 @@ class FakeFetchPort(FetchPort):
     Attributes:
         aborted_streams: Recorded ``(method, url)`` pairs of streams
             closed before completion.
+        requests: Recorded requests in arrival order.
 
     """
 
@@ -517,6 +537,7 @@ class FakeFetchPort(FetchPort):
         self._responses = responses or {}
         self._streams = streams or {}
         self.aborted_streams: list[tuple[str, str]] = []
+        self.requests: list[RecordedRequest] = []
 
     async def fetch(
         self,
@@ -524,7 +545,7 @@ class FakeFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> Response:
         """Return a canned response for the requested URL.
 
@@ -532,7 +553,7 @@ class FakeFetchPort(FetchPort):
             url: Target URL.
             method: HTTP method.
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             The canned ``Response`` for ``(method, url)``.
@@ -541,6 +562,9 @@ class FakeFetchPort(FetchPort):
             KeyError: If no response is registered for the key.
 
         """
+        self.requests.append(
+            RecordedRequest(method=method, url=url, headers=dict(headers) if headers else {}, body=body)
+        )
         key = (method, url)
         if key in self._responses:
             return self._responses[key]
@@ -554,7 +578,7 @@ class FakeFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> FetchStream:
         """Return a scripted stream for the requested URL.
 
@@ -562,7 +586,7 @@ class FakeFetchPort(FetchPort):
             url: Target URL.
             method: HTTP method.
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             A ``FetchStream`` yielding the scripted chunks.
@@ -571,6 +595,9 @@ class FakeFetchPort(FetchPort):
             KeyError: If no stream or response is registered for the key.
 
         """
+        self.requests.append(
+            RecordedRequest(method=method, url=url, headers=dict(headers) if headers else {}, body=body)
+        )
         key = (method, url)
         response = self._responses.get(key)
         if key in self._streams:

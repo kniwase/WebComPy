@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING
 
 import httpx
@@ -129,10 +130,16 @@ class ServerFetchPort(FetchPort):
                 return True
         return False
 
-    def _cache_key(self, url: str, method: str, body: str | None = None) -> str:
+    def _cache_key(self, url: str, method: str, body: str | bytes | None = None) -> str:
         if method == "GET":
             return url
-        return f"{method}:{url}:{body or ''}"
+        if body is None:
+            key_body = ""
+        elif isinstance(body, str):
+            key_body = body
+        else:
+            key_body = hashlib.sha256(body).hexdigest()
+        return f"{method}:{url}:{key_body}"
 
     @staticmethod
     def _extract_url_from_cache_key(key: str) -> str:
@@ -153,7 +160,7 @@ class ServerFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> Response:
         """Fetch ``url`` via external client or in-process ASGI transport.
 
@@ -161,7 +168,7 @@ class ServerFetchPort(FetchPort):
             url: Target URL.
             method: HTTP method.
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             HTTP ``Response``.
