@@ -8,7 +8,7 @@ WebComPy's unit tests and E2E tests use structurally distinct execution paths so
 
 ### Requirement: Unit tests shall be the default pytest discovery target
 
-Unit tests SHALL reside in `tests/` and SHALL be the default discovery target when pytest is invoked without explicit path arguments. The `pyproject.toml` `[tool.pytest.ini_options]` SHALL declare `testpaths = ["tests"]` so that `uv run pytest` (no arguments) discovers only unit tests. E2E test directories SHALL NOT be nested under `tests/`.
+Unit tests SHALL reside in `tests/` and SHALL be the default discovery target when pytest is invoked without explicit path arguments. The `pyproject.toml` `[tool.pytest.ini_options]` SHALL declare `testpaths = ["tests"]` so that `uv run pytest` (no arguments) discovers only unit tests. E2E test directories SHALL NOT be nested under `tests/`. The browser test tier `tests/browser/` SHALL NOT be nested under `tests/` in a way that makes it part of the default `testpaths` discovery target; when `testpaths` includes `tests`, items under `tests/browser/` SHALL be excluded from default discovery unless explicitly selected via a path argument.
 
 #### Scenario: Running unit tests with no arguments
 
@@ -21,6 +21,10 @@ Unit tests SHALL reside in `tests/` and SHALL be the default discovery target wh
 - **WHEN** a developer runs `uv run pytest tests/test_signal.py`
 - **THEN** only the specified unit test file SHALL run
 - **AND** no E2E tests SHALL be collected
+
+#### Scenario: Default discovery does not include the browser test tier
+- **WHEN** a developer runs `uv run pytest` without any path arguments and without `WEBCOMPY_RUN_BROWSER=1`
+- **THEN** no test under `tests/browser/` SHALL be collected
 
 ### Requirement: E2E tests shall reside in a physically separate directory
 
@@ -87,3 +91,35 @@ The GFM conformance harness (`tests/conformance/`) SHALL be collected by the def
 
 - **WHEN** the HTML-parser parity scenario runs
 - **THEN** it SHALL execute only via the E2E entry point (`scripts/run-e2e-tests.sh`), as part of an existing or new E2E group
+
+### Requirement: Browser tests shall reside in a physically separate directory and require opt-in
+
+Browser tests SHALL reside in `tests/browser/`, physically separate from the default unit discovery target in a way that `uv run pytest` (no arguments, no `WEBCOMPY_RUN_BROWSER`) never collects them. Collection of `tests/browser/` SHALL require the opt-in environment variable `WEBCOMPY_RUN_BROWSER=1`; when absent, collection SHALL skip browser-tier items (or abort that subtree with a message referencing `scripts/run-browser-tests.sh`) without launching a browser or starting the harness server. When the variable is set to `1`, collection SHALL proceed via the normal import path, and the harness server + Playwright session SHALL be established.
+
+#### Scenario: Browser tests are not discovered by default
+- **WHEN** a developer runs `uv run pytest` without `WEBCOMPY_RUN_BROWSER=1` and without an explicit `tests/browser/**` path argument
+- **THEN** no file under `tests/browser/` SHALL be collected
+- **AND** no browser SHALL be launched and no harness server SHALL be started
+
+#### Scenario: Direct invocation without opt-in fails to run the tier
+- **WHEN** a developer runs `uv run pytest tests/browser/test_signal_browser.py` without `WEBCOMPY_RUN_BROWSER=1`
+- **THEN** collection of that path SHALL emit a collection-time error or skip, referencing `scripts/run-browser-tests.sh` and `WEBCOMPY_RUN_BROWSER=1`, without starting a browser or harness
+
+#### Scenario: Direct invocation with opt-in succeeds
+- **WHEN** a developer runs `WEBCOMPY_RUN_BROWSER=1 uv run pytest tests/browser/test_signal_browser.py`
+- **THEN** pytest SHALL collect the file
+- **AND** the browser-test session fixture (harness server + Playwright page) SHALL be established before the first browser test runs
+
+### Requirement: scripts/run-browser-tests.sh shall be the canonical browser-test entry point
+
+`scripts/run-browser-tests.sh` SHALL be the canonical entry point for the browser test tier. It SHALL set `WEBCOMPY_RUN_BROWSER=1` in the pytest subprocess environment. It SHALL forward optional path/parametrize selector arguments to pytest. The script SHALL be documented alongside `scripts/run-e2e-tests.sh` as the entry point for browser-granularity testing.
+
+#### Scenario: Running browser tests via the script
+- **WHEN** a developer runs `scripts/run-browser-tests.sh tests/browser/test_signal_browser.py -k test_signal_propagates`
+- **THEN** the script SHALL set `WEBCOMPY_RUN_BROWSER=1` in the pytest subprocess environment
+- **AND** the requested path/k filter SHALL be forwarded to pytest
+
+#### Scenario: Running all browser tests via the script
+- **WHEN** a developer runs `scripts/run-browser-tests.sh` without arguments
+- **THEN** all browser-tier tests SHALL be collected (because the subprocess has `WEBCOMPY_RUN_BROWSER=1`)
+- **AND** the entire session SHALL run against a single harness boot (unless a crash forces a restart)
