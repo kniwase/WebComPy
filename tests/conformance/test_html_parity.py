@@ -9,3 +9,6 @@ def test_parity_results_structure():
     for kind, payload in results.values():
         assert kind in {"tree", "error"}
         assert isinstance(payload, str) and payload
+
+
+# browser-dualrun: skip

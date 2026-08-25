@@ -5,6 +5,7 @@ from webcompy_testing.browser_runner import (
     normalize_traceback,
     parse_test_id,
     resolve_parametrize_payload,
+    resolve_qualname_target,
 )
 
 
@@ -106,3 +107,45 @@ class TestUnknownFixtureError:
         assert "'browser'" in str(error)
         assert "app" in str(error)
         assert "dom_root" in str(error)
+
+
+class TestResolveQualnameTarget:
+    def test_module_level_function_resolves_unbound(self):
+        def test_a():
+            return "ok"
+
+        module = type("M", (), {"test_a": staticmethod(test_a)})
+
+        assert resolve_qualname_target(module, "test_a")() == "ok"
+
+    def test_class_method_binds_self(self):
+        class TestSuite:
+            def test_method(self):
+                return type(self).__name__
+
+        resolved = resolve_qualname_target(type("M", (), {"TestSuite": TestSuite}), "TestSuite::test_method")
+        import inspect
+
+        assert "self" not in inspect.signature(resolved).parameters
+        assert resolved() == "TestSuite"
+
+    def test_nested_qualname_resolves_through_chain(self):
+        class Outer:
+            class Inner:
+                @staticmethod
+                def deep():
+                    return 7
+
+        module = type("M", (), {"Outer": Outer})
+
+        assert resolve_qualname_target(module, "Outer::Inner::deep")() == 7
+
+    def test_non_callable_raises(self):
+        module = type("M", (), {"not_a_func": 42})
+
+        try:
+            resolve_qualname_target(module, "not_a_func")
+        except TypeError as e:
+            assert "non-callable" in str(e)
+        else:
+            raise AssertionError("TypeError not raised")

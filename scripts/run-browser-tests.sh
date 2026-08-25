@@ -5,6 +5,8 @@
 #   scripts/run-browser-tests.sh                                   # all browser tests (wheel mode)
 #   scripts/run-browser-tests.sh tests/browser/test_dom_browser.py # specific file
 #   scripts/run-browser-tests.sh -k signal                         # keyword selector
+#   scripts/run-browser-tests.sh --probes                          # only tests/browser/probes/**
+#   scripts/run-browser-tests.sh --dual                            # + CPython-vs-PyScript sweep
 #
 # Environment:
 #   WEBCOMPY_BROWSER_SOURCE=1            mount framework sources instead of wheels
@@ -17,14 +19,32 @@ cd "$ROOT_DIR"
 
 export WEBCOMPY_RUN_BROWSER=1
 
+target="tests/browser"
+rest=()
 has_path=0
-for arg in "$@"; do
-  case "$arg" in
-    tests/*|/*|*::*) has_path=1 ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dual)
+      export WEBCOMPY_RUN_DUAL=1
+      shift
+      ;;
+    --probes)
+      target="tests/browser/probes"
+      shift
+      ;;
+    tests/*|/*|*::*)
+      has_path=1
+      rest+=("$1")
+      shift
+      ;;
+    *)
+      rest+=("$1")
+      shift
+      ;;
   esac
 done
 
 if [ "$has_path" -eq 1 ]; then
-  exec uv run python -m pytest "$@"
+  exec uv run python -m pytest "${rest[@]}"
 fi
-exec uv run python -m pytest tests/browser "$@"
+exec uv run python -m pytest "$target" "${rest[@]}"

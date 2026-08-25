@@ -1,12 +1,12 @@
 ## 1. Classifier and dual-run sweep
 
 - [x] 1.1 Add `webcompy_cli/_browser_probes.py` AST classifier (separate file from archived Phase1 `_browser_test_harness.py`,案A; reuses `BROWSER_TEST_DIR` via import, no Starlette/uvicorn dep): walks `tests/**/*.py`, flags top-level `js`/`pyscript`/`pyodide`/`webcompy_testing` fake imports and module-scope side-effecting calls as ineligible, allows function-local `js` imports to remain eligible, respects `# browser-dualrun: eligible` / `# browser-dualrun: skip` pragma, and emits `eligible.txt` and `ineligible.json` sorted repo-relative. Public functions SHALL carry Google-style docstrings per `api-docstrings`.
-- [ ] 1.2 Implement driver-side dual-run sweep: CPython `pytest tests/` over `eligible.txt` → `{test_id: outcome}` map, PyScript harness load of same modules via existing `[files]` mount + `run_one(test_id)` sequential session → same-shaped map, bucket into `both-pass`/`CPython-only-fail`/`PyScript-only-fail`/`both-fail`, write `artifacts/browser-dualrun.json`, and print a terminal summary table.
+- [x] 1.2 Implement driver-side dual-run sweep: CPython `pytest tests/` over `eligible.txt` → `{test_id: outcome}` map, PyScript harness load of same modules via existing `[files]` mount + `run_one(test_id)` sequential session → same-shaped map, bucket into `both-pass`/`CPython-only-fail`/`PyScript-only-fail`/`both-fail`, write `artifacts/browser-dualrun.json`, and print a terminal summary table.
 
 ## 2. In-page runner dual-run extension
 
-- [ ] 2.1 Extend the Phase 1 in-page runner/harness to discover and import dual-run modules from the mounted `tests/` mirror, reusing the per-test isolation (fresh `WebComPyApp`/`BrowserRenderContext`, `dom_root` teardown, stdout/stderr + console-error + traceback JSON) and repo-relative traceback rewriting.
-- [ ] 2.2 Wire harness entry points `scripts/run-browser-tests.sh --dual` and `WEBCOMPY_RUN_DUAL=1` / `WEBCOMPY_RUN_BROWSER=1` gating for the dual-run sweep; default to informational (no hard CI gate on divergence) with an extensible bucket-promotion hook for later triage.
+- [x] 2.1 Extend the Phase 1 in-page runner/harness to discover and import dual-run modules from the mounted `tests/` mirror, reusing the per-test isolation (fresh `WebComPyApp`/`BrowserRenderContext`, `dom_root` teardown, stdout/stderr + console-error + traceback JSON) and repo-relative traceback rewriting.
+- [x] 2.2 Wire harness entry points `scripts/run-browser-tests.sh --dual` and `WEBCOMPY_RUN_DUAL=1` / `WEBCOMPY_RUN_BROWSER=1` gating for the dual-run sweep; default to informational (no hard CI gate on divergence) with an extensible bucket-promotion hook for later triage.
 
 ## 3. Probe suite (tests/browser/probes/)
 

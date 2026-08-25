@@ -6,6 +6,7 @@ from webcompy_testing.browser_runner._runner import (
     normalize_traceback,
     parse_test_id,
     resolve_parametrize_payload,
+    resolve_qualname_target,
     run_one,
     skip,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "normalize_traceback",
     "parse_test_id",
     "resolve_parametrize_payload",
+    "resolve_qualname_target",
     "run_one",
     "skip",
 ]

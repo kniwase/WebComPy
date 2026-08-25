@@ -1,4 +1,4 @@
-"""AST classifier partitioning ``tests/`` modules for PyScript dual-run eligibility.
+"""AST classifier and dual-run sweep utilities for ``tests/`` modules.
 
 The classifier walks test modules without importing them, parses each file's
 AST, and tags a module as dual-run eligible only when its top level is safe to
@@ -26,8 +26,11 @@ from __future__ import annotations
 
 import ast
 import json
+import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 BROWSER_TEST_DIR = "tests/browser"
 DUALRUN_BASELINE_DIR = "tests/.dualrun"
@@ -287,3 +290,246 @@ def load_baseline(repo_root: Path) -> list[str]:
     if not baseline.is_file():
         return []
     return sorted(line.strip() for line in baseline.read_text(encoding="utf-8").splitlines() if line.strip())
+
+
+_DUALRUN_ARTIFACT_NAME = "browser-dualrun.json"
+_DISPLAY_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
+
+
+@dataclass
+class DualRunSweepResult:
+    """Outcome of one CPython-vs-PyScript dual-run sweep.
+
+    Attributes:
+        eligible_count: Number of eligible modules the sweep attempted.
+        buckets: Bucketed test ids keyed ``both-pass``, ``CPython-only-fail``,
+            ``PyScript-only-fail``, and ``both-fail``.
+        cpython_map: Mapping of CPython node id to raw outcome
+            (``passed`` / ``failed`` / ``skipped``).
+        pyscript_map: Same-shaped mapping collected in-page, keyed by the
+            original CPython node id.
+        duration_ms: Total sweep wall time in milliseconds.
+        error: Infrastructure error message when the CPython side could not
+            produce a report; ``None`` on a structurally complete sweep.
+
+    """
+
+    eligible_count: int
+    buckets: dict[str, list[str]] = field(default_factory=dict)
+    cpython_map: dict[str, str] = field(default_factory=dict)
+    pyscript_map: dict[str, str] = field(default_factory=dict)
+    duration_ms: float = 0.0
+    error: str | None = None
+
+
+def convert_cpython_id(nodeid: str, param_indices: dict[str, int]) -> str:
+    """Convert a CPython pytest node id into an in-page runner test id.
+
+    The trailing display suffix (``[param value]``) is stripped and replaced
+    with the machine-readable index form (``[p<index>]``) expected by the
+    in-page runner.
+
+    Args:
+        nodeid: CPython pytest node id, optionally carrying a display
+            parametrize suffix.
+        param_indices: Mapping of suffix-stripped node id to its parametrize
+            index within the declared values list.
+
+    Returns:
+        The equivalent in-page test id.
+
+    """
+    match = _DISPLAY_SUFFIX_RE.search(nodeid)
+    stripped = nodeid[: match.start()] if match else nodeid
+    index = param_indices.get(stripped)
+    if index is not None:
+        return f"{stripped}[p{index}]"
+    return stripped
+
+
+def diff_outcomes(cpython_map: dict[str, str], pyscript_map: dict[str, str]) -> dict[str, list[str]]:
+    """Bucket paired outcomes from both interpreters into a divergence diff.
+
+    Test ids whose outcome is ``skipped`` on either side are excluded from the
+    buckets but remain present in the raw maps written to the artifact.
+
+    Args:
+        cpython_map: Node-id-to-outcome mapping collected under CPython.
+        pyscript_map: Same-shaped mapping collected inside the harness page.
+
+    Returns:
+        Buckets keyed ``both-pass``, ``CPython-only-fail``,
+        ``PyScript-only-fail``, and ``both-fail`` with sorted test ids.
+
+    """
+    buckets: dict[str, list[str]] = {
+        "both-pass": [],
+        "CPython-only-fail": [],
+        "PyScript-only-fail": [],
+        "both-fail": [],
+    }
+    for test_id in sorted(set(cpython_map) & set(pyscript_map)):
+        cpython = cpython_map[test_id]
+        pyscript = pyscript_map[test_id]
+        if cpython == "skipped" or pyscript == "skipped":
+            continue
+        if cpython == "passed" and pyscript == "passed":
+            buckets["both-pass"].append(test_id)
+        elif cpython == "passed":
+            buckets["PyScript-only-fail"].append(test_id)
+        elif pyscript == "passed":
+            buckets["CPython-only-fail"].append(test_id)
+        else:
+            buckets["both-fail"].append(test_id)
+    return buckets
+
+
+def write_dualrun_artifact(result: DualRunSweepResult, artifacts_dir: Path) -> Path:
+    """Write the bucketed dual-run diff artifact for one sweep invocation.
+
+    Args:
+        result: Sweep outcome to serialize.
+        artifacts_dir: Destination directory (created when missing).
+
+    Returns:
+        The path of the written ``browser-dualrun.json`` artifact.
+
+    """
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    path = artifacts_dir / _DUALRUN_ARTIFACT_NAME
+    payload = {
+        "eligible_count": result.eligible_count,
+        "buckets": {name: sorted(ids) for name, ids in result.buckets.items()},
+        "cpython_map": dict(sorted(result.cpython_map.items())),
+        "pyscript_map": dict(sorted(result.pyscript_map.items())),
+        "duration_ms": round(result.duration_ms, 3),
+    }
+    if result.error is not None:
+        payload["error"] = result.error
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
+
+
+def run_dualrun_sweep(
+    *,
+    repo_root: Path,
+    driver: Any,
+    artifacts_dir: Path | None = None,
+    report_path: Path | None = None,
+) -> DualRunSweepResult:
+    """Execute the eligible subset under both interpreters and diff results.
+
+    The CPython side runs a subprocess pytest over the classified eligible
+    modules using the dual-run report plugin; the PyScript side dispatches the
+    same test ids through the live harness driver. The sweep is informational:
+    infrastructure failures are recorded in :attr:`DualRunSweepResult.error`
+    instead of raising, so callers never need to fail a session because of it.
+
+    Args:
+        repo_root: Repository root containing the ``tests/`` tree.
+        driver: Live browser harness driver exposing ``run_one(test_id)``
+            returning the in-page JSON result string.
+        artifacts_dir: Directory for ``browser-dualrun.json``; defaults to
+            ``<repo_root>/artifacts``.
+        report_path: Where the CPython plugin writes its outcome JSON;
+            defaults to a scratch file under ``<repo_root>/.tmp``.
+
+    Returns:
+        A :class:`DualRunSweepResult` describing the paired outcomes.
+
+    """
+    started = time.perf_counter()
+    destination = artifacts_dir or repo_root / "artifacts"
+    scratch = report_path or repo_root / ".tmp" / "dualrun-cpython.json"
+    classification = classify_tests(repo_root)
+    result = DualRunSweepResult(eligible_count=len(classification.eligible))
+    if not classification.eligible:
+        result.duration_ms = (time.perf_counter() - started) * 1000
+        write_dualrun_artifact(result, destination)
+        return result
+
+    outcomes, indices = _collect_cpython_outcomes(repo_root, classification.eligible, scratch)
+    if outcomes is None:
+        result.error = f"CPython collection failed; see {scratch} diagnostics in the subprocess log"
+        result.duration_ms = (time.perf_counter() - started) * 1000
+        write_dualrun_artifact(result, destination)
+        return result
+
+    result.cpython_map = outcomes
+    total = len(outcomes)
+    for progress, nodeid in enumerate(sorted(outcomes), start=1):
+        converted = convert_cpython_id(nodeid, indices)
+        try:
+            payload = driver.run_one(converted)
+            if isinstance(payload, (str, bytes)):
+                payload = json.loads(payload)
+            status = str(payload.get("status", "failed"))
+        except RuntimeError as e:
+            if "worker thread" in str(e):
+                # Driver is dead; nothing further can execute in-page.
+                for remaining in sorted(outcomes)[progress - 1 :]:
+                    result.pyscript_map[remaining] = "skipped"
+                break
+            status = "failed"
+        except Exception:
+            status = "failed"
+        result.pyscript_map[nodeid] = status
+        if progress % 25 == 0 or progress == total:
+            print(f"[browser-dualrun] in-page progress {progress}/{total}", flush=True)
+
+    result.buckets = diff_outcomes(result.cpython_map, result.pyscript_map)
+    result.duration_ms = (time.perf_counter() - started) * 1000
+    write_dualrun_artifact(result, destination)
+    return result
+
+
+def _collect_cpython_outcomes(
+    repo_root: Path,
+    eligible: list[str],
+    report_path: Path,
+) -> tuple[dict[str, str] | None, dict[str, int]]:
+    """Collect CPython outcomes for the eligible modules via a pytest subprocess.
+
+    A nonzero pytest exit code caused by failing tests is expected and not an
+    infrastructure failure; only a missing or malformed report is.
+
+    Args:
+        repo_root: Repository root used as the pytest working directory.
+        eligible: Repo-relative eligible module paths to run.
+        report_path: Destination of the dual-run plugin's JSON report.
+
+    Returns:
+        Tuple of the outcome map (or ``None`` on infrastructure failure) and
+        the nodeid-to-parametrize-index map.
+
+    """
+    import os
+    import subprocess
+    import sys
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, "WEBCOMPY_DUALRUN_REPORT": str(report_path)}
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        *sorted(eligible),
+        "-p",
+        "webcompy_cli._dualrun_pytest_plugin",
+        "-q",
+        "--tb=no",
+        "--no-header",
+    ]
+    completed = subprocess.run(command, cwd=repo_root, env=env, capture_output=True, check=False)
+    try:
+        data = json.loads(report_path.read_text(encoding="utf-8"))
+        outcomes = {str(k): str(v) for k, v in data.get("outcomes", {}).items()}
+        indices = {str(k): int(v) for k, v in data.get("param_indices", {}).items()}
+    except (OSError, json.JSONDecodeError):
+        print(
+            "[browser-dualrun] warning: CPython subprocess produced no usable report "
+            f"(exit={completed.returncode}); stderr tail:\n{completed.stderr.decode(errors='replace')[-2000:]}",
+            flush=True,
+        )
+        return None, {}
+    return outcomes, indices

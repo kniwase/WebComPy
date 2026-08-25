@@ -162,3 +162,6 @@ webcompy-lock.json
 /*.jpeg
 /*.gif
 
+
+# Dual-run / sweep artifacts
+/artifacts/

@@ -137,3 +137,6 @@ class TestXfailDataValidation:
         raw = json.loads(Path(__file__).parent.joinpath("xfail.json").read_text(encoding="utf-8"))
         examples = raw["xfail_examples"]
         assert len(examples) == len(set(examples))
+
+
+# browser-dualrun: skip

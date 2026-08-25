@@ -76,6 +76,39 @@ def discover_test_modules(repo_root: Path) -> list[Path]:
     return sorted(p.relative_to(repo_root) for p in base.rglob("test_*.py") if p.is_file())
 
 
+def merge_test_relpaths(repo_root: Path, dual_test_relpaths: list[str] | None) -> list[str]:
+    """Merge dual-run module paths and their package markers into the mount set.
+
+    Each dual-run path is appended after the browser-tier inventory (which is
+    never removed), plus every existing ancestor ``__init__.py`` so dotted
+    imports such as ``tests.test_signal`` resolve on the Emscripten FS.
+
+    Args:
+        repo_root: Repository root used to probe ancestor ``__init__.py``
+            files.
+        dual_test_relpaths: Repo-relative eligible test module paths, or
+            ``None`` to return only the browser-tier inventory.
+
+    Returns:
+        Sorted, deduplicated repo-relative paths to mount and list in the
+        manifest.
+
+    """
+    merged: dict[str, None] = {p.as_posix(): None for p in discover_test_modules(repo_root)}
+    extras: set[str] = set()
+    for rel in dual_test_relpaths or []:
+        rel_posix = Path(rel).as_posix()
+        extras.add(rel_posix)
+        parts = Path(rel_posix).parts[:-1]
+        for depth in range(1, len(parts) + 1):
+            candidate = Path(*parts[:depth]) / "__init__.py"
+            if (repo_root / candidate).is_file():
+                extras.add(candidate.as_posix())
+    for extra in sorted(extras):
+        merged.setdefault(extra, None)
+    return sorted(merged)
+
+
 def collect_framework_source_files(repo_root: Path) -> dict[str, list[str]]:
     """Map each framework package name to sorted POSIX paths under its ``src`` root."""
     result: dict[str, list[str]] = {}
@@ -299,6 +332,7 @@ def create_harness_app(
     *,
     base_url: str,
     supply_mode: Literal["wheel", "source"] | None = None,
+    dual_test_relpaths: list[str] | None = None,
 ) -> HarnessServer:
     """Assemble the harness application serving assets, files, config, manifest, and page."""
     mode = supply_mode or resolve_supply_mode()
@@ -325,8 +359,7 @@ def create_harness_app(
         cache_dir,
         package_names=package_closure,
     )
-    test_paths = discover_test_modules(repo_root)
-    test_rels = [p.as_posix() for p in test_paths]
+    test_rels = merge_test_relpaths(repo_root, dual_test_relpaths)
     manifest_modules = [rel[: -len(".py")].replace("/", ".") for rel in test_rels]
 
     wheel_names: list[str] = []

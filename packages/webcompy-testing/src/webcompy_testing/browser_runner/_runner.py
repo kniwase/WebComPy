@@ -220,12 +220,45 @@ async def _load_function(module_name: str, qualname: str) -> Any:
             module = importlib.import_module(module_name)
         else:
             raise
-    target: Any = module
-    for part in qualname.split("::"):
+    return resolve_qualname_target(module, qualname)
+
+
+def resolve_qualname_target(container: Any, qualname: str) -> Any:
+    """Resolve a ``::``-separated qualname to a callable, binding methods.
+
+    When the qualname path addresses a method through a class (for example
+    ``TestDIScope::test_class_type_key``), the class is instantiated with no
+    arguments and the attribute is fetched from the instance so the returned
+    callable is a bound method. This mirrors pytest's auto-instantiation of
+    test classes and keeps ``self`` out of the fixture-argument resolution.
+
+    Args:
+        container: The module (or any object) in which to resolve.
+        qualname: The ``::``-separated attribute path.
+
+    Returns:
+        The resolved callable.
+
+    Raises:
+        TypeError: If the resolved target is not callable.
+
+    """
+    parts = qualname.split("::")
+    target: Any = container
+    for part in parts[:-1]:
         target = getattr(target, part)
-    if not callable(target):
+    last = parts[-1]
+    raw = getattr(target, last)
+    if isinstance(target, type) and inspect.isfunction(raw):
+        first_params = list(inspect.signature(raw).parameters)
+        if first_params and first_params[0] == "self":
+            owner = target()
+            bound = getattr(owner, last)
+            if callable(bound):
+                return bound
+    if not callable(raw):
         raise TypeError(f"'{qualname}' resolved to a non-callable object")
-    return target
+    return raw
 
 
 _SWEEP_CHROME_NODE_NAMES = frozenset({"SCRIPT"})
