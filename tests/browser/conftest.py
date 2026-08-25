@@ -28,9 +28,14 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_collection_modifyitems(session: pytest.Session, config: pytest.Config, items: list[pytest.Item]) -> None:
+    probe_count = 0
     for item in items:
         if item.path.is_relative_to(_BROWSER_DIR):
             item.add_marker(pytest.mark.browser)
+            if item.path.is_relative_to(_BROWSER_DIR / "probes"):
+                item.add_marker(pytest.mark.probe)
+                probe_count += 1
+    config._webcompy_probe_count = probe_count  # type: ignore[attr-defined]
 
 
 def _format_remote_failure(result: dict) -> str:
@@ -167,11 +172,39 @@ def browser_harness(request: pytest.FixtureRequest):
         shutdown_harness(process)
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Append the dual-run divergence summary when a sweep ran this session.
+_OUTCOME_PRECEDENCE = {"failed": 3, "skipped": 2, "passed": 1}
 
-    The sweep is informational: divergences never change the session exit
-    status; they are reported here and persisted in the artifact.
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call):
+    """Track probe-item outcomes for the terminal probes-suite section.
+
+    Args:
+        item: The executing pytest item.
+        call: The phase context (setup, call, or teardown).
+
+    Yields:
+        The wrapped hook result carrying the phase report.
+
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if "probe" not in item.keywords:
+        return
+    stats = getattr(item.config, "_webcompy_probe_stats", None)
+    if stats is None:
+        stats = {}
+        item.config._webcompy_probe_stats = stats  # type: ignore[attr-defined]
+    # Count only the decisive phase per item (setup skips, call results).
+    if report.when == "call" or (report.when == "setup" and report.outcome != "passed"):
+        stats[report.outcome] = stats.get(report.outcome, 0) + 1
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Append the probes-suite and dual-run sections when present.
+
+    The dual-run sweep is informational: divergences never change the session
+    exit status; they are reported here and persisted in the artifact.
 
     Args:
         terminalreporter: Pytest's terminal reporter for writing output.
@@ -182,6 +215,16 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         ``None``.
 
     """
+    probe_count = getattr(config, "_webcompy_probe_count", 0)
+    if probe_count:
+        stats = getattr(config, "_webcompy_probe_stats", {})
+        terminalreporter.section("probes suite", sep="=")
+        terminalreporter.write_line(f"probes collected: {probe_count}")
+        terminalreporter.write_line(
+            f"probes passed: {stats.get('passed', 0)} / failed: {stats.get('failed', 0)}"
+            f" / skipped: {stats.get('skipped', 0)}"
+        )
+
     result = getattr(config, "_webcompy_dualrun_result", None)
     if result is None:
         return

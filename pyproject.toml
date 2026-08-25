@@ -50,6 +50,7 @@ testpaths = ["tests"]
 pythonpath = ["e2e/core"]
 markers = [
     "browser: executed inside the real PyScript runtime via the browser test harness",
+    "probe: environment probe codifying a PyScript runtime contract (hard gate)",
 ]
 
 

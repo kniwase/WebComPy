@@ -10,8 +10,8 @@
 
 ## 3. Probe suite (tests/browser/probes/)
 
-- [ ] 3.1 Add `tests/browser/probes/` as the authoritative probe battery (ordinary browser-tier tests, grouped as the `probes` suite in reports, hard gate on failure): initial probes covering `asyncio.sleep(0)`/WebLoop ordering, `create_proxy`/`destroy` lifecycle (including idempotent destroy and survival across awaits), `js` `to_js`/`is_none`/`undefined` interop, and `Text.splitText` UTF-16 boundaries (including surrogate-half behavior matching `FakeDOMNode.splitText`'s spec).
-- [ ] 3.2 Provide probe authoring convention: module docstring is the contract statement; any new `tests/browser/probes/test_probe_*.py` is auto-discovered by the harness manifest without code changes; `scripts/run-browser-tests.sh --probes` runs only `tests/browser/probes/**` via the harness.
+- [x] 3.1 Add `tests/browser/probes/` as the authoritative probe battery (ordinary browser-tier tests, grouped as the `probes` suite in reports, hard gate on failure): initial probes covering `asyncio.sleep(0)`/WebLoop ordering, `create_proxy`/`destroy` lifecycle (including idempotent destroy and survival across awaits), `js` `to_js`/`is_none`/`undefined` interop, and `Text.splitText` UTF-16 boundaries (including surrogate-half behavior matching `FakeDOMNode.splitText`'s spec).
+- [x] 3.2 Provide probe authoring convention: module docstring is the contract statement; any new `tests/browser/probes/test_probe_*.py` is auto-discovered by the harness manifest without code changes; `scripts/run-browser-tests.sh --probes` runs only `tests/browser/probes/**` via the harness.
 
 ## 4. Version-bump sweep
 
