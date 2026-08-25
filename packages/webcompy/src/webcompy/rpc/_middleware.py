@@ -80,6 +80,13 @@ class RpcNext(Protocol):
 
 
 RpcMiddleware: TypeAlias = Callable[[RpcContext, RpcNext], Awaitable[Any]]
+"""Async callable that wraps one HTTP JSON-RPC operation.
+
+Receives the typed procedure context and a ``next`` handle whose
+synthetic ``response`` short-circuits the wire while keeping schema
+validation.
+
+"""
 
 
 class RpcMiddlewareRegistry:
@@ -175,3 +182,27 @@ async def run_rpc_middlewares(
         return await middleware(context, nxt)
 
     return await run(0, ctx)
+
+
+def add_rpc_middleware(middleware: RpcMiddleware) -> None:
+    """Append *middleware* to the active RPC middleware registry.
+
+    Registrations are consulted at each HTTP RPC operation, so they take
+    effect on subsequent calls. Ordering is ``middlewares[0]`` outermost.
+
+    Args:
+        middleware: Callable invoked with the procedure context and a
+            ``next`` handle.
+
+    Raises:
+        RuntimeError: If no registry is available in the current scope
+            (no active render context).
+
+    """
+    from webcompy.di import inject
+    from webcompy.di._keys import RPC_MIDDLEWARE_KEY
+
+    registry = inject(RPC_MIDDLEWARE_KEY, default=None)  # type: ignore[type-var]
+    if registry is None:
+        raise RuntimeError("No active RPC middleware registry in the current DI scope")
+    registry.use(middleware)  # type: ignore[attr-defined]

@@ -23,8 +23,8 @@
 
 ## 4. Utilities and Exports
 
-- [ ] 4.1 Add `add_fetch_middleware(mw)` / `add_rpc_middleware(mw)` delegating to the active context's registries; export types, registries, keys, utilities from public entry points (`webcompy.ports`, `webcompy.rpc`, `webcompy.plugin`)
-- [ ] 4.2 Write Google-style docstrings for all new public interfaces (checker-strict); run `python3 scripts/check-docstrings.py` and pydoclint
+- [x] 4.1 Add `add_fetch_middleware(mw)` / `add_rpc_middleware(mw)` delegating to the active context's registries; export types, registries, keys, utilities from public entry points (`webcompy.ports`, `webcompy.rpc`, `webcompy.plugin`)
+- [x] 4.2 Write Google-style docstrings for all new public interfaces (checker-strict); run `python3 scripts/check-docstrings.py` and pydoclint
 
 ## 5. Sample Plugins and E2E
 

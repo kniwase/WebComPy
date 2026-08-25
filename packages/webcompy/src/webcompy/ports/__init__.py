@@ -15,6 +15,7 @@ from webcompy.ports._keys import (
     CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
     EVENT_SOURCE_PORT_KEY,
+    FETCH_MIDDLEWARE_KEY,
     FETCH_PORT_KEY,
     FFI_PORT_KEY,
     HISTORY_PORT_KEY,
@@ -27,6 +28,12 @@ from webcompy.ports._keys import (
 )
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.ports._media_query import MediaQueryPort
+from webcompy.ports._middleware import (
+    FetchMiddleware,
+    FetchMiddlewareRegistry,
+    FetchRequest,
+    add_fetch_middleware,
+)
 from webcompy.ports._resource import ResourceNotFoundError, ResourcePort
 from webcompy.ports._transition import TransitionPort
 from webcompy.ports._websocket import WebSocketConnection, WebSocketPort
@@ -37,6 +44,7 @@ __all__ = [
     "CUSTOM_ELEMENT_PORT_KEY",
     "DOM_PORT_KEY",
     "EVENT_SOURCE_PORT_KEY",
+    "FETCH_MIDDLEWARE_KEY",
     "FETCH_PORT_KEY",
     "FFI_PORT_KEY",
     "HISTORY_PORT_KEY",
@@ -54,7 +62,10 @@ __all__ = [
     "DOMPort",
     "EventSourcePort",
     "FFIPort",
+    "FetchMiddleware",
+    "FetchMiddlewareRegistry",
     "FetchPort",
+    "FetchRequest",
     "FetchStream",
     "HistoryPort",
     "HostPort",
@@ -65,4 +76,5 @@ __all__ = [
     "TransitionPort",
     "WebSocketConnection",
     "WebSocketPort",
+    "add_fetch_middleware",
 ]

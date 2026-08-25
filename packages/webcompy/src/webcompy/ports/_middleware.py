@@ -59,6 +59,13 @@ FetchMiddleware: TypeAlias = Callable[
     [FetchRequest, FetchNext],
     Awaitable["Response | FetchStream"],
 ]
+"""Async callable that wraps one fetch or streaming HTTP request.
+
+Receives the mutable request view and a ``next`` handle whose
+synthetic ``response`` short-circuits the inner port. Middleware at
+index ``0`` runs outermost.
+
+"""
 
 
 class FetchMiddlewareRegistry:
@@ -277,3 +284,28 @@ class _MiddlewareFetchPort(FetchPort):
         if delegate is None:
             return None
         return delegate()
+
+
+def add_fetch_middleware(middleware: FetchMiddleware) -> None:
+    """Append *middleware* to the active fetch middleware registry.
+
+    The call is threaded through the current DI scope. Registrations
+    remain visible to subsequent fetch operations (including streaming);
+    ordering is ``middlewares[0]`` outermost.
+
+    Args:
+        middleware: Callable invoked with the request view and a ``next``
+            handle.
+
+    Raises:
+        RuntimeError: If no registry is available in the current scope
+            (no active render context).
+
+    """
+    from webcompy.di import inject
+    from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
+
+    registry = inject(FETCH_MIDDLEWARE_KEY, default=None)  # type: ignore[type-var]
+    if registry is None:
+        raise RuntimeError("No active fetch middleware registry in the current DI scope")
+    registry.use(middleware)  # type: ignore[attr-defined]
