@@ -132,13 +132,18 @@ class _TrackingFFIPort(BrowserFFIPort):
         self._proxies.clear()
 
 
+_console_start_index = 0
+
+
 def bootstrap() -> None:
     """Expose ``run_one`` on ``window`` and mark the harness page ready."""
+    global _console_start_index
     _ensure_pytest_shim()
     ffi = importlib.import_module("pyscript").ffi
     js = importlib.import_module("js")
     js.window.__webcompy_test__ = ffi.create_proxy({"run_one": run_one})
     js.document.documentElement.setAttribute("data-webcompy-test-ready", "1")
+    _console_start_index = js.window.__webcompy_test_console__.length
 
 
 def skip(reason: str = "skipped") -> None:
@@ -223,12 +228,18 @@ async def _load_function(module_name: str, qualname: str) -> Any:
     return target
 
 
+_SWEEP_CHROME_NODE_NAMES = frozenset({"SCRIPT"})
+
+
 def _sweep_dom_roots() -> None:
     js = importlib.import_module("js")
     children = [child for child in js.document.body.childNodes]
     for child in children:
-        if child.nodeName == "DIV" and child.getAttribute("id") != "webcompy-app":
-            child.remove()
+        if child.nodeName == "DIV" and child.getAttribute("id") == "webcompy-app":
+            continue
+        if child.nodeName in _SWEEP_CHROME_NODE_NAMES:
+            continue
+        child.remove()
 
 
 def _make_dom_root() -> Any:
@@ -289,9 +300,10 @@ def _dump_result(
 
 async def run_one(test_id: str) -> str:
     """Execute one browser test function and return its result as a JSON string."""
+    global _console_start_index
     js = importlib.import_module("js")
     console_buffer = js.window.__webcompy_test_console__
-    console_start = console_buffer.length
+    console_start = _console_start_index
     started = time.perf_counter()
     stdout_io = io.StringIO()
     stderr_io = io.StringIO()
@@ -303,10 +315,10 @@ async def run_one(test_id: str) -> str:
         module_name, qualname, param_index = parse_test_id(test_id)
         func = await _load_function(module_name, qualname)
         _sweep_dom_roots()
-        _module, ctx, tracking_port = _make_test_context(sys.modules[module_name])
+        app, ctx, tracking_port = _make_test_context(sys.modules[module_name])
         dom_root = _make_dom_root()
         kwargs = resolve_parametrize_payload(func, param_index)
-        kwargs.update(_fixture_kwargs(func, _module, dom_root, exclude=set(kwargs)))
+        kwargs.update(_fixture_kwargs(func, app, dom_root, exclude=set(kwargs)))
         with redirect_stdout(stdout_io), redirect_stderr(stderr_io):
             outcome = func(**kwargs)
             if inspect.iscoroutine(outcome):
@@ -324,7 +336,7 @@ async def run_one(test_id: str) -> str:
         return _dump_result(
             "skipped",
             started,
-            type(e).__name__,
+            "Skipped",
             str(e),
             stdout_io.getvalue(),
             stderr_io.getvalue(),
@@ -359,3 +371,4 @@ async def run_one(test_id: str) -> str:
                 tracking_port.destroy_all()
             if module_name:
                 sys.modules.pop(module_name, None)
+        _console_start_index = console_buffer.length
