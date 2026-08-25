@@ -79,6 +79,7 @@ A browser app lives in a single render context for its lifetime, so an eagerly a
 - [`Content-Type` clobbered by middleware] → Runner forces `application/json` after merging user headers.
 - [Synthetic RPC fragments malformed] → `_resolve_single` raises `RpcError(INTERNAL_ERROR/SERVER_ERROR)`; unit tests cover error surfacing.
 - [Order confusion] → Spec states `middlewares[0]` outermost with a worked example; composition code uses `reversed` in one shared helper for both systems.
+- [Late-registered middleware is innermost and can be shadowed by an earlier interceptor] → Inherent consequence of append-only registration plus fixed ordering; validated in the browser tier (`tests/browser/test_fetch_middleware_browser.py`) that a registration swaps cached chains via the generation counter. Middleware authors who need to act on requests already intercepted elsewhere must register before that interceptor.
 - [Stream close/cancel propagation] → Wrapper delegates `close()/aclose()` to inner stream; tested.
 
 ## Migration Plan
