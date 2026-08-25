@@ -9,6 +9,7 @@ import pytest
 from webcompy.ajax import HttpClient, TypedResponseError
 from webcompy.ajax._fetch import Response, WebComPyHttpClientException
 from webcompy.di._scope import DIScope
+from webcompy.elements.types._refference import DomNodeRef
 from webcompy.hydration._transfer_meta import META_BODY_KEY, META_HEADER_NAME
 from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy_testing import FakeFetchPort
@@ -268,6 +269,46 @@ class TestHttpClientTransferMeta:
         with self._scope({("GET", "/api/record"): response}):
             result = await HttpClient.get("/api/record", response_type=TypedRecord)
         assert result.anything == 42
+
+
+class TestHttpClientFormData:
+    def _scope(self, responses):
+        scope = DIScope()
+        port = FakeFetchPort(responses=responses)
+        scope.provide(FETCH_PORT_KEY, port)
+        return scope, port
+
+    @pytest.mark.asyncio
+    async def test_form_data_routed_through_port_as_multipart(self):
+        scope, port = self._scope({("POST", "/api/submit"): _port_response("{}")})
+        with scope:
+            res = await HttpClient.post("/api/submit", form_data={"name": "value", "blob": b"\x01\x02"})
+        assert res.ok is True
+        request = port.requests[0]
+        assert isinstance(request.body, bytes)
+        content_type = next(v for k, v in request.headers.items() if k.lower() == "content-type")
+        boundary = content_type.rsplit("=", 1)[1]
+        assert content_type.startswith("multipart/form-data; boundary=")
+        assert boundary.isalnum()
+        assert f'--{boundary}\r\nContent-Disposition: form-data; name="name"\r\n\r\nvalue\r\n'.encode() in request.body
+        assert b"\x01\x02" in request.body
+
+    @pytest.mark.asyncio
+    async def test_explicit_content_type_wins(self):
+        scope, port = self._scope({("POST", "/api/submit"): _port_response("{}")})
+        with scope:
+            await HttpClient.post("/api/submit", headers={"Content-Type": "application/x-custom"}, form_data={"a": "1"})
+        request = port.requests[0]
+        content_type = next(v for k, v in request.headers.items() if k.lower() == "content-type")
+        assert content_type == "application/x-custom"
+        assert "boundary" not in content_type
+
+    @pytest.mark.asyncio
+    async def test_form_element_outside_browser_raises_descriptive_error(self):
+        scope, port = self._scope({})
+        with scope, pytest.raises(WebComPyHttpClientException, match="browser"):
+            await HttpClient.post("/api/submit", form_element=DomNodeRef())
+        assert port.requests == []
 
 
 def _port_response(text, status_code=200, ok=True, headers=None):

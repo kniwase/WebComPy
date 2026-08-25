@@ -5,10 +5,10 @@
 
 ## 2. FetchPort body type extension
 
-- [ ] 2.1 Widen `body` to `str | bytes | None` in `FetchPort.fetch()` and `FetchPort.stream()` in `packages/webcompy/src/webcompy/ports/_fetch.py`, including docstring updates
-- [ ] 2.2 Update `BrowserFetchPort.fetch()` / `.stream()` annotations and normalize `_cache_key` to hash non-str bodies via SHA-256
-- [ ] 2.3 Update `ServerFetchPort.fetch()` and `FakeFetchPort.fetch()` / `.stream()` annotations with docstring updates
-- [ ] 2.4 Add unit tests: binary body passes through a fake port unchanged; deterministic cache-key behavior for repeated identical bytes bodies
+- [x] 2.1 Widen `body` to `str | bytes | None` in `FetchPort.fetch()` and `FetchPort.stream()` in `packages/webcompy/src/webcompy/ports/_fetch.py`, including docstring updates
+- [x] 2.2 Update `BrowserFetchPort.fetch()` / `.stream()` annotations and normalize `_cache_key` to hash non-str bodies via SHA-256
+- [x] 2.3 Update `ServerFetchPort.fetch()` and `FakeFetchPort.fetch()` / `.stream()` annotations with docstring updates
+- [x] 2.4 Add unit tests: binary body passes through a fake port unchanged; deterministic cache-key behavior for repeated identical bytes bodies
 
 ## 3. HttpClient integration
 
