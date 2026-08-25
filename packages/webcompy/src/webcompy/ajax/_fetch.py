@@ -173,6 +173,16 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
         raise TypedResponseError(f"Response does not match schema: {err}; body excerpt: {res.text[:200]!r}") from err
 
 
+def _port_response_to_client(ports_res: Any) -> Response:
+    return Response(
+        text=ports_res.text,
+        headers=ports_res.headers,
+        status_code=ports_res.status_code,
+        reason=ports_res.status_text,
+        ok=ports_res.ok,
+    )
+
+
 class HttpClient:
     """Static HTTP client whose requests are routed through the ``FetchPort``.
 
@@ -235,13 +245,7 @@ class HttpClient:
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
-                ret = Response(
-                    text=ports_res.text,
-                    headers=ports_res.headers,
-                    status_code=ports_res.status_code,
-                    reason=ports_res.status_text,
-                    ok=ports_res.ok,
-                )
+                ret = _port_response_to_client(ports_res)
         elif form_element is not None:
             from webcompy.ports._browser._raw import browser as _raw_browser
 
@@ -288,13 +292,7 @@ class HttpClient:
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
-                ret = Response(
-                    text=ports_res.text,
-                    headers=ports_res.headers,
-                    status_code=ports_res.status_code,
-                    reason=ports_res.status_text,
-                    ok=ports_res.ok,
-                )
+                ret = _port_response_to_client(ports_res)
         return ret
 
     @overload
