@@ -33,8 +33,8 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 6.2 Run `uv run pyright`
-- [ ] 6.3 Run `uv run python -m pytest tests/ --tb=short` — full suite green including existing ajax/rpc/plugin suites
+- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`
+- [x] 6.2 Run `uv run pyright`
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short` — full suite green including existing ajax/rpc/plugin suites
 - [ ] 6.4 Update `AGENTS.md` File → Spec Mapping (`webcompy/ports/`, `webcompy/ajax/`, `webcompy/rpc/`, `webcompy/plugin/` rows gain `fetch-middleware`/`rpc-middleware`), Framework Invariants if needed, Current Specs list; sync `.opencode/skills/webcompy-review/SKILL.md`; run `python3 scripts/check-doc-spec-refs.py`
-- [ ] 6.5 Run `openspec validate feat-fetch-rpc-middleware`
+- [x] 6.5 Run `openspec validate feat-fetch-rpc-middleware`
