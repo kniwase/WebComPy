@@ -225,7 +225,7 @@ class HttpClient:
         send_url = url + "?" + urllib.parse.urlencode(query_params) if query_params is not None else url
         # header
         raw_headers = dict(headers) if headers else {}
-        req_headers = {urllib.parse.quote(str(k)): urllib.parse.quote(str(v)) for k, v in raw_headers.items()}
+        req_headers = dict(raw_headers)
         has_content_type = any(name.lower() == "content-type" for name in raw_headers)
         # body
         has_body = any(
@@ -278,10 +278,11 @@ class HttpClient:
         else:
             if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
-                    req_headers["Content-Type"] = "application/json"
+                    if not has_content_type:
+                        req_headers["Content-Type"] = "application/json"
                     body = json_dumps(json, ensure_ascii=True)
                 elif body_data is not None:
-                    body = body_data if isinstance(body_data, str) else body_data.decode()
+                    body = body_data
                 else:
                     body = None
             else:
