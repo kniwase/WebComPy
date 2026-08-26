@@ -165,7 +165,7 @@ The functions SHALL also be re-exported from `webcompy` (top-level package) as `
 #### Scenario: Usage with render_template in async setup
 - **WHEN** a component writes:
   ```python
-  @define_component
+  @define_component()
   async def Card(ctx):
       tpl = await load_text("templates/card.html")
       return render_template(tpl, locals())

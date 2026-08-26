@@ -44,7 +44,7 @@ pressure_sensor.subscribe(on_pressure)
 ```python
 from webcompy import use_window_event
 
-@define_component("event-page")
+@define_component()
 def EventPage(context):
     width, _ = use_window_event("resize", 0, transform=lambda e: e.target.innerWidth)
     return html.DIV({}, str(width.value))
@@ -62,7 +62,7 @@ def EventPage(context):
 ```python
 from webcompy import use_document_event
 
-@define_component("event-page")
+@define_component()
 def EventPage(context):
     hidden, _ = use_document_event(
         "visibilitychange",

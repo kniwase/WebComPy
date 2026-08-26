@@ -14,7 +14,7 @@ Like SSE messages, WebSocket messages have *occurrence* semantics: every frame m
 ```python
 from webcompy.realtime import use_websocket
 
-@define_component("chat")
+@define_component("live-chat")
 def Chat(context):
     ws = use_websocket("/api/chat")
 

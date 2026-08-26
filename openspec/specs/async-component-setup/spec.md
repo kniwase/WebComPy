@@ -19,7 +19,7 @@ A component definition decorated with `@define_component` SHALL be `async def`. 
 #### Scenario: Awaiting an async operation during setup
 - **WHEN** a developer writes:
   ```python
-  @define_component
+  @define_component()
   async def MyComponent(context):
       data = await fetch("/api/data")
       return html.DIV({}, str(data))
