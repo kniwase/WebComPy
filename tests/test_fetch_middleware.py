@@ -3,13 +3,18 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
+from webcompy.di import DIScope
 from webcompy.exception import WebComPyException
 from webcompy.ports._fetch import FetchPort, FetchStream, Response, _BufferedFetchStream
+from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
 from webcompy.ports._middleware import (
     FetchMiddleware,
     FetchMiddlewareRegistry,
     FetchRequest,
     _MiddlewareFetchPort,
+    add_fetch_middleware,
 )
 
 
@@ -291,3 +296,27 @@ def test_fetch_head_rebuilt_only_on_generation_change() -> None:
     registry.use(noop_mw)
     wrapped._ensure_chains()
     assert wrapped._fetch_head is not first_head
+
+
+def test_add_fetch_middleware_registers_in_active_scope() -> None:
+    registry = FetchMiddlewareRegistry()
+    scope = DIScope()
+    scope.__enter__()
+    try:
+        scope.provide(FETCH_MIDDLEWARE_KEY, registry)
+
+        async def mw(request: FetchRequest, next):  # type: ignore[name-defined]
+            return await next(request)
+
+        add_fetch_middleware(mw)
+        assert registry.middlewares == (mw,)
+    finally:
+        scope.__exit__(None, None, None)
+
+
+def test_add_fetch_middleware_without_scope_raises() -> None:
+    async def mw(request: FetchRequest, next):  # type: ignore[name-defined]
+        return await next(request)
+
+    with pytest.raises(RuntimeError, match="No active fetch middleware registry"):
+        add_fetch_middleware(mw)
