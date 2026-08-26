@@ -371,7 +371,7 @@ uv run python -m webcompy inspect pyexec --repl              # REPL over stdin l
 
 ### Pre-Push Verification (before pushing a branch)
 
-1. **Local CI checks** — use the `webcompy-local-ci` skill (lint, typecheck, unit tests)
+1. **Local CI checks** — use the `webcompy-local-ci` skill (lint, typecheck, unit tests); for browser-runtime changes also run `scripts/run-browser-tests.sh` (probes are hard gate)
 2. **Code review** — use the `webcompy-review` skill (or `@webcompy-reviewer` for sandboxed CI invocation)
 
 ### PR Lifecycle
