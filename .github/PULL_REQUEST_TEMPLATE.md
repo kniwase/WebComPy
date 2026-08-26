@@ -36,6 +36,7 @@
 - [ ] PR title and body are written in English
 - [ ] All completed OpenSpec changes have specs synced and are archived (if applicable)
 - [ ] Tests added/updated for changed code
+- [ ] Browser tests pass (if browser-runtime change) — `scripts/run-browser-tests.sh` (probes are hard gate)
 - [ ] E2E tests pass (if UI-affecting change)
 - [ ] Dual environment verified (browser + server)
 - [ ] No new module-level globals introduced (use DI instead)
