@@ -181,6 +181,9 @@ def _reason_for_imports(tree: ast.Module) -> str | None:
 def classify_module(source: str, path: str) -> str | None:
     """Classify one test module's source text as eligible or ineligible.
 
+    Parse failures of ``source`` propagate as :class:`SyntaxError`; callers
+    should treat them as their own ineligible reason.
+
     Args:
         source: Full text of the module under classification.
         path: Repo-relative POSIX path used in reason messages.
@@ -188,10 +191,6 @@ def classify_module(source: str, path: str) -> str | None:
     Returns:
         ``None`` when the module is dual-run eligible; otherwise a
         human-readable reason string describing why it was excluded.
-
-    Raises:
-        SyntaxError: Propagated when ``source`` fails to parse; callers
-            should treat parse failures as their own ineligible reason.
 
     """
     tree = ast.parse(source, filename=path)

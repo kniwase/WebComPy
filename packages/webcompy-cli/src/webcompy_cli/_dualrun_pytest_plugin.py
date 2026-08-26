@@ -13,14 +13,16 @@ from __future__ import annotations
 import json
 import os
 import re
-
-import pytest
+from typing import Any
 
 _DISPLAY_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
 _OUTCOME_PRECEDENCE = {"failed": 3, "skipped": 2, "passed": 1}
 
+_OUTCOMES: dict[str, str] = {}
+_PARAM_INDICES: dict[str, int] = {}
 
-def _parametrize_index_of(item) -> int | None:
+
+def _parametrize_index_of(item: Any) -> int | None:
     """Derive the machine parametrize index for one collected item.
 
     Mirrors the browser-tier conftest algorithm: match the item's resolved
@@ -55,7 +57,21 @@ def _parametrize_index_of(item) -> int | None:
     return matches[0] if len(matches) == 1 else None
 
 
-def pytest_collection_finish(session) -> None:
+def pytest_configure(config: Any) -> None:
+    """Reset per-run recording state.
+
+    Args:
+        config: The pytest config object starting the session.
+
+    Returns:
+        ``None``.
+
+    """
+    _OUTCOMES.clear()
+    _PARAM_INDICES.clear()
+
+
+def pytest_collection_finish(session: Any) -> None:
     """Record every collected item's node id and parametrize index.
 
     Args:
@@ -65,44 +81,34 @@ def pytest_collection_finish(session) -> None:
         ``None``.
 
     """
-    indices: dict[str, int] = {}
     for item in session.items:
         index = _parametrize_index_of(item)
         if index is not None:
             match = _DISPLAY_SUFFIX_RE.search(item.nodeid)
             stripped = item.nodeid[: match.start()] if match else item.nodeid
-            indices[stripped] = index
-    session._dualrun_param_indices = indices  # type: ignore[attr-defined]
-    session._dualrun_outcomes = {}  # type: ignore[attr-defined]
+            _PARAM_INDICES[stripped] = index
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """Merge each phase's report into the node-id outcome map.
+def pytest_runtest_logreport(report: Any) -> None:
+    """Merge one phase's report into the node-id outcome map.
 
     Outcomes across setup/call/teardown merge with precedence
     failed > skipped > passed so a teardown failure after a passing call is
     still surfaced.
 
     Args:
-        item: The executing pytest item.
-        call: The phase context (setup, call, or teardown).
+        report: The phase report emitted by pytest.
 
-    Yields:
-        The wrapped hook result carrying the phase report.
+    Returns:
+        ``None``.
 
     """
-    outcome = yield
-    report = outcome.get_result()
-    outcomes = getattr(item.session, "_dualrun_outcomes", None)
-    if outcomes is None:
-        return
-    existing = outcomes.get(report.nodeid)
+    existing = _OUTCOMES.get(report.nodeid)
     if existing is None or _OUTCOME_PRECEDENCE.get(report.outcome, 0) > _OUTCOME_PRECEDENCE.get(existing, 0):
-        outcomes[report.nodeid] = report.outcome
+        _OUTCOMES[report.nodeid] = report.outcome
 
 
-def pytest_sessionfinish(session, exitstatus) -> None:
+def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
     """Write the recorded outcomes and indices when a report path is set.
 
     Args:
@@ -117,8 +123,8 @@ def pytest_sessionfinish(session, exitstatus) -> None:
     if not target:
         return
     payload = {
-        "outcomes": dict(getattr(session, "_dualrun_outcomes", {})),
-        "param_indices": dict(getattr(session, "_dualrun_param_indices", {})),
+        "outcomes": dict(_OUTCOMES),
+        "param_indices": dict(_PARAM_INDICES),
     }
     with open(target, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, sort_keys=True)

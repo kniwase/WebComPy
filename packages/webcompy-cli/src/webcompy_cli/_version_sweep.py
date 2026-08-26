@@ -166,6 +166,10 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Process exit code: 0 on no regression, 1 on regression or error.
 
+    Raises:
+        ValueError: When a report file lacks the ``outcomes`` mapping
+            (reported as a usage error, not propagated to the caller).
+
     """
     parser = argparse.ArgumentParser(
         prog="webcompy-cli._version_sweep",

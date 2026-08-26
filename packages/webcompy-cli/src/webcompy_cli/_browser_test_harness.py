@@ -359,6 +359,9 @@ def create_harness_app(
             version-bump sweep to boot a candidate interpreter without
             changing the pin.
 
+    Returns:
+        The assembled harness application plus driver-facing metadata.
+
     """
     mode = supply_mode or resolve_supply_mode()
     version = pyscript_version or PYSCRIPT_VERSION
