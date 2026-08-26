@@ -183,11 +183,8 @@ jobs:
           path: ci-test-results.log
 
   browser-tests:
-    # Browser unit tier: executes tests/browser/** inside a real PyScript runtime.
-    # Initially allowed to fail while the flake budget is being evaluated.
     needs: [detect-scope, lint, typecheck, test]
     if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
-    continue-on-error: true
     runs-on: ubuntu-latest
     defaults:
       run:
