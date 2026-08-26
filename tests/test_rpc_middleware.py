@@ -11,9 +11,9 @@ from webcompy.di import DIScope
 from webcompy.di._keys import RPC_MIDDLEWARE_KEY, RPC_REGISTRY_KEY
 from webcompy.ports._fetch import FetchPort, FetchStream, Response, _BufferedFetchStream
 from webcompy.ports._keys import FETCH_PORT_KEY
-from webcompy.rpc import Procedure, RpcError, RpcHttpClient, StreamingProcedure, batch, notify
+from webcompy.rpc import Procedure, RpcCall, RpcError, RpcHttpClient, StreamingProcedure, batch, notify
 from webcompy.rpc._errors import INTERNAL_ERROR
-from webcompy.rpc._middleware import RpcContext, RpcMiddlewareRegistry
+from webcompy.rpc._middleware import RpcContext, RpcMiddlewareRegistry, add_rpc_middleware
 from webcompy.rpc._registry import ProcedureRegistry
 
 
@@ -158,6 +158,21 @@ async def test_headers_merged_and_content_type_forced(env) -> None:
 
 
 @pytest.mark.asyncio
+async def test_lowercase_content_type_variant_is_dropped(env) -> None:
+    async def auth(ctx: RpcContext, next):  # type: ignore[name-defined]
+        ctx.headers["content-type"] = "text/plain"
+        return await next(ctx)
+
+    env.middlewares.use(auth)
+    await ADD(_client(), AddParams(a=1, b=2))
+
+    sent = env.fetch.calls[-1]["headers"]
+    content_types = [k for k in sent if k.lower() == "content-type"]
+    assert content_types == ["Content-Type"]
+    assert sent["Content-Type"] == "application/json"
+
+
+@pytest.mark.asyncio
 async def test_params_substitution_reaches_envelope(env) -> None:
     async def bump(ctx: RpcContext, next):  # type: ignore[name-defined]
         if isinstance(ctx.params, AddParams):
@@ -206,6 +221,18 @@ async def test_short_circuit_validation_failure_raises_rpc_error(env) -> None:
     with pytest.raises(RpcError) as exc_info:
         await MOCK(_client(), EmptyParams())
     assert exc_info.value.code == INTERNAL_ERROR
+
+
+@pytest.mark.asyncio
+async def test_bare_return_without_next_raises(env) -> None:
+    async def bare_return(ctx: RpcContext, next):  # type: ignore[name-defined]
+        return {"result": 42}
+
+    env.middlewares.use(bare_return)
+
+    with pytest.raises(RuntimeError, match="without calling next"):
+        await MOCK(_client(), EmptyParams())
+    assert len(env.fetch.calls) == 0
 
 
 @pytest.mark.asyncio
@@ -316,3 +343,50 @@ async def test_missing_middleware_key_still_works() -> None:
         assert await ADD(_client(), AddParams(a=4, b=6)) == 10
     finally:
         scope.__exit__(None, None, None)
+
+
+def test_add_rpc_middleware_registers_in_active_scope() -> None:
+    middlewares = RpcMiddlewareRegistry()
+    scope = DIScope()
+    scope.__enter__()
+    try:
+        scope.provide(RPC_MIDDLEWARE_KEY, middlewares)
+
+        async def mw(ctx: RpcContext, next):  # type: ignore[name-defined]
+            return await next(ctx)
+
+        add_rpc_middleware(mw)
+        assert middlewares.middlewares == (mw,)
+    finally:
+        scope.__exit__(None, None, None)
+
+
+def test_add_rpc_middleware_without_scope_raises() -> None:
+    async def mw(ctx: RpcContext, next):  # type: ignore[name-defined]
+        return await next(ctx)
+
+    with pytest.raises(RuntimeError, match="No active RPC middleware registry"):
+        add_rpc_middleware(mw)
+
+
+@pytest.mark.asyncio
+async def test_notify_fast_path_omits_params_member_when_none(env) -> None:
+    call = RpcCall("ping", None, None, _client())
+
+    await notify(call)
+
+    sent = json.loads(env.fetch.calls[-1]["body"])
+    assert isinstance(sent, list)
+    assert "params" not in sent[0]
+
+
+@pytest.mark.asyncio
+async def test_batch_omits_params_member_when_none(env) -> None:
+    transport = _client()
+
+    await batch(ADD(transport, AddParams(a=1, b=2)), RpcCall("ping", None, None, transport))
+
+    sent = json.loads(env.fetch.calls[-1]["body"])
+    assert isinstance(sent, list)
+    assert "params" not in sent[1]
+    assert sent[0]["params"] == {"a": 1, "b": 2}

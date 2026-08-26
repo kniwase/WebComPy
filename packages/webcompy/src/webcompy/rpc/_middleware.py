@@ -68,6 +68,8 @@ class RpcNext(Protocol):
     ``result``/``meta`` members for calls, a ``list`` of such dicts for
     batches, or a ``FetchStream`` for streaming calls) is normalized and
     routed through the standard validation path, so schema guarantees hold.
+    Returning from a middleware without calling ``next`` is not supported
+    and raises ``RuntimeError`` instead of bypassing validation.
     """
 
     def __call__(
@@ -127,7 +129,9 @@ def merge_extra_headers(extra: dict[str, str] | None) -> dict[str, str]:
     """Merge middleware-contributed headers onto the fixed transport headers.
 
     ``Content-Type`` is forced back to ``application/json`` after merging
-    so middleware cannot break the JSON-RPC wire format.
+    so middleware cannot break the JSON-RPC wire format. The force-back is
+    case-insensitive: any contributed ``content-type`` variant is dropped
+    so the merged map carries exactly one canonical ``Content-Type`` entry.
 
     Args:
         extra: Headers contributed by middleware, or ``None``.
@@ -138,7 +142,7 @@ def merge_extra_headers(extra: dict[str, str] | None) -> dict[str, str]:
     """
     merged: dict[str, str] = {"Content-Type": "application/json"}
     if extra:
-        merged.update(extra)
+        merged.update({k: v for k, v in extra.items() if k.lower() != "content-type"})
     merged["Content-Type"] = "application/json"
     return merged
 
@@ -164,6 +168,11 @@ async def run_rpc_middlewares(
     Returns:
         The value produced by the outermost layer.
 
+    Raises:
+        RuntimeError: If a middleware returns without calling ``next``;
+            returning a bare value is not supported because it would
+            bypass result validation.
+
     """
     if not middlewares:
         return await terminal(ctx)
@@ -174,12 +183,18 @@ async def run_rpc_middlewares(
         if index == len(middlewares):
             return await terminal(context)
         middleware = middlewares[index]
+        called_next = False
 
         async def nxt(ctx: RpcContext | None = None, *, response: Any = None, stream: Any = None) -> Any:
+            nonlocal called_next
+            called_next = True
             supplied = response if response is not None else stream
             return await run(index + 1, ctx if ctx is not None else context, response=supplied)
 
-        return await middleware(context, nxt)
+        result = await middleware(context, nxt)
+        if not called_next:
+            raise RuntimeError("RPC middleware returned without calling next; returning a bare value is not supported")
+        return result
 
     return await run(0, ctx)
 

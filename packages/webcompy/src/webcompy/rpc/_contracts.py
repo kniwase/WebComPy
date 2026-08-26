@@ -733,7 +733,8 @@ async def notify(*calls: RpcCall[Any, Any]) -> None:  # pyright: ignore[reportIn
             envelopes: list[dict[str, Any]] = []
             for c in calls:
                 envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": c._name}
-                _http_encode(registry, envelope, c._params)
+                if c._params is not None:
+                    _http_encode(registry, envelope, c._params)
                 envelopes.append(envelope)
 
             await _post(registry, envelopes)
