@@ -1,6 +1,7 @@
 """Unit tests for the browser dual-run AST classifier."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -97,6 +98,24 @@ def test_browser_only_import_is_ineligible():
     assert "pyodide" in reason
 
 
+def test_unmounted_webcompy_cli_import_is_ineligible():
+    source = "from webcompy_cli._browser_probes import classify_tests\n"
+
+    reason = classify_module(source, "tests/test_cli_dep.py")
+
+    assert reason is not None
+    assert "webcompy_cli" in reason
+
+
+def test_unmounted_docs_app_import_is_ineligible():
+    source = "from docs_app.components.docs_page import _toc_href\n"
+
+    reason = classify_module(source, "tests/test_docs_dep.py")
+
+    assert reason is not None
+    assert "docs_app" in reason
+
+
 def test_syntax_error_is_reported_by_classify_tests(tmp_path):
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_broken.py").write_text("def broken(:\n", encoding="utf-8")
@@ -122,6 +141,57 @@ def test_classify_tests_skips_browser_tier_and_sorts(tmp_path):
     assert "tests/browser/test_dom_browser.py" not in result.eligible
 
 
+def test_classify_tests_disqualifies_unmounted_sibling_import(tmp_path):
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "__init__.py").write_text("", encoding="utf-8")
+    (tests / "conftest.py").write_text("class FakeDOMNode: pass\n", encoding="utf-8")
+    (tests / "test_helper_mod.py").write_text("X = 1\n", encoding="utf-8")
+    (tests / "test_user.py").write_text("from tests.conftest import FakeDOMNode\n", encoding="utf-8")
+    (tests / "test_ok_cross.py").write_text("from tests.test_helper_mod import X\n", encoding="utf-8")
+
+    result = classify_tests(tmp_path)
+
+    assert result.eligible == ["tests/test_helper_mod.py", "tests/test_ok_cross.py"]
+    assert "unmounted" in result.ineligible["tests/test_user.py"]
+
+
+def test_pragma_eligible_waives_unmounted_sibling_import(tmp_path):
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "__init__.py").write_text("", encoding="utf-8")
+    (tests / "conftest.py").write_text("class FakeDOMNode: pass\n", encoding="utf-8")
+    (tests / "test_user.py").write_text(
+        "from tests.conftest import FakeDOMNode\n# browser-dualrun: eligible\n",
+        encoding="utf-8",
+    )
+
+    result = classify_tests(tmp_path)
+
+    assert result.eligible == ["tests/test_user.py"]
+    assert not result.ineligible
+
+
+def test_classify_tests_drops_importers_of_ineligible_helpers(tmp_path):
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "__init__.py").write_text("", encoding="utf-8")
+    (tests / "test_helper_bad.py").write_text(
+        "from webcompy_testing import FakeDOMNode\n",
+        encoding="utf-8",
+    )
+    (tests / "test_user.py").write_text(
+        "from tests.test_helper_bad import X\n",
+        encoding="utf-8",
+    )
+
+    result = classify_tests(tmp_path)
+
+    assert result.eligible == []
+    assert "FakeDOMNode" in result.ineligible["tests/test_helper_bad.py"]
+    assert "unmounted" in result.ineligible["tests/test_user.py"]
+
+
 def test_write_baseline_shapes_and_sorting(tmp_path):
     result = DualRunClassification(
         eligible=["tests/b.py", "tests/a.py"],
@@ -145,6 +215,19 @@ def test_load_baseline_reads_sorted_lines(tmp_path):
     (baseline_dir / "eligible.txt").write_text("tests/b.py\ntests/a.py\n\n", encoding="utf-8")
 
     assert load_baseline(tmp_path) == ["tests/a.py", "tests/b.py"]
+
+
+def test_committed_baseline_matches_live_classification():
+    repo_root = Path(__file__).resolve().parents[1]
+    baseline_dir = repo_root / "tests" / ".dualrun"
+    if not (baseline_dir / "eligible.txt").is_file():
+        pytest.skip("committed dual-run baseline is not available in this environment")
+
+    classification = classify_tests(repo_root)
+
+    assert load_baseline(repo_root) == sorted(classification.eligible)
+    committed_ineligible = json.loads((baseline_dir / "ineligible.json").read_text(encoding="utf-8"))
+    assert committed_ineligible == classification.ineligible
 
 
 @pytest.mark.parametrize(

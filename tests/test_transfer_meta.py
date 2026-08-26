@@ -445,3 +445,6 @@ class TestCustomTypeHandlers:
         )
 
         assert result == {"data": b"hello", "x": 2}
+
+
+# browser-dualrun: skip

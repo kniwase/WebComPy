@@ -3,12 +3,18 @@
 The classifier walks test modules without importing them, parses each file's
 AST, and tags a module as dual-run eligible only when its top level is safe to
 execute inside a real PyScript interpreter: browser-only imports (``js``,
-``pyscript``, ``pyodide``), ``e2e.*`` imports, and fake-port symbols from
-``webcompy_testing`` are disqualifying, and any module-scope side-effecting
-call (except the registration-style ``pytest.mark.*`` / ``pytest.fixture``
-call chains) is disqualifying. Imports of ``js``-family symbols inside
-function bodies do not disqualify a module because those imports are only
-evaluated in-page.
+``pyscript``, ``pyodide``), ``webcompy_cli``/``docs_app`` (never mounted
+in-page), ``e2e.*`` imports, and fake-port symbols from ``webcompy_testing``
+are disqualifying, and any module-scope side-effecting call (except the
+registration-style ``pytest.mark.*`` / ``pytest.fixture`` call chains) is
+disqualifying. Imports of ``js``-family symbols inside function bodies do not
+disqualify a module because those imports are only evaluated in-page. Top-level
+imports rooted at ``tests`` are validated against the harness mount inventory:
+only mounted test modules (and package ``__init__.py`` files) resolve in-page,
+so sibling helpers such as ``tests/conftest.py`` disqualify the importer, and
+the validation iterates to a fixpoint so importers of helpers that are
+themselves ineligible drop out too. The eligible-pragma waiver short-circuits
+these mount-inventory checks like any other.
 
 A trailing pragma comment on its own line overrides the AST judgment:
 
@@ -28,6 +34,7 @@ import ast
 import json
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -38,9 +45,12 @@ PRAGMA_ELIGIBLE = "browser-dualrun: eligible"
 PRAGMA_SKIP = "browser-dualrun: skip"
 
 _BROWSER_ONLY_MODULES = frozenset({"js", "pyscript", "pyodide"})
+_UNMOUNTED_IN_PAGE_MODULES = frozenset({"webcompy_cli", "docs_app"})
+_DISQUALIFYING_IMPORT_ROOTS = _BROWSER_ONLY_MODULES | _UNMOUNTED_IN_PAGE_MODULES
 _FAKE_SOURCE_MODULE = "webcompy_testing"
 _FAKE_SYMBOL_PREFIXES = ("Fake", "_")
 _E2E_PACKAGE_ROOT = "e2e"
+_MOUNTED_PACKAGE_ROOT = "tests"
 
 
 @dataclass
@@ -148,7 +158,7 @@ def _reason_for_statement(stmt: ast.stmt) -> str | None:
 
 
 def _reason_for_imports(tree: ast.Module) -> str | None:
-    """Scan top-level imports for browser-only, e2e, or fake-port symbols.
+    """Scan top-level imports for browser-only, unmounted, e2e, or fake-port symbols.
 
     Args:
         tree: Parsed module AST.
@@ -162,20 +172,86 @@ def _reason_for_imports(tree: ast.Module) -> str | None:
         if isinstance(stmt, ast.Import):
             for alias in stmt.names:
                 root = alias.name.split(".")[0]
-                if root in _BROWSER_ONLY_MODULES or root == _E2E_PACKAGE_ROOT:
+                if root in _DISQUALIFYING_IMPORT_ROOTS or root == _E2E_PACKAGE_ROOT:
                     return f"top-level import of '{alias.name}' at line {stmt.lineno}"
         elif isinstance(stmt, ast.ImportFrom):
             if stmt.level != 0:
                 continue
             module = stmt.module or ""
             root = module.split(".")[0]
-            if root in _BROWSER_ONLY_MODULES or root == _E2E_PACKAGE_ROOT:
+            if root in _DISQUALIFYING_IMPORT_ROOTS or root == _E2E_PACKAGE_ROOT:
                 return f"top-level import from '{module}' at line {stmt.lineno}"
             if root == _FAKE_SOURCE_MODULE:
                 for alias in stmt.names:
                     if alias.name != "__all__" and alias.name.startswith(_FAKE_SYMBOL_PREFIXES):
                         return f"top-level import of '{module}.{alias.name}' at line {stmt.lineno}"
     return None
+
+
+def _reason_for_unmounted_tests_imports(tree: ast.Module, is_mounted: Callable[[str], bool]) -> str | None:
+    """Check top-level ``tests.*`` imports against a mount-inventory predicate.
+
+    Only dual-run test modules themselves (plus their ancestor package
+    ``__init__.py`` files) are mounted in-page, so a top-level import of a
+    sibling helper such as ``tests/conftest.py`` cannot resolve inside the
+    interpreter and disqualifies the importing module.
+
+    Args:
+        tree: Parsed module AST.
+        is_mounted: Predicate answering whether a dotted ``tests.*`` target
+            resolves against the in-page mount inventory.
+
+    Returns:
+        A human-readable reason string naming the unmounted import, or
+        ``None`` when every top-level ``tests.*`` import target is mounted.
+
+    """
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Import):
+            targets = [alias.name for alias in stmt.names]
+            lineno = stmt.lineno
+        elif isinstance(stmt, ast.ImportFrom) and stmt.level == 0 and stmt.module:
+            if stmt.module == _MOUNTED_PACKAGE_ROOT:
+                targets = [f"{_MOUNTED_PACKAGE_ROOT}.{alias.name}" for alias in stmt.names]
+            else:
+                targets = [stmt.module]
+            lineno = stmt.lineno
+        else:
+            continue
+        for dotted in targets:
+            if not dotted.startswith(f"{_MOUNTED_PACKAGE_ROOT}."):
+                continue
+            if not is_mounted(dotted):
+                return f"top-level import of unmounted module '{dotted}' at line {lineno}"
+    return None
+
+
+def _mounted_predicate(repo_root: Path, eligible: set[str] | None = None) -> Callable[[str], bool]:
+    """Build a mount-inventory predicate for ``tests.*`` import targets.
+
+    Args:
+        repo_root: Repository root used to probe candidate target files.
+        eligible: When given, ``test_*.py`` module targets must belong to this
+            repo-relative path set (the harness mounts only eligible dual-run
+            modules); when ``None``, any existing ``test_*.py`` file counts as
+            mounted.
+
+    Returns:
+        A predicate answering whether a dotted ``tests.*`` module resolves
+        against the in-page mount inventory.
+
+    """
+
+    def is_mounted(dotted: str) -> bool:
+        base = repo_root.joinpath(*dotted.split("."))
+        as_module = base.with_suffix(".py")
+        if as_module.is_file() and as_module.name.startswith("test_"):
+            if eligible is None:
+                return True
+            return as_module.relative_to(repo_root).as_posix() in eligible
+        return (base / "__init__.py").is_file()
+
+    return is_mounted
 
 
 def classify_module(source: str, path: str) -> str | None:
@@ -217,6 +293,11 @@ def classify_tests(repo_root: Path) -> DualRunClassification:
     Modules under the browser tier directory (``tests/browser``) are excluded:
     they already run through the browser harness and never participate in the
     dual-run sweep. Test modules are parsed read-only; none are imported.
+    Top-level imports rooted at ``tests`` are validated against the harness
+    mount inventory via :func:`_reason_for_unmounted_tests_imports`: first by
+    file existence, then iteratively against the eligible set itself until a
+    fixpoint is reached, so modules importing helpers that are themselves
+    ineligible drop out as well. The pragma waiver short-circuits both checks.
 
     Args:
         repo_root: Repository root containing the ``tests/`` tree.
@@ -229,6 +310,10 @@ def classify_tests(repo_root: Path) -> DualRunClassification:
     tests_dir = repo_root / "tests"
     if not tests_dir.is_dir():
         return result
+
+    sources: dict[str, str] = {}
+    trees: dict[str, ast.Module] = {}
+    static_reasons: dict[str, str | None] = {}
     for path in sorted(tests_dir.rglob("test_*.py")):
         if not path.is_file():
             continue
@@ -237,15 +322,44 @@ def classify_tests(repo_root: Path) -> DualRunClassification:
             continue
         try:
             source = path.read_text(encoding="utf-8")
+            sources[rel] = source
+            trees[rel] = ast.parse(source, filename=rel)
             reason = classify_module(source, rel)
+            if reason is None and _pragma_of(source) != PRAGMA_ELIGIBLE:
+                reason = _reason_for_unmounted_tests_imports(trees[rel], _mounted_predicate(repo_root))
+            static_reasons[rel] = reason
         except SyntaxError as e:
-            reason = f"syntax error at line {e.lineno}"
+            static_reasons[rel] = f"syntax error at line {e.lineno}"
         except UnicodeDecodeError:
-            reason = "file is not valid UTF-8"
-        if reason is None:
+            static_reasons[rel] = "file is not valid UTF-8"
+
+    # Dropping an unmountable helper can orphan its importers, so refine the
+    # eligible set iteratively until it reaches a fixpoint.
+    eligible = {rel for rel, reason in static_reasons.items() if reason is None}
+    refined_reasons: dict[str, str] = {}
+    while True:
+        next_eligible: set[str] = set()
+        for rel in sorted(eligible):
+            if _pragma_of(sources[rel]) == PRAGMA_ELIGIBLE:
+                next_eligible.add(rel)
+                continue
+            reason = _reason_for_unmounted_tests_imports(trees[rel], _mounted_predicate(repo_root, eligible))
+            if reason is None:
+                next_eligible.add(rel)
+            else:
+                refined_reasons[rel] = reason
+        if next_eligible == eligible:
+            break
+        eligible = next_eligible
+
+    for rel in sorted(static_reasons):
+        reason = static_reasons[rel]
+        if rel in eligible:
             result.eligible.append(rel)
-        else:
+        elif reason is not None:
             result.ineligible[rel] = reason
+        else:
+            result.ineligible[rel] = refined_reasons[rel]
     return result
 
 
