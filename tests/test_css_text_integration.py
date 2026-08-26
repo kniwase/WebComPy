@@ -79,7 +79,7 @@ class TestCssTextTemplateRegistration:
         color = Signal("blue")
         registered_ref: dict = {}
 
-        @define_component("my-comp")
+        @define_component()
         def MyComp(context):
             style = reactive_scoped_style(css_text_template(".btn { color: {{ color }}; }", {"color": color}))
             context.use_reactive_scoped_style(style)
@@ -113,7 +113,7 @@ class TestReactiveStyleDomUpdate:
 
         color = Signal("blue")
 
-        @define_component("rx-comp")
+        @define_component()
         def RxComp(context):
             return html.DIV({}, "")
 
@@ -221,7 +221,7 @@ class TestAsyncFileCssHydration:
 
         captured_server: dict = {}
 
-        @define_component("server-comp")
+        @define_component()
         async def ServerComp(_):
             text = await load_text("card.css")
             parsed = css_text(text)
@@ -256,7 +256,7 @@ class TestAsyncFileCssHydration:
 
         captured_browser: dict = {}
 
-        @define_component("browser-comp")
+        @define_component()
         async def BrowserComp(_):
             text = await load_text("card.css")
             parsed = css_text(text)
@@ -348,7 +348,7 @@ class TestDictFactoryReactiveRegression:
 
         color = Signal("blue")
 
-        @define_component("dict-rx-comp")
+        @define_component()
         def DictRxComp(context):
             return html.DIV({}, "")
 

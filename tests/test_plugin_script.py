@@ -13,7 +13,7 @@ def _make_app(**config_kwargs):
     from webcompy.elements import html
     from webcompy_server import configure_server_context
 
-    @define_component("test-root")
+    @define_component()
     def TestRoot(context):
         return html.DIV({}, "test")
 

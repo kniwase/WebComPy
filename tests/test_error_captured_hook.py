@@ -62,7 +62,7 @@ class TestOnErrorCapturedRegistration:
 _captured_hooks_seen: list[object] = []
 
 
-@define_component("hooked-component")
+@define_component()
 def HookedComponent(context: ComponentContext[None]):
     def hook(err: Exception):
         return None

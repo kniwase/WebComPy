@@ -15,12 +15,12 @@ from webcompy.router._lazy import LazyComponentGenerator
 from webcompy_server import configure_server_context
 
 
-@define_component("scoping-root")
+@define_component()
 def ScopingRoot(context):
     return html.DIV({}, RouterView())
 
 
-@define_component("scoping-page")
+@define_component()
 def ScopingPage(context):
     return html.DIV({}, "page")
 
@@ -64,7 +64,7 @@ class TestLazyRegistrationAcrossRenderContexts:
         scope0.__enter__()
         try:
 
-            @define_component("lazy-page")
+            @define_component()
             def LazyPage(context):
                 return html.DIV({}, "lazy")
         finally:

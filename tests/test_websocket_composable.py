@@ -471,7 +471,7 @@ class TestSsr:
         from webcompy.elements import html
         from webcompy_testing import create_test_app, render_app_html
 
-        @define_component("ws-comp")
+        @define_component()
         def WsComp(context: ComponentContext[None]):
             ws = use_websocket("/ws")
             return html.SPAN({}, ws.state.value.name)
@@ -496,7 +496,7 @@ class TestTestingRenderPath:
         from webcompy.signal import use_computed
         from webcompy_testing import TestRenderer
 
-        @define_component("ws-testing-page")
+        @define_component()
         def WsTestingPage(context: ComponentContext[None]):
             ws = use_websocket("/ws")
             state = use_computed(lambda: ws.state.value.name)

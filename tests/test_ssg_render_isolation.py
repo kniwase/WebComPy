@@ -51,7 +51,7 @@ def _make_isolation_app() -> WebComPyApp:
     generator invisible to every later render context.
     """
 
-    @define_component("iso-sidebar")
+    @define_component()
     def IsoSidebar(context):
         return html.DIV({}, "sidebar")
 
@@ -74,11 +74,11 @@ def _make_isolation_app() -> WebComPyApp:
     )
     sys.modules["iso_layout_mod"] = layout_mod
 
-    @define_component("iso-home")
+    @define_component()
     def IsoHome(context):
         return html.DIV({}, "home", RouterView())
 
-    @define_component("iso-child")
+    @define_component()
     def IsoChild(context):
         return html.DIV({}, "child")
 
@@ -155,7 +155,7 @@ async def test_component_imported_during_current_render_style_in_same_page_head(
 async def test_reactive_scoped_style_from_async_setup_in_ssg_head():
     from webcompy.components import reactive_scoped_style
 
-    @define_component("iso-async-rx")
+    @define_component()
     async def IsoAsyncRx(context):
         context.use_reactive_scoped_style(reactive_scoped_style(lambda: {".iso-rx-box": {"color": "blue"}}))
         return html.DIV({"class": "iso-rx-box"}, "rx")
@@ -175,17 +175,17 @@ async def test_resource_payload_isolated_per_render_context(tmp_path):
     (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
     (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
 
-    @define_component("iso-doc-a")
+    @define_component()
     async def IsoDocA(context):
         text = await load_text("documents/a.md")
         return html.DIV({}, text)
 
-    @define_component("iso-doc-b")
+    @define_component()
     async def IsoDocB(context):
         text = await load_text("documents/b.md")
         return html.DIV({}, text)
 
-    @define_component("iso-doc-root")
+    @define_component()
     def IsoDocRoot(context):
         return html.DIV({}, RouterView())
 
@@ -216,19 +216,19 @@ async def test_resource_payload_isolated_per_render_context(tmp_path):
 
 @pytest.mark.asyncio
 async def test_fetch_payload_isolated_per_render_context():
-    @define_component("iso-fetch-one")
+    @define_component()
     async def IsoFetchOne(context):
         port = inject(FETCH_PORT_KEY)
         resp = await port.fetch("/api/one")
         return html.DIV({}, resp.text)
 
-    @define_component("iso-fetch-two")
+    @define_component()
     async def IsoFetchTwo(context):
         port = inject(FETCH_PORT_KEY)
         resp = await port.fetch("/api/two")
         return html.DIV({}, resp.text)
 
-    @define_component("iso-fetch-root")
+    @define_component()
     def IsoFetchRoot(context):
         return html.DIV({}, RouterView())
 
@@ -260,12 +260,12 @@ async def test_fetch_payload_isolated_per_render_context():
 
 
 def _make_resource_app(pkg) -> WebComPyApp:
-    @define_component("iso-res-page")
+    @define_component()
     async def IsoResPage(context):
         text = await load_text("documents/a.md")
         return html.DIV({}, text)
 
-    @define_component("iso-res-root")
+    @define_component()
     def IsoResRoot(context):
         return html.DIV({}, RouterView())
 

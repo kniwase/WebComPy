@@ -5,21 +5,21 @@ from webcompy.signal import ReactiveList, Signal
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component("attr-test-root")
+@define_component()
 def AttrTestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({"class": "container", "id": "main", "data-value": "42"}, "hello")
 
 
-@define_component("event-test-root")
+@define_component()
 def EventTestRoot(context):
     from webcompy.elements import html
 
     return html.BUTTON({"@click": lambda e: None}, "click me")
 
 
-@define_component("conditional-test-root")
+@define_component()
 def ConditionalTestRoot(context):
     from webcompy.elements import html
 
@@ -30,7 +30,7 @@ def ConditionalTestRoot(context):
     )
 
 
-@define_component("list-test-root")
+@define_component()
 def ListTestRoot(context):
     from webcompy.elements import html
 
@@ -41,7 +41,7 @@ def ListTestRoot(context):
     )
 
 
-@define_component("nested-test-root")
+@define_component()
 def NestedTestRoot(context):
     from webcompy.elements import html
 

@@ -5,7 +5,7 @@ from webcompy.elements import html
 from webcompy.router import RouterLink
 
 
-@define_component("site-navigation")
+@define_component()
 def SiteNavigation(context: ComponentContext[None]):
     return html.NAV(
         {},

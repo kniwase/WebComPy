@@ -90,7 +90,7 @@ def _make_page_component():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component("test-page")
+    @define_component()
     def TestPage(ctx):
         return html.DIV({})
 

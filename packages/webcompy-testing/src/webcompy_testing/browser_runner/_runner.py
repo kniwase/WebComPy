@@ -95,7 +95,7 @@ def _ensure_pytest_shim() -> None:
     sys.modules["pytest"] = _build_pytest_shim()
 
 
-@define_component("browser-test-default-root")
+@define_component()
 def BrowserTestDefaultRoot(context):
     from webcompy.elements import html
 

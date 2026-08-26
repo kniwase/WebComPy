@@ -294,7 +294,7 @@ class TestSsr:
         from webcompy.elements import html
         from webcompy_testing import create_test_app, render_app_html
 
-        @define_component("sse-comp")
+        @define_component()
         def SseComp(context: ComponentContext[None]):
             es = use_event_source("/events")
             return html.SPAN({}, es.state.value.name)
@@ -319,7 +319,7 @@ class TestTestingRenderPath:
         from webcompy.signal import use_computed
         from webcompy_testing import TestRenderer
 
-        @define_component("sse-testing-page")
+        @define_component()
         def SseTestingPage(context: ComponentContext[None]):
             es = use_event_source("/events")
             state = use_computed(lambda: es.state.value.name)

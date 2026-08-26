@@ -5,7 +5,7 @@ from ...components.demo_display import DemoDisplay
 from ...components.ui import DocsSection
 
 
-@define_component("transition-demo-page")
+@define_component()
 def TransitionDemoPage(context: ComponentContext[None]):
     context.set_title("Transition - WebCompy Demo")
     return html.DIV(

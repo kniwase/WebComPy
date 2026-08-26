@@ -5,7 +5,7 @@ from ...components.demo_display import DemoDisplay
 from ...components.ui import DocsSection
 
 
-@define_component("teleport-demo-page")
+@define_component()
 def TeleportDemoPage(context: ComponentContext[None]):
     context.set_title("Teleport - WebCompy Demo")
     return html.DIV(

@@ -25,7 +25,7 @@ class User:
     name: str
 
 
-@define_component("typed-fetch-root")
+@define_component()
 def TypedFetchRoot(context):
     from webcompy.components._hooks import use_async_result
 
@@ -33,7 +33,7 @@ def TypedFetchRoot(context):
     return html.DIV({"data-testid": "typed-root"}, result.data.value.name if result.data.value else "")
 
 
-@define_component("no-transfer-root")
+@define_component()
 def NoTransferRoot(context):
     from webcompy.components._hooks import use_async_result
 

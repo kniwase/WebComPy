@@ -7,7 +7,7 @@ from webcompy.signal import ReactiveList, use_reactive_dict, use_state
 from webcompy.template import render_template
 
 
-@define_component("template-control-flow-page")
+@define_component()
 def TemplateControlFlowPage(context: ComponentContext[None]):
     context.set_title("Template Control Flow - E2E")
 

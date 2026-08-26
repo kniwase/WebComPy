@@ -6,7 +6,7 @@ from webcompy.di._scope import _active_di_scope, _get_app_di_scope
 from webcompy_testing import create_test_app
 
 
-@define_component("dispose-test-root")
+@define_component()
 def DisposeTestRoot(context):
     from webcompy.elements import html
 

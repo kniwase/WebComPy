@@ -7,13 +7,13 @@ from webcompy.elements import html
 from webcompy.elements.generators import suspense
 
 
-@define_component("async-greeting")
+@define_component()
 async def AsyncGreeting(context: ComponentContext[None]):
     await asyncio.sleep(0.01)
     return html.DIV({"data-testid": "suspense-data"}, html.H2({}, "Resolved!"))
 
 
-@define_component("suspense-page")
+@define_component()
 def SuspensePage(context: ComponentContext[None]):
     context.set_title("Suspense - E2E")
 

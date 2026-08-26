@@ -70,7 +70,7 @@ def _make_page_component():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component("test-page")
+    @define_component()
     def TestPage(ctx):
         return html.DIV({})
 
@@ -81,7 +81,7 @@ def _make_fetch_root():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component("fetch-root")
+    @define_component()
     def FetchRoot(context):
         from webcompy.ajax import HttpClient
         from webcompy.components._hooks import use_async_result

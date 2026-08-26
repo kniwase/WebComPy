@@ -53,7 +53,7 @@ def _fastapi_app() -> FastAPI:
     return app
 
 
-@define_component("record-page")
+@define_component()
 def RecordPage(context: ComponentContext[None]):
     name_text = use_state(lambda: "")
     blob_text = use_state(lambda: "")

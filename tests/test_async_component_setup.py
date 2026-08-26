@@ -65,7 +65,7 @@ class TestSubtreeHasAsyncSetup:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("sync-cmp")
+        @define_component()
         def SyncCmp(context):
             return html.DIV({}, "sync")
 
@@ -77,7 +77,7 @@ class TestSubtreeHasAsyncSetup:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("sync-cmp")
+        @define_component()
         def SyncCmp(context):
             return html.DIV({}, "sync")
 
@@ -90,7 +90,7 @@ class TestSubtreeHasAsyncSetup:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("sync-cmp")
+        @define_component()
         def SyncCmp(context):
             return html.DIV({}, "sync")
 
@@ -105,7 +105,7 @@ class TestSubtreeHasAsyncSetup:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("sync-cmp")
+        @define_component()
         def SyncCmp(context):
             return html.DIV({}, "sync")
 
@@ -122,11 +122,11 @@ class TestSubtreeHasAsyncSetup:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("async-cmp")
+        @define_component()
         def AsyncCmp(context):
             return html.DIV({}, "async")
 
-        @define_component("sync-wrapper")
+        @define_component()
         def SyncWrapper(context):
             return html.DIV({}, "sync")
 
@@ -155,7 +155,7 @@ class TestRepeatElementAsyncRefreshRegistration:
         from webcompy.elements.types._repeat import RepeatElement
         from webcompy.signal import ReactiveList
 
-        @define_component("my-cmp")
+        @define_component()
         def MyCmp(context):
             return html.DIV({}, context.props)
 
@@ -200,7 +200,7 @@ class TestRepeatElementAsyncRefreshRegistration:
         from webcompy.elements.types._repeat import RepeatElement
         from webcompy.signal import ReactiveList
 
-        @define_component("my-cmp")
+        @define_component()
         def MyCmp(context):
             return html.DIV({}, context.props)
 
@@ -241,7 +241,7 @@ class TestSwitchElementAsyncRefreshRegistration:
         from webcompy.elements.types._switch import SwitchElement
         from webcompy.signal import Signal
 
-        @define_component("my-cmp")
+        @define_component()
         def MyCmp(context):
             return html.DIV({}, context.props)
 
@@ -288,7 +288,7 @@ class TestFoundationValidationSpike:
         from webcompy.elements.types._repeat import RepeatElement
         from webcompy.signal import ReactiveList
 
-        @define_component("data-component")
+        @define_component()
         async def DataComponent(context):
             data = "Alice"
             return html.DIV({}, str(data))
@@ -334,7 +334,7 @@ class TestFoundationValidationSpike:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component("failing-component")
+        @define_component()
         async def FailingComponent(context):
             msg = "async-setup-failure"
             return html.DIV({}, msg)
@@ -375,7 +375,7 @@ class TestFoundationValidationSpike:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component("failing-component")
+        @define_component()
         async def FailingComponent(context):
             msg = "async-setup-failure"
             return html.DIV({}, msg)

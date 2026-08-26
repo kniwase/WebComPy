@@ -7,7 +7,7 @@ from webcompy.rpc import RpcHttpClient, RpcWsClient
 from webcompy.signal import use_state
 
 
-@define_component("rpc-stream-page")
+@define_component()
 def RpcStreamPage(context: ComponentContext[None]):
     context.set_title("RPC Streaming - E2E")
 

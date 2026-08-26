@@ -58,7 +58,7 @@ class TestBuildArtifactsDataclass:
 
 class TestCreateAsgiAppMode:
     def _make_minimal_app(self) -> WebComPyApp:
-        @define_component("build-artifacts-root")
+        @define_component()
         def BuildArtifactsRoot(context):
             from webcompy.elements import html
 

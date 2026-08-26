@@ -24,7 +24,7 @@ class TestAsyncComponentContextActive:
     def test_active_component_context_available_in_async_body(self):
         captured = []
 
-        @define_component("async-ctx-cmp")
+        @define_component()
         async def AsyncCtxCmp(context):
             captured.append(_active_component_context.get())
             return html.DIV({}, "async")
@@ -36,7 +36,7 @@ class TestAsyncComponentContextActive:
     def test_active_scope_available_in_async_body(self):
         captured = []
 
-        @define_component("async-scope-cmp")
+        @define_component()
         async def AsyncScopeCmp(context):
             captured.append(_active_scope.get())
             return html.DIV({}, "async")
@@ -50,7 +50,7 @@ class TestAsyncComponentLifecycleHooks:
     def test_async_body_on_before_rendering_hook_fires(self):
         called = []
 
-        @define_component("async-hook-cmp")
+        @define_component()
         async def AsyncHookCmp(context):
             @on_before_rendering
             def hook():
@@ -64,7 +64,7 @@ class TestAsyncComponentLifecycleHooks:
     def test_async_body_on_after_rendering_hook_fires(self):
         called = []
 
-        @define_component("async-hook-cmp")
+        @define_component()
         async def AsyncHookCmp(context):
             @on_after_rendering
             def hook():
@@ -78,7 +78,7 @@ class TestAsyncComponentLifecycleHooks:
     def test_async_body_on_before_destroy_hook_fires(self):
         called = []
 
-        @define_component("async-hook-cmp")
+        @define_component()
         async def AsyncHookCmp(context):
             @on_before_destroy
             def hook():
@@ -93,7 +93,7 @@ class TestAsyncComponentLifecycleHooks:
     def test_async_body_framework_cleanup_runs_before_user_hook(self):
         order = []
 
-        @define_component("async-hook-cmp")
+        @define_component()
         async def AsyncHookCmp(context):
             signal = Signal(0)
             effect(lambda: signal.value, on_cleanup=lambda: order.append("effect"))
@@ -111,7 +111,7 @@ class TestAsyncComponentLifecycleHooks:
 
 class TestAsyncComponentAsyncResults:
     def test_async_body_use_async_result_collected(self):
-        @define_component("async-result-cmp")
+        @define_component()
         async def AsyncResultCmp(context):
             use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "async")
@@ -124,7 +124,7 @@ class TestSyncComponentBehaviorUnchanged:
     def test_sync_component_hooks_extracted_at_setup(self):
         called = []
 
-        @define_component("sync-hook-cmp")
+        @define_component()
         def SyncHookCmp(context):
             @on_before_rendering
             def hook():
@@ -136,7 +136,7 @@ class TestSyncComponentBehaviorUnchanged:
             assert "before" in called
 
     def test_sync_component_no_pending_async_template(self):
-        @define_component("sync-cmp")
+        @define_component()
         def SyncCmp(context):
             return html.DIV({}, "sync")
 
@@ -148,12 +148,12 @@ class TestSuspenseAsyncContext:
     def test_async_component_under_suspense_has_context(self):
         captured = []
 
-        @define_component("async-suspense-child")
+        @define_component()
         async def AsyncSuspenseChild(context):
             captured.append(_active_component_context.get())
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             return html.DIV(
                 {},
@@ -171,19 +171,19 @@ class TestSuspenseAsyncContext:
     def test_parallel_suspense_no_context_cross_contamination(self):
         captured = {}
 
-        @define_component("child-a")
+        @define_component()
         async def ChildA(context):
             await asyncio.sleep(0)
             captured["A"] = context._component_name
             return html.DIV({}, "A")
 
-        @define_component("child-b")
+        @define_component()
         async def ChildB(context):
             await asyncio.sleep(0)
             captured["B"] = context._component_name
             return html.DIV({}, "B")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             return html.DIV(
                 {},
@@ -200,7 +200,7 @@ class TestSuspenseAsyncContext:
     def test_suspense_async_body_on_before_rendering_hook_fires(self):
         called = []
 
-        @define_component("async-suspense-child")
+        @define_component()
         async def AsyncSuspenseChild(context):
             await asyncio.sleep(0)
 
@@ -210,7 +210,7 @@ class TestSuspenseAsyncContext:
 
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             return html.DIV(
                 {},
@@ -226,7 +226,7 @@ class TestSuspenseAsyncContext:
     def test_suspense_async_body_on_after_rendering_hook_fires(self):
         called = []
 
-        @define_component("async-suspense-child")
+        @define_component()
         async def AsyncSuspenseChild(context):
             await asyncio.sleep(0)
 
@@ -236,7 +236,7 @@ class TestSuspenseAsyncContext:
 
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             return html.DIV(
                 {},
@@ -253,7 +253,7 @@ class TestSuspenseAsyncContext:
         called = []
         child_holder = []
 
-        @define_component("async-suspense-child")
+        @define_component()
         async def AsyncSuspenseChild(context):
             await asyncio.sleep(0)
 
@@ -263,7 +263,7 @@ class TestSuspenseAsyncContext:
 
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             child = AsyncSuspenseChild(None)
             child_holder.append(child)
@@ -282,13 +282,13 @@ class TestSuspenseAsyncContext:
     def test_suspense_async_body_use_async_result_collected(self):
         child_holder = []
 
-        @define_component("async-result-child")
+        @define_component()
         async def AsyncResultChild(context):
             await asyncio.sleep(0)
             use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             child = AsyncResultChild(None)
             child_holder.append(child)
@@ -309,13 +309,13 @@ class TestSuspenseAsyncContext:
 
         child_holder = []
 
-        @define_component("async-result-child")
+        @define_component()
         async def AsyncResultChild(context):
             await asyncio.sleep(0)
             use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "child")
 
-        @define_component("suspense-wrapper")
+        @define_component()
         def SuspenseWrapper(context):
             child = AsyncResultChild(None)
             child_holder.append(child)
@@ -348,7 +348,7 @@ class TestAsyncComponentEffectCleanup:
     def test_effect_created_in_async_body_tracked_by_scope(self):
         cleaned = []
 
-        @define_component("async-effect-cmp")
+        @define_component()
         async def AsyncEffectCmp(context):
             signal = Signal(0)
             effect(lambda: signal.value, on_cleanup=lambda: cleaned.append("clean"))
@@ -433,7 +433,7 @@ class TestAsyncComponentSetupFailureCleanup:
     def test_failed_async_setup_removes_event_listener(self):
         from webcompy import use_window_event
 
-        @define_component("failing-async-cmp")
+        @define_component()
         async def FailingAsyncCmp(context):
             await asyncio.sleep(0)
             use_window_event("resize", 0)
@@ -448,7 +448,7 @@ class TestAsyncComponentSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("failing-async-cmp")
+        @define_component()
         async def FailingAsyncCmp(context):
             await asyncio.sleep(0)
 
@@ -467,7 +467,7 @@ class TestAsyncComponentSetupFailureCleanup:
     def test_failed_async_setup_destroy_hook_fires_only_once(self):
         order: list[str] = []
 
-        @define_component("failing-async-cmp")
+        @define_component()
         async def FailingAsyncCmp(context):
             await asyncio.sleep(0)
 
@@ -489,7 +489,7 @@ class TestAsyncComponentSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("cancelled-async-cmp")
+        @define_component()
         async def CancelledAsyncCmp(context):
             await asyncio.sleep(0)
 
@@ -512,7 +512,7 @@ class TestAsyncComponentSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("async-ok-cmp")
+        @define_component()
         async def AsyncOkCmp(context):
             await asyncio.sleep(0)
             effect(lambda: None, on_cleanup=lambda: order.append("effect"))
@@ -541,7 +541,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
         monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
         order: list[str] = []
 
-        @define_component("failing-child")
+        @define_component()
         async def FailingChild(context):
             await asyncio.sleep(0)
 
@@ -552,7 +552,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -580,7 +580,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
         monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
         order: list[str] = []
 
-        @define_component("failing-child")
+        @define_component()
         async def FailingChild(context):
             await asyncio.sleep(0)
 
@@ -591,7 +591,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -625,7 +625,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
 
         monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
 
-        @define_component("slow-child")
+        @define_component()
         async def SlowChild(context):
             await asyncio.sleep(0)
             use_window_event("resize", 0)
@@ -692,7 +692,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("failing-child")
+        @define_component()
         async def FailingChild(context):
             await asyncio.sleep(0)
 
@@ -703,7 +703,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -726,7 +726,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("slow-child")
+        @define_component()
         async def SlowChild(context):
             @on_before_destroy
             def _user_hook():
@@ -735,7 +735,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
             use_window_event("resize", 0)
             await asyncio.sleep(30)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -757,7 +757,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
 
         order: list[str] = []
 
-        @define_component("failing-child")
+        @define_component()
         async def FailingChild(context):
             await asyncio.sleep(0)
 
@@ -768,7 +768,7 @@ class TestSuspenseAsyncSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},

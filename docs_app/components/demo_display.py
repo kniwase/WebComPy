@@ -17,7 +17,7 @@ class DemoComponentProps(TypedDict):
     demo_path: str
 
 
-@define_component("demo-display")
+@define_component()
 def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     source_code = use_state(lambda: "")
 

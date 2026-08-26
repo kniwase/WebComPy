@@ -23,7 +23,7 @@ from webcompy_testing import create_test_app, render_app_html
 _WEBCOMPY_DATA_RE = re.compile(r'<script type="application/json" id="__webcompy_data__">(.*?)</script>', re.DOTALL)
 
 
-@define_component("rpc-ws-ssr-root")
+@define_component()
 def RpcWsSsrRoot(context):
     from webcompy.elements import html
 

@@ -65,11 +65,11 @@ class TestErrorBoundaryRender:
     def test_sync_setup_error_renders_fallback_and_calls_on_error(self):
         errors: list[Exception] = []
 
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("sync setup failed")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {"data-testid": "root"},
@@ -92,12 +92,12 @@ class TestErrorBoundaryRender:
             assert boundary._in_fallback
 
     def test_async_setup_error_renders_fallback(self):
-        @define_component("async-crashing-child")
+        @define_component()
         async def AsyncCrashingChild(context):
             await asyncio.sleep(0)
             raise RuntimeError("async setup failed")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -115,11 +115,11 @@ class TestErrorBoundaryRender:
             assert boundary._in_fallback
 
     def test_no_error_renders_children_normally(self):
-        @define_component("healthy-child")
+        @define_component()
         def HealthyChild(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -137,11 +137,11 @@ class TestErrorBoundaryRender:
             assert not boundary._in_fallback
 
     def test_nested_boundaries_innermost_engages(self):
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -159,14 +159,14 @@ class TestErrorBoundaryRender:
             assert result.find_by_attribute("data-testid", "outer-fallback") is None
 
     def test_error_in_fallback_escalates_to_outer_boundary(self):
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("original boom")
 
         def failing_fallback(error: Exception, reset):
             raise RuntimeError("fallback failed")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -187,7 +187,7 @@ class TestErrorBoundaryRender:
     def test_fallback_receives_error_and_reset_callable(self):
         captured: dict[str, object] = {}
 
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("capture me")
 
@@ -196,7 +196,7 @@ class TestErrorBoundaryRender:
             captured["reset"] = reset
             return html.DIV({"data-testid": "capturing-fallback"}, "fb")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV({}, ErrorBoundary(children=lambda: CrashingChild(None), fallback=fallback))
 
@@ -210,11 +210,11 @@ class TestErrorBoundaryRender:
     def test_typed_response_error_engages_fallback(self):
         errors: list[Exception] = []
 
-        @define_component("schema-mismatch-child")
+        @define_component()
         def SchemaMismatchChild(context):
             raise TypedResponseError("schema mismatch during fetch")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {"data-testid": "root"},
@@ -239,17 +239,17 @@ class TestPropagationWalk:
     def test_hooks_invoked_nearest_first_then_boundary_engages(self):
         calls: list[str] = []
 
-        @define_component("inner-hook-cmp")
+        @define_component()
         def InnerHookCmp(context):
             context.on_error_captured(lambda e: calls.append("inner"))
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component("outer-hook-cmp")
+        @define_component()
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -272,7 +272,7 @@ class TestPropagationWalk:
     def test_hook_veto_prevents_boundary_engagement(self):
         calls: list[str] = []
 
-        @define_component("inner-hook-cmp")
+        @define_component()
         def InnerHookCmp(context):
             def veto(e: Exception):
                 calls.append("inner")
@@ -281,12 +281,12 @@ class TestPropagationWalk:
             context.on_error_captured(veto)
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component("outer-hook-cmp")
+        @define_component()
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -309,11 +309,11 @@ class TestPropagationWalk:
     def test_hooks_above_engaged_boundary_not_invoked(self):
         calls: list[str] = []
 
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             context.on_error_captured(lambda e: calls.append("root"))
             return html.DIV(
@@ -333,17 +333,17 @@ class TestPropagationWalk:
     def test_destroyed_component_hooks_not_invoked(self):
         calls: list[str] = []
 
-        @define_component("inner-hook-cmp")
+        @define_component()
         def InnerHookCmp(context):
             context.on_error_captured(lambda e: calls.append("inner"))
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component("outer-hook-cmp")
+        @define_component()
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -367,14 +367,14 @@ class TestReset:
     def test_reset_rebuilds_children_with_fresh_state(self):
         state = {"crash": True, "setup_count": 0}
 
-        @define_component("flaky-child")
+        @define_component()
         def FlakyChild(context):
             state["setup_count"] += 1
             if state["crash"]:
                 raise RuntimeError("flaky failure")
             return html.DIV({"data-testid": "flaky-ok"}, f"ok-{state['setup_count']}")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -403,12 +403,12 @@ class TestReset:
     def test_reset_with_persistent_error_reengages_fallback(self):
         state = {"setup_count": 0}
 
-        @define_component("always-crashing")
+        @define_component()
         def AlwaysCrashing(context):
             state["setup_count"] += 1
             raise RuntimeError("persistent failure")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -433,13 +433,13 @@ class TestReset:
     def test_sync_reset_entry_point_schedules_refresh(self):
         state = {"crash": True}
 
-        @define_component("flaky-child")
+        @define_component()
         def FlakyChild(context):
             if state["crash"]:
                 raise RuntimeError("flaky failure")
             return html.DIV({"data-testid": "flaky-ok"}, "ok")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -459,11 +459,11 @@ class TestReset:
             assert result.find_by_attribute("data-testid", "flaky-ok") is not None
 
     def test_reset_noop_when_not_in_fallback(self):
-        @define_component("healthy-child")
+        @define_component()
         def HealthyChild(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -483,11 +483,11 @@ class TestReset:
 
 class TestErrorPolicy:
     def test_ssg_policy_reraises_original_error(self):
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("ssg crash")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -506,11 +506,11 @@ class TestErrorPolicy:
             scope.dispose()
 
     def test_default_policy_is_ssr_tolerant(self):
-        @define_component("crashing-child")
+        @define_component()
         def CrashingChild(context):
             raise RuntimeError("ssr crash")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},

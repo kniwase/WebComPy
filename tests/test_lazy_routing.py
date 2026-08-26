@@ -83,7 +83,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("test-comp")
+            @define_component()
             def TestComp(ctx):
                 return html.DIV({})
 
@@ -106,7 +106,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("display-comp", display="block")
+            @define_component(display="block")
             def DisplayComp(ctx):
                 return html.DIV({})
 
@@ -151,7 +151,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("cached-comp")
+            @define_component()
             def CachedComp(ctx):
                 return html.DIV({})
 
@@ -178,7 +178,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("call-comp")
+            @define_component()
             def CallComp(ctx):
                 return html.DIV({})
 
@@ -201,7 +201,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("preload-comp")
+            @define_component()
             def PreloadComp(ctx):
                 return html.DIV({})
 
@@ -224,7 +224,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("style-comp")
+            @define_component()
             def StyleComp(ctx):
                 return html.DIV({})
 
@@ -249,7 +249,7 @@ class TestLazyComponentGenerator:
 
         try:
 
-            @define_component("style-set-comp")
+            @define_component()
             def StyleSetComp(ctx):
                 return html.DIV({})
 
@@ -318,7 +318,7 @@ class TestRouterPreload:
 
         try:
 
-            @define_component("preload-route")
+            @define_component()
             def PreloadRoute(ctx):
                 return html.DIV({})
 
@@ -349,7 +349,7 @@ class TestRouterPreload:
         scope.__enter__()
         try:
 
-            @define_component("skip-preload")
+            @define_component()
             def SkipPreload(ctx):
                 return html.DIV({})
 
@@ -375,7 +375,7 @@ class TestRouterGetComponentForPath:
         scope.__enter__()
         try:
 
-            @define_component("match-comp")
+            @define_component()
             def MatchComp(ctx):
                 return html.DIV({})
 
@@ -404,7 +404,7 @@ class TestRouterGetComponentForPath:
         scope.__enter__()
         try:
 
-            @define_component("param-comp")
+            @define_component()
             def ParamComp(ctx):
                 return html.DIV({})
 
@@ -433,7 +433,7 @@ class TestLazyPreloadMethod:
 
         try:
 
-            @define_component("pl-method")
+            @define_component()
             def PlMethod(ctx):
                 return html.DIV({})
 
@@ -460,7 +460,7 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        @define_component("hover-comp")
+        @define_component()
         def HoverComp(ctx):
 
             return html.DIV({})
@@ -498,7 +498,7 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        @define_component("eager-comp")
+        @define_component()
         def EagerComp(ctx):
 
             return html.DIV({})
@@ -529,7 +529,7 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        @define_component("query-comp")
+        @define_component()
         def QueryComp(ctx):
 
             return html.DIV({})
@@ -561,7 +561,7 @@ class TestRouterLinkMouseenter:
         store = ComponentStore()
         scope.provide(_COMPONENT_STORE_KEY, store)
 
-        @define_component("base-comp")
+        @define_component()
         def BaseComp(ctx):
 
             return html.DIV({})

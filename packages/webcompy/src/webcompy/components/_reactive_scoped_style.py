@@ -27,7 +27,7 @@ Example:
     >>> from webcompy.elements import html
     >>> from webcompy.signal import Signal
     >>>
-    >>> @define_component("my-component")
+    >>> @define_component()
     ... def MyComponent(context):
     ...     color = Signal("blue")
     ...     context.use_reactive_scoped_style(

@@ -4,7 +4,7 @@ from webcompy.elements import html
 from webcompy.signal import use_state
 
 
-@define_component("async-nav-page")
+@define_component()
 def AsyncNavPage(context: ComponentContext[None]):
     context.set_title("Async Nav - E2E")
 

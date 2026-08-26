@@ -30,7 +30,7 @@ def compute_parsed_dom_results() -> dict[str, str]:
     return results
 
 
-@define_component("html-parser-parity-page")
+@define_component()
 def HtmlParserParityPage(context: ComponentContext[None]):
     context.set_title("HTML Parser Parity - E2E")
 

@@ -52,7 +52,7 @@ def suspense_scope():
     scope.dispose()
 
 
-@define_component("suspense-provide-child")
+@define_component()
 def SuspenseProvideChild(context):
     from webcompy.di import provide
 
@@ -60,7 +60,7 @@ def SuspenseProvideChild(context):
     return html.DIV({}, "child")
 
 
-@define_component("suspense-ordinal-child")
+@define_component()
 def SuspenseOrdinalChild(context):
     return html.DIV({}, "x")
 
@@ -415,7 +415,7 @@ class TestSuspenseTimeoutProbeDestroy:
 
         destroyed: list[str] = []
 
-        @define_component("timeout-destroy-child")
+        @define_component()
         def TimeoutDestroyChild(context):
             from webcompy.components import on_before_destroy
 

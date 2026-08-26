@@ -100,14 +100,14 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        @define_component("user-layout")
+        @define_component()
         def UserLayout(ctx):
 
             return html.DIV({})
 
         layout = UserLayout
 
-        @define_component("docs-page")
+        @define_component()
         def DocsPage(ctx):
             return html.DIV({})
 
@@ -141,14 +141,14 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        @define_component("user-layout")
+        @define_component()
         def UserLayout(ctx):
 
             return html.DIV({})
 
         layout = UserLayout
 
-        @define_component("doc-page")
+        @define_component()
         def DocPage(ctx):
             return html.DIV({})
 
@@ -187,7 +187,7 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        @define_component("user-page")
+        @define_component()
         def UserPage(ctx):
 
             return html.DIV({})

@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from webcompy.signal import use_reactive_list
 
 
-@define_component("risky-widget")
+@define_component()
 def RiskyWidget(context: ComponentContext[None]):
     items = use_reactive_list(lambda: ["a"])
 
@@ -24,7 +24,7 @@ def RiskyWidget(context: ComponentContext[None]):
     )
 
 
-@define_component("error-boundary-page")
+@define_component()
 def ErrorBoundaryPage(context: ComponentContext[RouterContext]):
     def fallback(error: Exception, reset):
         return html.DIV(
@@ -40,7 +40,7 @@ def ErrorBoundaryPage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component("nested-crash-page")
+@define_component()
 def NestedCrashPage(context: ComponentContext[RouterContext]):
     items = use_reactive_list(lambda: ["a"])
 
@@ -59,7 +59,7 @@ def NestedCrashPage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component("catch-events-page")
+@define_component()
 def CatchEventsPage(context: ComponentContext[RouterContext]):
     def fallback(error: Exception, reset):
         return html.DIV(

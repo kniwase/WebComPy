@@ -3,7 +3,7 @@ from webcompy.signal import use_state
 from webcompy.template import render_template
 
 
-@define_component("template-page")
+@define_component()
 def TemplatePage(context: ComponentContext[None]):
     context.set_title("Template - E2E")
 

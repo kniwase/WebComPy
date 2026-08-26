@@ -23,7 +23,7 @@ def _token_span(token: Token) -> Any:
     return create_element("span", {"class": _token_span_classes(token.type)}, token.value)
 
 
-@define_component("code-block")
+@define_component()
 def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
     """Render source code with syntax highlighting inside ``pre``/``code``.
 

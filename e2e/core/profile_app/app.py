@@ -6,17 +6,17 @@ from webcompy.elements import html
 from webcompy.router import Router, RouterView, lazy
 
 
-@define_component("profile-app-home")
+@define_component()
 def ProfileAppHome(context):
     return html.DIV({}, html.P({"data-testid": "profile-root"}, "Profile App"))
 
 
-@define_component("profile-app-lazy")
+@define_component()
 def ProfileAppLazy(context):
     return html.DIV({}, html.P({"data-testid": "profile-lazy"}, "Lazy Page"))
 
 
-@define_component("profile-app-root")
+@define_component()
 def ProfileAppRoot(_: ComponentContext[None]):
     return html.DIV({}, RouterView())
 

@@ -8,7 +8,7 @@ from webcompy_server._html import generate_html
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component("test-root")
+@define_component()
 def TestRoot(context):
     from webcompy.elements import html
 

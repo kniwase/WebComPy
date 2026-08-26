@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.router import RouterContext, RouterLink
 
 
-@define_component("scroll-long-page")
+@define_component()
 def ScrollLongPage(context: ComponentContext[RouterContext]):
     context.set_title("Scroll Long - E2E")
     return html.DIV(
@@ -18,7 +18,7 @@ def ScrollLongPage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component("scroll-target-page")
+@define_component()
 def ScrollTargetPage(context: ComponentContext[RouterContext]):
     context.set_title("Scroll Target - E2E")
     return html.DIV(

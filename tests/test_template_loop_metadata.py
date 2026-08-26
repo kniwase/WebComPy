@@ -113,7 +113,7 @@ class TestNestedLoopShadowing:
 
 class TestReactiveListLoopMetadata:
     def _page(self, captured: dict[str, Any]):
-        @define_component("loop-metadata-page")
+        @define_component()
         def LoopMetadataPage(_: ComponentContext[None]):
             items = use_reactive_list(lambda: ["a", "b"])
             captured["items"] = items
@@ -158,7 +158,7 @@ class TestPlainSignalListLoopMetadata:
     def test_plain_signal_list_replacement(self):
         captured: dict[str, Any] = {}
 
-        @define_component("plain-signal-page")
+        @define_component()
         def PlainSignalPage(_: ComponentContext[None]):
             from webcompy.signal import use_state
 
@@ -178,7 +178,7 @@ class TestPlainSignalListLoopMetadata:
 
 class TestReactiveDictLoopMetadata:
     def _page(self, captured: dict[str, Any]):
-        @define_component("reactive-dict-page")
+        @define_component()
         def ReactiveDictPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -248,7 +248,7 @@ class TestReactiveDictLoopMetadata:
     def test_two_var_dict_loop_with_metadata(self):
         captured: dict[str, Any] = {}
 
-        @define_component("two-var-page")
+        @define_component()
         def TwoVarPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -271,7 +271,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_value_replacement_updates_existing_key(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-page")
+        @define_component()
         def DictValuePage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -291,7 +291,7 @@ class TestReactiveDictValueReactivity:
     def test_two_var_value_replacement_updates_existing_key(self):
         captured: dict[str, Any] = {}
 
-        @define_component("two-var-value-page")
+        @define_component()
         def TwoVarValuePage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -311,7 +311,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_dict_value_dotted_access(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-dotted-page")
+        @define_component()
         def DictValueDottedPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -333,7 +333,7 @@ class TestReactiveDictValueReactivity:
     def test_two_var_dict_value_dotted_access(self):
         captured: dict[str, Any] = {}
 
-        @define_component("two-var-dict-value-dotted-page")
+        @define_component()
         def TwoVarDictValueDottedPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -353,7 +353,7 @@ class TestReactiveDictValueReactivity:
     def test_dict_value_signal_field_dotted_access(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-signal-field-page")
+        @define_component()
         def DictValueSignalFieldPage(_: ComponentContext[None]):
             from webcompy.signal import Signal, use_reactive_dict
 
@@ -374,7 +374,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_signal_value_plain_interpolation(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-signal-page")
+        @define_component()
         def DictValueSignalPage(_: ComponentContext[None]):
             from webcompy.signal import Signal, use_reactive_dict
 
@@ -394,7 +394,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_none_value_omitted(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-none-page")
+        @define_component()
         def DictValueNonePage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -411,7 +411,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_none_value_replaced_reactively(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-none-replaced-page")
+        @define_component()
         def DictValueNoneReplacedPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -431,7 +431,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_dict_value_dotted_condition(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-condition-page")
+        @define_component()
         def DictValueConditionPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -451,7 +451,7 @@ class TestReactiveDictValueReactivity:
         assert texts == ["Alice", "Bob"]
 
     def test_one_var_element_value_rendered_as_child(self):
-        @define_component("dict-value-element-page")
+        @define_component()
         def DictValueElementPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -473,7 +473,7 @@ class TestReactiveDictValueReactivity:
             assert [li.textContent for li in lis] == ["Alice", "Bob"]
 
     def test_two_var_element_value_rendered_as_child(self):
-        @define_component("two-var-dict-value-element-page")
+        @define_component()
         def TwoVarDictValueElementPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -499,7 +499,7 @@ class TestReactiveDictValueReactivity:
     def test_one_var_signal_wrapping_element_value_rendered_as_child(self):
         from webcompy.signal import Signal
 
-        @define_component("dict-value-signal-element-page")
+        @define_component()
         def DictValueSignalElementPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -521,7 +521,7 @@ class TestReactiveDictValueReactivity:
     def test_scalar_to_element_replacement_renders_child(self):
         captured: dict[str, Any] = {}
 
-        @define_component("scalar-to-element-page")
+        @define_component()
         def ScalarToElementPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -541,7 +541,7 @@ class TestReactiveDictValueReactivity:
     def test_element_to_scalar_replacement_renders_scalar(self):
         captured: dict[str, Any] = {}
 
-        @define_component("element-to-scalar-page")
+        @define_component()
         def ElementToScalarPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -561,7 +561,7 @@ class TestReactiveDictValueReactivity:
     def test_element_to_element_replacement_renders_new_element(self):
         captured: dict[str, Any] = {}
 
-        @define_component("element-to-element-page")
+        @define_component()
         def ElementToElementPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -581,7 +581,7 @@ class TestReactiveDictValueReactivity:
     def test_signal_wrapped_element_inner_change_renders_new_element(self):
         captured: dict[str, Any] = {}
 
-        @define_component("signal-element-change-page")
+        @define_component()
         def SignalElementChangePage(_: ComponentContext[None]):
             from webcompy.signal import Signal, use_reactive_dict
 
@@ -611,7 +611,7 @@ class TestReactiveDictComputedLifecycle:
         return count
 
     def _page(self, captured: dict[str, Any]):
-        @define_component("dict-lifecycle-page")
+        @define_component()
         def DictLifecyclePage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -651,7 +651,7 @@ class TestIntermediateSignalCleanup:
 
         captured: dict[str, Any] = {}
 
-        @define_component("attr-page")
+        @define_component()
         def AttrPage(_: ComponentContext[None]):
             profile = Signal({"name": "Alice"})
             captured["profile"] = profile
@@ -670,7 +670,7 @@ class TestIntermediateSignalCleanup:
 
         captured: dict[str, Any] = {}
 
-        @define_component("if-cond-page")
+        @define_component()
         def IfCondPage(_: ComponentContext[None]):
             user = Signal({"visible": True})
             captured["user"] = user
@@ -689,7 +689,7 @@ class TestIntermediateSignalCleanup:
 
         captured: dict[str, Any] = {}
 
-        @define_component("text-page")
+        @define_component()
         def TextPage(_: ComponentContext[None]):
             profile = Signal({"name": "Alice"})
             captured["profile"] = profile
@@ -708,7 +708,7 @@ class TestReactiveDictEmptyBody:
     def test_empty_body_dict_loop_renders_without_error(self):
         captured: dict[str, Any] = {}
 
-        @define_component("empty-body-page")
+        @define_component()
         def EmptyBodyPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -724,7 +724,7 @@ class TestReactiveDictEmptyBody:
     def test_conditionally_empty_body_dict_loop_renders(self):
         captured: dict[str, Any] = {}
 
-        @define_component("cond-empty-page")
+        @define_component()
         def CondEmptyPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -741,7 +741,7 @@ class TestReactiveDictEmptyBody:
     def test_empty_body_two_var_dict_loop_renders(self):
         captured: dict[str, Any] = {}
 
-        @define_component("two-var-empty-page")
+        @define_component()
         def TwoVarEmptyPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -755,7 +755,7 @@ class TestReactiveDictEmptyBody:
     def test_failed_binding_cleans_up_row_computeds(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-value-fail-page")
+        @define_component()
         def DictValueFailPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -777,7 +777,7 @@ class TestDictValueRowCallbackRegistration:
     def test_on_set_parent_registers_raw_async_refresh(self):
         captured: dict[str, Any] = {}
 
-        @define_component("dict-row-page")
+        @define_component()
         def DictRowPage(_: ComponentContext[None]):
             from webcompy.signal import use_reactive_dict
 
@@ -805,7 +805,7 @@ class TestIncomingSignalOwnership:
 
         captured: dict[str, Any] = {}
 
-        @define_component("switch-page")
+        @define_component()
         def SwitchPage(_: ComponentContext[None]):
             src = Signal(1)
             shared = Computed(lambda: src.value * 2)
@@ -828,7 +828,7 @@ class TestIncomingSignalOwnership:
 
         captured: dict[str, Any] = {}
 
-        @define_component("if-plain-page")
+        @define_component()
         def IfPlainPage(_: ComponentContext[None]):
             src = Signal(1)
             is_even = Computed(lambda: src.value % 2 == 0)
@@ -851,7 +851,7 @@ class TestIncomingSignalOwnership:
 
         captured: dict[str, Any] = {}
 
-        @define_component("if-expr-page")
+        @define_component()
         def IfExprPage(_: ComponentContext[None]):
             src = Signal(2)
             captured["src"] = src
@@ -868,7 +868,7 @@ class TestIncomingSignalOwnership:
 
         captured: dict[str, Any] = {}
 
-        @define_component("manual-root-page")
+        @define_component()
         def ManualRootPage(_: ComponentContext[None]):
             cls = Signal("user-cls")
             captured["cls"] = cls
@@ -888,7 +888,7 @@ class TestIncomingSignalOwnership:
 
         captured: dict[str, Any] = {}
 
-        @define_component("attr-page")
+        @define_component()
         def AttrPage(_: ComponentContext[None]):
             src = Signal("red")
             captured["src"] = src

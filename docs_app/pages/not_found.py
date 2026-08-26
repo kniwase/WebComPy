@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ..components.ui import DocsSection
 
 
-@define_component("not-found")
+@define_component()
 def NotFound(context: ComponentContext[RouterContext]):
     context.set_title("NotFound - WebCompy")
 

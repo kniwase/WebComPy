@@ -250,7 +250,7 @@ class TestPerInstanceTransferId:
         assert ctx._transfer_id == "tid-1"
 
     def test_component_fallback_to_bare_id_without_app_context(self):
-        @define_component("standalone-comp")
+        @define_component()
         def StandaloneComp(context: ComponentContext[None]):
             return html.DIV({}, "x")
 
@@ -264,12 +264,12 @@ class TestMultiInstanceTransfer:
     def test_two_instances_collect_and_restore_independently(self):
         leaf_id = generate_id("MultiLeaf")
 
-        @define_component("multi-leaf")
+        @define_component()
         def MultiLeaf(context: ComponentContext[None]):
             value = use_state("value", lambda: 0)
             return html.DIV({}, f"leaf:{value.value}")
 
-        @define_component("multi-root")
+        @define_component()
         def MultiRoot(context: ComponentContext[None]):
             return html.DIV({}, MultiLeaf(None), MultiLeaf(None))
 
@@ -401,7 +401,7 @@ class TestRenderClosesPayloadViaFallback:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing import create_test_app
 
-        @define_component("close-fallback-root")
+        @define_component()
         def CloseFallbackRoot(context: ComponentContext[None]):
             return html.DIV({}, "hello")
 
@@ -433,7 +433,7 @@ class TestRenderClosesPayloadViaFallback:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing import FakeBrowserDOMPort, create_test_app
 
-        @define_component("close-nonhydrate-root")
+        @define_component()
         def CloseNonhydrateRoot(context: ComponentContext[None]):
             return html.DIV({}, "hello")
 

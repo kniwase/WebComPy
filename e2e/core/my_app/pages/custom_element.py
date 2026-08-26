@@ -9,7 +9,7 @@ from webcompy.elements import html, repeat, switch
 from webcompy.signal import use_computed, use_reactive_list, use_state
 
 
-@define_component("e2e-card", observed_attributes=("theme-color",))
+@define_component(observed_attributes=("theme-color",))
 def E2eCard(context: ComponentContext[dict]):
     theme = use_computed(lambda: context.props["theme_color"] or "none")
 
@@ -30,7 +30,7 @@ def E2eCard(context: ComponentContext[dict]):
     ]
 
 
-@define_component("custom-element-page")
+@define_component()
 def CustomElementPage(context: ComponentContext[None]):
     context.set_title("Custom Elements - E2E")
 

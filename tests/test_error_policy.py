@@ -8,12 +8,12 @@ from webcompy.elements import ErrorBoundary, html
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component("crashing-child")
+@define_component()
 def CrashingChild(context):
     raise RuntimeError("policy crash")
 
 
-@define_component("contained-root")
+@define_component()
 def ContainedRoot(context):
     return html.DIV(
         {"data-testid": "policy-root"},
@@ -25,7 +25,7 @@ def ContainedRoot(context):
     )
 
 
-@define_component("uncontained-root")
+@define_component()
 def UncontainedRoot(context):
     return html.DIV({}, CrashingChild(None))
 
@@ -63,7 +63,7 @@ class TestSsgFailFast:
             _render(app)
 
     def test_ssg_policy_succeeds_without_errors(self):
-        @define_component("healthy-root")
+        @define_component()
         def HealthyRoot(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 

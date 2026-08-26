@@ -11,7 +11,7 @@ from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import TestRenderer, create_test_app, render_app_html
 
 
-@define_component("template-text-root")
+@define_component()
 def TemplateTextRoot(context):
     name = use_state(lambda: "Alice")
     return render_template(
@@ -24,7 +24,7 @@ def TemplateTextRoot(context):
     )
 
 
-@define_component("template-attr-root")
+@define_component()
 def TemplateAttrRoot(context):
     cls = use_state(lambda: "active")
     return render_template(
@@ -82,7 +82,7 @@ class TestTemplateSSR:
 
 class TestTemplateTestRenderer:
     def test_signal_text_updates(self):
-        @define_component("template-page")
+        @define_component()
         def TemplatePage(context):
             count = Signal(0)
             return render_template(
@@ -108,7 +108,7 @@ class TestTemplateTestRenderer:
             assert count_el.textContent == "1"
 
     def test_prerendered_text_node_present(self):
-        @define_component("static-template-page")
+        @define_component()
         def StaticTemplatePage(context):
             return render_template(
                 "<p data-testid='msg'>hello</p>",
@@ -164,7 +164,7 @@ class TestTemplateHydrationAdoption:
 
 class TestTemplateControlFlowSSR:
     def test_render_app_html_with_if(self):
-        @define_component("if-page")
+        @define_component()
         def IfPage(context):
             show = Signal(True)
             return render_template(
@@ -177,7 +177,7 @@ class TestTemplateControlFlowSSR:
         assert 'data-testid="if-root"' in html
 
     def test_render_app_html_with_for(self):
-        @define_component("for-page")
+        @define_component()
         def ForPage(context):
             items = ReactiveList(["x", "y", "z"])
             return render_template(
@@ -192,7 +192,7 @@ class TestTemplateControlFlowSSR:
         assert "z" in html
 
     def test_render_app_html_with_nested_control_flow(self):
-        @define_component("nested-page")
+        @define_component()
         def NestedPage(context):
             items = [
                 {"name": "a", "visible": True},
@@ -210,7 +210,7 @@ class TestTemplateControlFlowSSR:
         assert "b" not in html or "b</li>" not in html
 
     def test_render_app_html_with_dict_kv(self):
-        @define_component("dict-page")
+        @define_component()
         def DictPage(context):
             return render_template(
                 "<ul>{% for k, v in d %}<li>{{ k }}={{ v }}</li>{% endfor %}</ul>",
@@ -225,7 +225,7 @@ class TestTemplateControlFlowSSR:
         from webcompy_server._html import _HtmlElement
         from webcompy_testing._utils import run_sync
 
-        @define_component("dict-loop-page")
+        @define_component()
         def DictLoopPage(context):
             d = use_reactive_dict(lambda: {"a": 1, "b": 2, "c": 3})
             return render_template(
@@ -252,7 +252,7 @@ class TestTemplateControlFlowSSR:
 
 class TestTemplateControlFlowPrerenderedFlags:
     def test_if_branch_renders_correct_branch(self):
-        @define_component("branch-page")
+        @define_component()
         def BranchPage(context):
             flag = True
             return render_template(
@@ -266,7 +266,7 @@ class TestTemplateControlFlowPrerenderedFlags:
             assert "hidden" not in html
 
     def test_for_loop_renders_all_iterations(self):
-        @define_component("loop-page")
+        @define_component()
         def LoopPage(context):
             items = ["a", "b", "c"]
             return render_template(
@@ -285,12 +285,12 @@ class TestComponentTagSSR:
     """SSR-time rendering of component tags produces the component's output."""
 
     def test_ssr_includes_component_template_output(self):
-        @define_component("greeting-card")
+        @define_component()
         def GreetingCard(context):
             name = context.props.get("name", "")
             return render_template(f"<span data-testid='name'>Hi {name}</span>")
 
-        @define_component("greeting-page")
+        @define_component()
         def GreetingPage(context):
             return render_template(
                 "<div><greeting-card name='Alice' /></div>",
@@ -313,12 +313,12 @@ class TestComponentTagTestRenderer:
     """TestRenderer should expose component-tag-rendered DOM nodes."""
 
     def test_component_tag_renders_into_test_renderer(self):
-        @define_component("info-badge")
+        @define_component()
         def InfoBadge(context):
             label = context.props.get("label", "")
             return render_template(f"<span data-testid='badge'>{label}</span>")
 
-        @define_component("badge-page")
+        @define_component()
         def BadgePage(context):
             return render_template(
                 "<div><info-badge label='ready' /></div>",
@@ -334,7 +334,7 @@ class TestComponentTagTestRenderer:
             assert badge.textContent == "ready"
 
 
-@define_component("expr-root")
+@define_component()
 def ExprRoot(context):
     count = use_state(lambda: 5)
     name = use_state(lambda: "alice")
@@ -378,7 +378,7 @@ class TestExprSSR:
             assert el.textContent == "a, b"
 
 
-@define_component("comment-raw-root")
+@define_component()
 def CommentRawRoot(context):
     return render_template(
         """
@@ -404,7 +404,7 @@ class TestCommentRawSSR:
             assert el.textContent == "{{ literal }}"
 
     def test_comment_inside_raw_preserved(self):
-        @define_component("raw-comment-page")
+        @define_component()
         def RawCommentPage(context):
             return render_template(
                 '<p data-testid="rc">{% raw %}{# not a comment #}{% endraw %}</p>',
@@ -416,7 +416,7 @@ class TestCommentRawSSR:
             assert el.textContent == "{# not a comment #}"
 
     def test_raw_block_literal_directive(self):
-        @define_component("raw-directive-page")
+        @define_component()
         def RawDirectivePage(context):
             return render_template(
                 '<p data-testid="rd">{% raw %}{% if x %}{% endraw %}</p>',
@@ -428,7 +428,7 @@ class TestCommentRawSSR:
             assert el.textContent == "{% if x %}"
 
     def test_tags_inside_raw_still_parse(self):
-        @define_component("raw-tags-page")
+        @define_component()
         def RawTagsPage(context):
             return render_template(
                 '<div data-testid="rt">{% raw %}<b>{{ x }}</b>{% endraw %}</div>',

@@ -8,7 +8,7 @@ class InlineCodeProps(TypedDict, total=False):
     text: str
 
 
-@define_component("inline-code")
+@define_component()
 def InlineCode(context: ComponentContext[InlineCodeProps]):
     return html.CODE(
         {"class": "ui-inline-code"},
@@ -20,7 +20,7 @@ class CardProps(TypedDict, total=False):
     title: str
 
 
-@define_component("docs-card")
+@define_component()
 def DocsCard(context: ComponentContext[CardProps]):
     body = context.slots("default")
     title = context.props.get("title")
@@ -40,7 +40,7 @@ class SectionProps(TypedDict, total=False):
     heading: str
 
 
-@define_component("docs-section")
+@define_component()
 def DocsSection(context: ComponentContext[SectionProps]):
     return html.SECTION(
         {"class": "ui-section"},
@@ -54,7 +54,7 @@ class LinkProps(TypedDict, total=False):
     text: str
 
 
-@define_component("docs-link")
+@define_component()
 def DocsLink(context: ComponentContext[LinkProps]):
     return html.A(
         {"class": "ui-link", "href": context.props.get("href", "#")},
@@ -75,7 +75,7 @@ class ButtonProps(TypedDict, total=False):
     onclick: object
 
 
-@define_component("docs-button")
+@define_component()
 def DocsButton(context: ComponentContext[ButtonProps]):
     props = context.props
     variant = props.get("variant", "default")

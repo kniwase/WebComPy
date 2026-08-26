@@ -8,7 +8,7 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app
 
 
-@define_component("isolation-root")
+@define_component()
 def IsolationRoot(context):
     from webcompy.elements import html
 

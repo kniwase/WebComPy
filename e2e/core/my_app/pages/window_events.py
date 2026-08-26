@@ -3,7 +3,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component("window-events-page")
+@define_component()
 def WindowEventsPage(context: ComponentContext[None]):
     context.set_title("Window Events - E2E")
 

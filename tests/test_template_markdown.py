@@ -341,7 +341,7 @@ class TestFragmentTransparency:
 
 class TestComponentRootIntegration:
     def test_multi_root_raises_when_returned_directly_from_component(self):
-        @define_component("fragment-root")
+        @define_component()
         def FragmentRoot(context):
             return render_markdown("# Title\n\nText.", {})
 
@@ -354,7 +354,7 @@ class TestComponentRootIntegration:
         assert isinstance(comp._children[0], FragmentElement)
 
     def test_explicit_element_wrapper_makes_markdown_valid_component_root(self):
-        @define_component("article-page")
+        @define_component()
         def ArticlePage(context):
             return Element(
                 "article",

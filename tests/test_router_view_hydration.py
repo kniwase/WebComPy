@@ -15,12 +15,12 @@ from webcompy.router import Router, RouterView
 pytestmark = pytest.mark.usefixtures("fake_browser_full")
 
 
-@define_component("sync-hydration-page")
+@define_component()
 def SyncHydrationPage(context: ComponentContext[None]):
     return html.DIV({"data-testid": "sync-page"}, "sync-content")
 
 
-@define_component("async-hydration-page")
+@define_component()
 async def AsyncHydrationPage(context: ComponentContext[None]):
     return html.DIV({"data-testid": "async-page"}, "async-content")
 

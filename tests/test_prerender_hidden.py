@@ -9,7 +9,7 @@ from webcompy_server import configure_server_context
 from webcompy_server._html import generate_html
 
 
-@define_component("prerender-test-root")
+@define_component()
 def PrerenderTestRoot(context):
     from webcompy.elements import html
 

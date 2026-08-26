@@ -80,7 +80,7 @@ class TestReactiveExpressionText:
     def test_text_expression_updates_on_signal_change(self):
         captured: dict[str, Signal] = {}
 
-        @define_component("page-with-capture")
+        @define_component()
         def PageWithCapture(context):
             count = Signal(5)
             captured["count"] = count
@@ -118,7 +118,7 @@ class TestReactiveExpressionFor:
     def test_for_slice_updates_on_list_mutation(self):
         captured: dict[str, object] = {}
 
-        @define_component("template-expression-page")
+        @define_component()
         def TemplateExpressionPage(context):
             from webcompy.signal import use_reactive_list
 

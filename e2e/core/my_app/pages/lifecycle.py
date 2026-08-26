@@ -9,7 +9,7 @@ from webcompy.elements import html
 from webcompy.signal import Signal, use_state
 
 
-@define_component("lifecycle-page")
+@define_component()
 def LifecyclePage(context: ComponentContext[None]):
     context.set_title("Lifecycle - E2E")
 

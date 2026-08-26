@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ...components.demo_display import DemoDisplay
 
 
-@define_component("fetch-sample-page")
+@define_component()
 def FetchSamplePage(context: ComponentContext[RouterContext]):
     context.set_title("Fetch Sample - WebCompy Demo")
     return html.DIV(

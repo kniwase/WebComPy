@@ -37,7 +37,7 @@ class TestNonZeroOffsetRegularElementRefresh:
     def test_children_indexed_from_zero_and_order_kept_after_refresh(self):
         items = ReactiveList(["x", "y"])
 
-        @define_component("sibling-page")
+        @define_component()
         def SiblingPage(context):
             return render_template(
                 """

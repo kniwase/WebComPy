@@ -7,7 +7,7 @@ from webcompy.router import RouterView
 from .navigation import SiteNavigation
 
 
-@define_component("app-root")
+@define_component()
 def AppRoot(_: ComponentContext[None]):
     return html.DIV(
         {},
