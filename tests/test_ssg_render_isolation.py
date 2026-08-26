@@ -66,7 +66,7 @@ def _make_isolation_app() -> WebComPyApp:
         "from webcompy.components import define_component\n"
         "from webcompy.elements import html\n"
         "from iso_sidebar_mod import IsoSidebar\n"
-        "@define_component('iso-layout')\n"
+        "@define_component()\n"
         "def IsoLayout(context):\n"
         "    return html.DIV({}, IsoSidebar(None))\n"
         "IsoLayout.scoped_style = {'.iso-layout': {'color': 'blue'}}\n",

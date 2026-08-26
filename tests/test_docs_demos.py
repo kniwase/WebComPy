@@ -45,7 +45,7 @@ def test_mock_app_run_restores_on_exception():
 
 def test_helloworld_renders_heading():
     with mock_app_run():
-        from static._demos.helloworld.app import HelloWorldApp as App
+        from static._demos.helloworld.app import HelloWorld as App
 
         with TestRenderer.render(App) as result:
             html = result.to_html()
@@ -55,7 +55,7 @@ def test_helloworld_renders_heading():
 
 def test_helloworld_heading_text():
     with mock_app_run():
-        from static._demos.helloworld.app import HelloWorldApp as App
+        from static._demos.helloworld.app import HelloWorld as App
 
         with TestRenderer.render(App) as result:
             heading = result.query_selector("h1")
@@ -173,7 +173,7 @@ def test_todo_remove_done_items():
 
 def test_teleport_demo_renders_controls():
     with mock_app_run():
-        from static._demos.teleport.app import TeleportDemoApp as App
+        from static._demos.teleport.app import TeleportDemo as App
 
         with TestRenderer.render(App) as result:
             html = result.to_html()
@@ -185,7 +185,7 @@ def test_teleport_demo_renders_controls():
 
 def test_transition_demo_renders_controls():
     with mock_app_run():
-        from static._demos.transition.app import TransitionDemoApp as App
+        from static._demos.transition.app import TransitionDemo as App
 
         with TestRenderer.render(App) as result:
             html = result.to_html()
@@ -198,7 +198,7 @@ def test_transition_demo_renders_controls():
 
 def test_transition_demo_toggle_fade():
     with mock_app_run():
-        from static._demos.transition.app import TransitionDemoApp as App
+        from static._demos.transition.app import TransitionDemo as App
 
         with TestRenderer.render(App) as result:
             toggle = result.find_by_text("Toggle Fade")
@@ -236,7 +236,7 @@ async def test_fetch_page_loads():
     scope.provide(FETCH_PORT_KEY, FakeFetchPort(responses=responses))
 
     with mock_app_run():
-        from static._demos.fetch_sample.app import FetchSampleApp as App
+        from static._demos.fetch_sample.app import FetchSample as App
 
         with TestRenderer.render(App, parent_scope=scope) as result:
             # Yield to the event loop so that fire-and-forget async tasks
@@ -255,7 +255,7 @@ async def test_fetch_page_loads():
 @skip_matplotlib
 def test_matplotlib_page_heading():
     with mock_app_run():
-        from static._demos.matplotlib_sample.app import MatplotlibSampleApp as App
+        from static._demos.matplotlib_sample.app import MatplotlibSample as App
 
         with TestRenderer.render(App) as result:
             html = result.to_html()
@@ -265,7 +265,7 @@ def test_matplotlib_page_heading():
 @skip_matplotlib
 def test_matplotlib_initial_value():
     with mock_app_run():
-        from static._demos.matplotlib_sample.app import MatplotlibSampleApp as App
+        from static._demos.matplotlib_sample.app import MatplotlibSample as App
 
         with TestRenderer.render(App) as result:
             html = result.to_html()
@@ -275,7 +275,7 @@ def test_matplotlib_initial_value():
 @skip_matplotlib
 def test_matplotlib_increment_button():
     with mock_app_run():
-        from static._demos.matplotlib_sample.app import MatplotlibSampleApp as App
+        from static._demos.matplotlib_sample.app import MatplotlibSample as App
 
         with TestRenderer.render(App) as result:
             add_btn = result.find_by_text("+")
@@ -287,7 +287,7 @@ def test_matplotlib_increment_button():
 @skip_matplotlib
 def test_matplotlib_image_rendered():
     with mock_app_run():
-        from static._demos.matplotlib_sample.app import MatplotlibSampleApp as App
+        from static._demos.matplotlib_sample.app import MatplotlibSample as App
 
         with TestRenderer.render(App) as result:
             img = result.query_selector("img")

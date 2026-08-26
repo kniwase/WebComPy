@@ -8,7 +8,7 @@ from webcompy.elements import DOMEvent, html, repeat, switch
 from webcompy.signal import use_computed, use_reactive_dict, use_state
 
 
-@define_component("fizzbuzz-app")
+@define_component()
 def FizzbuzzApp(context: ComponentContext[None]):
     opened = use_state(lambda: True)
     fizzbuzz_dict = use_reactive_dict(lambda: {})

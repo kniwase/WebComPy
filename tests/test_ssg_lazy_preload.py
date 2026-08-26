@@ -205,7 +205,7 @@ class TestGenerateLazyRoutePreload:
             "from webcompy.components import define_component\n"
             "from webcompy.elements import html\n"
             "from nested_sidebar_mod import NestedSidebar\n"
-            "@define_component('nested-layout')\n"
+            "@define_component()\n"
             "def NestedLayout(context):\n"
             "    return html.DIV({}, NestedSidebar(None))\n",
             layout_mod.__dict__,
@@ -267,7 +267,7 @@ class TestGenerateLazyRoutePreload:
             "from webcompy.components import define_component\n"
             "from webcompy.elements import html\n"
             "from pd_sidebar_mod import PdSidebar\n"
-            "@define_component('pd-layout')\n"
+            "@define_component()\n"
             "def PdLayout(context):\n"
             "    return html.DIV({}, PdSidebar(None))\n",
             layout_mod.__dict__,
