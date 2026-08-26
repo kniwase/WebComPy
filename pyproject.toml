@@ -76,7 +76,9 @@ check-class-attributes = false
 # exception, so the file is excluded from pydoclint.
 # resources.load_text/load_bytes raise transitively via _normalize_source and
 # _get_port; DOC502 only sees direct raise statements.
-exclude = "(?x)packages/webcompy/src/webcompy/template/_css_parser\\.py|packages/webcompy/src/webcompy/di/__init__\\.py|packages/webcompy/src/webcompy/resources\\.py"
+# rpc/_middleware.run_rpc_middlewares raises RuntimeError from a nested closure
+# wrapping each middleware layer; DOC502 only sees direct raise statements.
+exclude = "(?x)packages/webcompy/src/webcompy/template/_css_parser\\.py|packages/webcompy/src/webcompy/di/__init__\\.py|packages/webcompy/src/webcompy/resources\\.py|packages/webcompy/src/webcompy/rpc/_middleware\\.py"
 
 [tool.pyright]
 pythonVersion = "3.12"

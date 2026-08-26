@@ -52,7 +52,7 @@ class Response:
         """Decode the response body as JSON.
 
         Args:
-            kwargs: Extra keyword arguments forwarded to ``json.loads``.
+            **kwargs: Extra keyword arguments forwarded to ``json.loads``.
 
         Returns:
             The decoded JSON value.
