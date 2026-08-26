@@ -1,0 +1,42 @@
+name: browser-version-sweep
+run-name: "PyScript version sweep (candidate ${{ inputs.pyscript_candidate_version }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pyscript_candidate_version:
+        description: "Candidate PyScript version to evaluate against the pinned version"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-environment
+        with:
+          playwright-install: "true"
+      - name: Run probe battery at pinned and candidate versions
+        env:
+          WEBCOMPY_PYSCRIPT_CANDIDATE: ${{ inputs.pyscript_candidate_version }}
+        run: |
+          scripts/run-browser-version-sweep.sh "${{ inputs.pyscript_candidate_version }}" 2>&1 | tee ci-version-sweep.log
+          exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-version-sweep
+          path: |
+            artifacts/browser-version-sweep.json
+            artifacts/probes-pinned.json
+            artifacts/probes-candidate.json
+            ci-version-sweep.log
+          if-no-files-found: warn

@@ -65,6 +65,9 @@ uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missi
 scripts/run-e2e-tests.sh                   # All E2E tests (core + docs, prod + static)
 scripts/run-e2e-tests.sh <group-name>      # Single E2E group (e.g., components, docs-home)
 scripts/run-browser-tests.sh               # Browser unit tier inside a real PyScript runtime
+scripts/run-browser-tests.sh --probes      # Environment probe battery only (hard gate)
+scripts/run-browser-tests.sh --dual        # + CPython-vs-PyScript dual-run sweep (informational)
+scripts/run-browser-version-sweep.sh <ver> # Probe sweep at pinned vs candidate PyScript version
 ```
 
 ### Inspect CLI
@@ -175,6 +178,9 @@ the per-area reference.
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 - **Browser Test Tier Importability** — `browser-test-harness/spec.md`
+- **Dual-Run Eligibility Classification** — `browser-dualrun/spec.md`
+- **Probe Authority & Hard Gate** — `browser-probes/spec.md`
+- **PyExec Harness Confinement** — `inspect-pyexec/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 
@@ -244,6 +250,10 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | `tests/browser/`, `webcompy_testing/browser_runner/` | `browser-test-harness/spec.md`, `test-execution-paths/spec.md` |
 | `webcompy_cli/_browser_test_harness.py` | `browser-test-harness/spec.md`, `cli/spec.md` |
+| `webcompy_cli/_browser_probes.py`, `webcompy_cli/_dualrun_pytest_plugin.py`, `tests/.dualrun/` | `browser-dualrun/spec.md`, `browser-probes/spec.md` |
+| `webcompy_cli/_version_sweep.py`, `scripts/run-browser-version-sweep.sh` | `browser-probes/spec.md` |
+| `webcompy_cli/_inspect_pyexec.py`, `webcompy_testing/browser_runner/` (evaluate) | `inspect-pyexec/spec.md`, `browser-test-harness/spec.md` |
+| `tests/browser/probes/` | `browser-probes/spec.md`, `browser-test-harness/spec.md` |
 | `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
 | `scripts/check-docstrings.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -403,6 +413,9 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`), browser (`tests/browser/`), and E2E (`e2e/`) tiers; opt-in `WEBCOMPY_RUN_E2E=1` / `WEBCOMPY_RUN_BROWSER=1` gates; `scripts/run-e2e-tests.sh` and `scripts/run-browser-tests.sh` canonical entry points |
+| `browser-dualrun` | Classification of `tests/` modules for PyScript dual-run eligibility (read-only AST pass with pragma overrides), in-page execution of the eligible subset via the harness mount, and bucketed CPython-vs-PyScript divergence reporting (`artifacts/browser-dualrun.json`, informational) |
+| `browser-probes` | Environment probe battery under `tests/browser/probes/` codifying PyScript-only contracts as a hard-gate suite, plus a manually-triggered version-bump sweep diffing probe outcomes across the pinned and a candidate PyScript version |
+| `inspect-pyexec` | `webcompy inspect pyexec`: single-shot and REPL evaluation of Python code inside the harness PyScript interpreter with structured JSON output; confined to the harness session, independent from `inspect-cli` |
 | `browser-test-harness` | PyScript-native in-browser unit testing: harness server (runtime assets, py-config, manifest, harness page), in-page runner with `app`/`dom_root` fixtures and per-test isolation, pytest dispatch over `window.__webcompy_test__.run_one`, wheel vs source-mount supply modes, crash containment, and console-error capture |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 | `api-docstrings` | Docstring coverage and Google-style structure for public interfaces of all four packages; ban on OpenSpec artifact references in docstrings and comments; stdlib-only strict checker with migration baseline (`scripts/check-docstrings.py`); same-PR docstring-implementation sync with must-fix inconsistency blocking approval |

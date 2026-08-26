@@ -265,6 +265,83 @@ and use distinct invocation paths:
 - When adding E2E test files, update both `scripts/run-e2e-tests.sh` groups
   and `.github/workflows/ci.yml`
 
+### Browser Dual-Run, Probes, and PyScript Version Bumps
+
+Three extensions build on the browser test tier: the dual-run sweep
+(`browser-dualrun`), the environment probe battery and version-bump sweep
+(`browser-probes`), and ad-hoc in-interpreter evaluation
+(`inspect-pyexec`). Their requirements live in the owning OpenSpec specs.
+
+**Dual-run sweep** (informational) re-executes dual-run-eligible modules from
+`tests/` inside the harness PyScript interpreter and diffs the outcomes with
+the CPython run:
+
+```bash
+scripts/run-browser-tests.sh --dual          # writes artifacts/browser-dualrun.json
+```
+
+Eligibility is decided by a read-only AST pass in
+`webcompy_cli/_browser_probes.py`. A module is ineligible when its top level
+imports `js` / `pyscript` / `pyodide`, `e2e.*`, or `Fake*` symbols from
+`webcompy_testing`, or when it contains module-scope side-effecting calls
+(`pytest.mark.*` / `pytest.fixture(...)` call chains are allowed). Function-local
+browser-only imports do not disqualify a module. A standalone comment line
+overrides the judgment:
+
+```python
+# browser-dualrun: eligible   # force an ineligible module into the sweep
+# browser-dualrun: skip       # keep an eligible module out of the sweep
+```
+
+The reviewed baseline lives at `tests/.dualrun/` (`eligible.txt`,
+`ineligible.json`). Regenerate it after changing eligibility-relevant code or
+pragmas:
+
+```bash
+python -c "from pathlib import Path; from webcompy_cli._browser_probes import classify_tests, write_baseline; write_baseline(classify_tests(Path.cwd()), Path('tests/.dualrun'))"
+```
+
+Divergence buckets are informational by default — they never fail CI.
+Promote a bucket to a hard gate only after triage, via a future change.
+
+**Environment probes** codify PyScript-runtime contracts as ordinary browser-tier
+tests under `tests/browser/probes/test_probe_*.py`; the module docstring is the
+human-readable contract statement. New probe files are auto-discovered by the
+harness manifest with no registration. Probes are a hard gate:
+
+```bash
+scripts/run-browser-tests.sh --probes
+```
+
+Probe assertions must reflect *observed* runtime behavior: run a new probe,
+then freeze the observed contract into its assertions and docstring.
+
+**PyScript version bump procedure**:
+
+1. Add the candidate release to `PYSCRIPT_TO_PYODIDE` in
+   `packages/webcompy-cli/src/webcompy_cli/_pyodide_lock.py` (one mapping line;
+   the sweep resolves candidate assets through it).
+2. Run the sweep locally:
+   `scripts/run-browser-version-sweep.sh <candidate>` — this executes the probe
+   battery at the pinned version and at the candidate, then writes
+   `artifacts/browser-version-sweep.json`. Exit code is nonzero when any probe
+   regressed (passed at the pinned version but failed at the candidate).
+3. Optionally dispatch the manual GitHub Actions workflow **browser-version-sweep**
+   with input `pyscript_candidate_version`.
+4. Only after a clean sweep, change the pin by updating `PYSCRIPT_VERSION`
+   in `packages/webcompy-server/src/webcompy_server/_html.py` (plus the
+   mapping entry, which step 1 already added). Candidate assets are never
+   promoted automatically.
+
+**`webcompy inspect pyexec`** evaluates ad-hoc Python inside the harness
+interpreter (never on a production server process):
+
+```bash
+uv run python -m webcompy inspect pyexec "print(2+2)"        # single-shot JSON
+uv run python -m webcompy inspect pyexec --file snippet.py   # evaluate a file
+uv run python -m webcompy inspect pyexec --repl              # REPL over stdin lines
+```
+
 ---
 
 ## Pull Request Process

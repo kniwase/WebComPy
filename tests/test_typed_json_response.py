@@ -139,3 +139,6 @@ class TestImportSafety:
         monkeypatch.setitem(sys.modules, "starlette", None)
         monkeypatch.setitem(sys.modules, "starlette.responses", None)
         import webcompy_server.contrib  # noqa: F401
+
+
+# browser-dualrun: skip

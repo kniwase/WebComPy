@@ -81,3 +81,6 @@ def test_block_section_xfails_have_notes() -> None:
     assert not missing, "Block-section xfail examples without notes in xfail.json: " + ", ".join(
         f"Ex {n} [{sec}]" for n, sec in missing
     )
+
+
+# browser-dualrun: skip

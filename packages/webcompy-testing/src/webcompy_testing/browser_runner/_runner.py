@@ -136,12 +136,12 @@ _console_start_index = 0
 
 
 def bootstrap() -> None:
-    """Expose ``run_one`` on ``window`` and mark the harness page ready."""
+    """Expose ``run_one`` / ``evaluate`` on ``window`` and mark the harness page ready."""
     global _console_start_index
     _ensure_pytest_shim()
     ffi = importlib.import_module("pyscript").ffi
     js = importlib.import_module("js")
-    js.window.__webcompy_test__ = ffi.create_proxy({"run_one": run_one})
+    js.window.__webcompy_test__ = ffi.create_proxy({"run_one": run_one, "evaluate": evaluate})
     js.document.documentElement.setAttribute("data-webcompy-test-ready", "1")
     _console_start_index = js.window.__webcompy_test_console__.length
 
@@ -220,12 +220,45 @@ async def _load_function(module_name: str, qualname: str) -> Any:
             module = importlib.import_module(module_name)
         else:
             raise
-    target: Any = module
-    for part in qualname.split("::"):
+    return resolve_qualname_target(module, qualname)
+
+
+def resolve_qualname_target(container: Any, qualname: str) -> Any:
+    """Resolve a ``::``-separated qualname to a callable, binding methods.
+
+    When the qualname path addresses a method through a class (for example
+    ``TestDIScope::test_class_type_key``), the class is instantiated with no
+    arguments and the attribute is fetched from the instance so the returned
+    callable is a bound method. This mirrors pytest's auto-instantiation of
+    test classes and keeps ``self`` out of the fixture-argument resolution.
+
+    Args:
+        container: The module (or any object) in which to resolve.
+        qualname: The ``::``-separated attribute path.
+
+    Returns:
+        The resolved callable.
+
+    Raises:
+        TypeError: If the resolved target is not callable.
+
+    """
+    parts = qualname.split("::")
+    target: Any = container
+    for part in parts[:-1]:
         target = getattr(target, part)
-    if not callable(target):
+    last = parts[-1]
+    raw = getattr(target, last)
+    if isinstance(target, type) and inspect.isfunction(raw):
+        first_params = list(inspect.signature(raw).parameters)
+        if first_params and first_params[0] == "self":
+            owner = target()
+            bound = getattr(owner, last)
+            if callable(bound):
+                return bound
+    if not callable(raw):
         raise TypeError(f"'{qualname}' resolved to a non-callable object")
-    return target
+    return raw
 
 
 _SWEEP_CHROME_NODE_NAMES = frozenset({"SCRIPT"})
@@ -372,3 +405,76 @@ async def run_one(test_id: str) -> str:
             if module_name:
                 sys.modules.pop(module_name, None)
         _console_start_index = console_buffer.length
+
+
+_EVAL_GLOBALS: dict[str, Any] | None = None
+
+
+def _eval_globals() -> dict[str, Any]:
+    """Return the persistent globals dict shared by ``evaluate`` calls.
+
+    Keeping one dict across invocations preserves interpreter state between
+    REPL turns; single-shot evaluations simply start from an empty namespace.
+
+    """
+    global _EVAL_GLOBALS
+    if _EVAL_GLOBALS is None:
+        _EVAL_GLOBALS = {"__name__": "__main__"}
+    return _EVAL_GLOBALS
+
+
+async def evaluate(code: str) -> str:
+    """Evaluate Python code inside the harness interpreter.
+
+    The last expression's value is returned as its ``repr`` (``None`` for
+    statement-only code), mirroring a REPL. State persists across calls via
+    the shared globals dict. Unlike :func:`run_one`, the console error delta
+    is emitted as structured ``{"type", "text"}`` objects.
+
+    Args:
+        code: Python source to evaluate; may span multiple lines and use
+            top-level ``await``.
+
+    Returns:
+        JSON string of shape ``{"stdout", "stderr", "result_repr",
+        "console_error_delta", "exc_type", "traceback"}``. Evaluation
+        failures are reported in the payload instead of raising.
+
+    """
+    global _console_start_index
+    js = importlib.import_module("js")
+    console_buffer = js.window.__webcompy_test_console__
+    console_start = _console_start_index
+    stdout_io = io.StringIO()
+    stderr_io = io.StringIO()
+    result_repr: str | None = None
+    exc_type: str | None = None
+    tb = ""
+    try:
+        from pyodide.code import eval_code_async
+
+        with redirect_stdout(stdout_io), redirect_stderr(stderr_io):
+            result = await eval_code_async(code, globals=_eval_globals())
+        if result is not None:
+            try:
+                result_repr = repr(result)
+            except Exception:
+                result_repr = f"<unrepresentable {type(result).__name__}>"
+    except Exception as e:
+        exc_type = type(e).__name__
+        tb = normalize_traceback("".join(traceback.format_exception(type(e), e, e.__traceback__)))
+    payload = json.dumps(
+        {
+            "stdout": stdout_io.getvalue(),
+            "stderr": stderr_io.getvalue(),
+            "result_repr": result_repr,
+            "console_error_delta": [
+                {"type": str(console_buffer[i].type), "text": str(console_buffer[i].text)}
+                for i in range(console_start, console_buffer.length)
+            ],
+            "exc_type": exc_type,
+            "traceback": tb,
+        }
+    )
+    _console_start_index = console_buffer.length
+    return payload

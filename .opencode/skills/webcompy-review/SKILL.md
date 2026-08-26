@@ -122,6 +122,9 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Template Binder Control Flow** — `template-engine/spec.md`
 - **Template Binder Component Tag Resolution** — `template-engine/spec.md`
 - **Forms** — `forms/spec.md`
+- **Dual-Run Eligibility Classification** — `browser-dualrun/spec.md`
+- **Probe Authority & Hard Gate** — `browser-probes/spec.md`
+- **PyExec Harness Confinement** — `inspect-pyexec/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 
