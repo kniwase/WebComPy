@@ -64,6 +64,30 @@ class WebComPyPlugin:
         """
         pass
 
+    @staticmethod
+    def get_fetch_middlewares() -> list[Any]:
+        """Return fetch middlewares contributed by the plugin.
+
+        Returns:
+            List of ``FetchMiddleware`` callables applied in the order
+            returned (index ``0`` outermost). An empty list contributes
+            nothing.
+
+        """
+        return []
+
+    @staticmethod
+    def get_rpc_middlewares() -> list[Any]:
+        """Return RPC middlewares contributed by the plugin.
+
+        Returns:
+            List of ``RpcMiddleware`` callables applied in the order
+            returned (index ``0`` outermost). An empty list contributes
+            nothing.
+
+        """
+        return []
+
     def on_render_context_init(self, ctx: RenderContext) -> None:
         """Handle creation of a new render context.
 

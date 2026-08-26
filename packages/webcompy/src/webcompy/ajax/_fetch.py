@@ -208,10 +208,17 @@ class HttpClient:
             method: HTTP method to use.
             url: Request URL.
             headers: Request headers as a ``{name: value}`` mapping.
+                An explicit ``Content-Type`` always wins over the
+                auto-generated value.
             query_params: Query parameters appended to the URL.
             json: JSON object serialized as the request body.
             body_data: Raw ``str`` or ``bytes`` request body.
             form_data: Multipart form fields encoded and sent through the fetch port.
+                The body is always encoded with an auto-generated boundary;
+                an explicit ``multipart/form-data; boundary=...`` header is
+                passed through unchanged and therefore does not match the
+                encoded body. Callers that need a custom boundary must build
+                the body themselves and send it via ``body_data``.
             form_element: A form DOM node whose fields are submitted (browser only).
 
         Returns:

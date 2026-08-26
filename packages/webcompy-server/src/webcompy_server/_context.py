@@ -65,6 +65,14 @@ class ServerRenderContext(RenderContext):
         self._di_scope.provide(TRANSITION_PORT_KEY, ServerTransitionPort())
         self._di_scope.provide(WEBSOCKET_PORT_KEY, ServerWebSocketPort())
 
+        from webcompy.di._keys import RPC_MIDDLEWARE_KEY
+        from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
+        from webcompy.ports._middleware import FetchMiddlewareRegistry
+        from webcompy.rpc._middleware import RpcMiddlewareRegistry
+
+        self._di_scope.provide(FETCH_MIDDLEWARE_KEY, FetchMiddlewareRegistry())
+        self._di_scope.provide(RPC_MIDDLEWARE_KEY, RpcMiddlewareRegistry())
+
     async def render_html(self, **kwargs: Any) -> str:
         """Render the application to an HTML string.
 

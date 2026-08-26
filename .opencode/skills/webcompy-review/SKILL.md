@@ -77,6 +77,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Readonly Signal & Event Source Lifecycle** — `readonly-signal/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
 - **FetchPort Streaming Contract** — `port-abstraction/spec.md`
+- **Fetch/RPC Middleware Ordering and Delegation** — `fetch-middleware/spec.md`, `rpc-middleware/spec.md`
 - **Realtime Type Allowlist Decoding** — `typed-realtime/spec.md`
 - **Error Handling** — `error-handling/spec.md`
 - **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`

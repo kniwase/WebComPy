@@ -8,6 +8,8 @@ from webcompy.di._key import InjectKey
 
 _ROUTER_KEY = InjectKey[object]("webcompy-internal-router")
 RPC_REGISTRY_KEY = InjectKey[object]("webcompy-rpc-registry")
+RPC_MIDDLEWARE_KEY = InjectKey[object]("webcompy-rpc-middleware")
+"""Key for the per-context ``RpcMiddlewareRegistry`` consulted by HTTP RPC operations."""
 _APP_KEY = InjectKey[object]("webcompy-internal-app")
 _COMPONENT_STORE_KEY = InjectKey[object]("webcompy-internal-component-store")
 _HEAD_PROPS_KEY = InjectKey[object]("webcompy-internal-head-props")

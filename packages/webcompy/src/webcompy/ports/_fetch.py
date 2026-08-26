@@ -11,6 +11,26 @@ from typing import Any
 
 @dataclass
 class Response:
+    """A buffered HTTP response returned by ``FetchPort.fetch``.
+
+    Args:
+        text: Response body decoded as text.
+        headers: Response headers.
+        status_code: HTTP status code.
+        status_text: HTTP status text.
+        ok: Whether the response is successful.
+        content: Raw response body as bytes.
+
+    Attributes:
+        text: Response body decoded as text.
+        headers: Response headers.
+        status_code: HTTP status code.
+        status_text: HTTP status text.
+        ok: Whether the response is successful.
+        content: Raw response body as bytes.
+
+    """
+
     text: str
     headers: dict[str, str]
     status_code: int
@@ -19,10 +39,25 @@ class Response:
     content: bytes = b""
 
     def raise_for_status(self) -> None:
+        """Raise an exception when the response is not successful.
+
+        Raises:
+            Exception: If the response status is not successful.
+
+        """
         if not self.ok:
             raise Exception("HTTP error")
 
     def json(self, **kwargs: Any) -> Any:
+        """Decode the response body as JSON.
+
+        Args:
+            **kwargs: Extra keyword arguments forwarded to ``json.loads``.
+
+        Returns:
+            The decoded JSON value.
+
+        """
         return json_loads(self.text, **kwargs)
 
 

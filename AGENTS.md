@@ -168,6 +168,7 @@ the per-area reference.
 - **Composable Usage** — `composables/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
 - **FetchPort Streaming Contract** — `port-abstraction/spec.md`
+- **Fetch/RPC Middleware Ordering and Delegation** — `fetch-middleware/spec.md`, `rpc-middleware/spec.md`
 - **Realtime Type Allowlist Decoding** — `typed-realtime/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
@@ -210,15 +211,15 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
-| `webcompy/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md`, `rpc-contracts/spec.md` |
+| `webcompy/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md`, `rpc-contracts/spec.md`, `rpc-middleware/spec.md` |
 | `webcompy/rpc/_contracts.py` | `rpc-contracts/spec.md`, `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md` |
 | `webcompy/rpc/_ws_client.py` | `rpc-websocket/spec.md`, `websocket-composable/spec.md`, `typed-realtime/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `json-rpc/spec.md`, `rpc-streaming/spec.md` |
-| `webcompy/rpc/_client.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md` |
+| `webcompy/rpc/_client.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md`, `rpc-middleware/spec.md` |
 | `webcompy/rpc/_stream.py` | `rpc-streaming/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/ports/_event_source.py`, `webcompy/ports/_browser/_event_source.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `sse-composable/spec.md` |
 | `webcompy/ports/_websocket.py`, `webcompy/ports/_browser/_websocket.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `websocket-composable/spec.md` |
-| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md`, `custom-element-components/spec.md` |
+| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md`, `custom-element-components/spec.md`, `fetch-middleware/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
@@ -229,9 +230,9 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_server/rpc/_dispatcher.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md` |
 | `webcompy_server/rpc/_streams.py` | `rpc-streaming/spec.md` |
 | `webcompy_server/rpc/_ws_endpoint.py` | `rpc-websocket/spec.md`, `rpc-streaming/spec.md` |
-| `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
+| `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md`, `fetch-middleware/spec.md`, `rpc-middleware/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
-| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md`, `fetch-middleware/spec.md` |
 | `webcompy/realtime/` | `sse-composable/spec.md`, `websocket-composable/spec.md`, `signal-stream/spec.md`, `typed-realtime/spec.md`, `reactive/spec.md`, `di-scope/spec.md` |
 | `webcompy/realtime/_typed.py` | `typed-realtime/spec.md`, `typed-response/spec.md`, `typed-api-client/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
@@ -347,6 +348,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
 | `port-abstraction` | Typed, injectable port ABCs replacing monolithic `browser` |
+| `fetch-middleware` | Stackable `FetchMiddleware` chains around `FetchPort.fetch/stream`: registries on DI, plugin hooks, `next(response=...)` interception with hydration/blocked-path delegation, header-commit-time streaming resolution |
 | `resource-port` | Async `ResourcePort` ABC + `ServerResourcePort`/`BrowserResourcePort` for app-package resource files (replaces legacy `load_asset`) |
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
@@ -374,6 +376,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos |
 | `inspect-cli` | CLI tool for browser inspection of WebComPy apps |
 | `json-rpc` | JSON-RPC 2.0 dispatcher, procedure registry, metadata extension, allowlist type decoding, typed browser client |
+| `rpc-middleware` | Stackable `RpcMiddleware` chains over HTTP RPC: typed args/headers context with batch/streaming metadata, validated `next(response=...)` synthesis through `_resolve_single`, registries on DI and plugin hooks |
 | `rpc-contracts` | Declarative RPC contracts (`Procedure`/`StreamingProcedure`/`Subscription`/`RpcCall`/`batch`/`notify`/`RpcTransport`/`RpcHttpClient`/`bind`) with registration validation and transport dispatch |
 | `rpc-streaming` | Finite, call-scoped streaming RPC responses: generator-function procedure registration with element-schema extraction, `RpcStream` typed async iterator with state and close semantics, HTTP SSE and WebSocket transport, mid-stream error propagation, client cancellation, and SSR degradation to an empty finished stream |
 | `rpc-websocket` | JSON-RPC 2.0 over WebSocket: WS dispatcher endpoint, `RpcWsClient`, subscription streams with cursors, rejoin/catch-up/`resync_required`, application-level heartbeat, `force_close` |
