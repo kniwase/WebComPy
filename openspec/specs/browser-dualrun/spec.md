@@ -1,8 +1,10 @@
+# Browser Dual-Run
+
 ## Purpose
 
 CPython-only unit tests never exercise the `ENVIRONMENT == "pyscript"` code paths; this capability classifies existing `tests/` modules for PyScript eligibility, re-executes the eligible subset inside the real PyScript harness, and reports CPython-vs-PyScript divergences as a first-class bucketed diff so WebLoop, FFI, encoding, and event-ordering gaps become visible before they reach E2E.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Classifier shall partition tests/ modules into eligible and ineligible sets via a read-only AST pass
 
