@@ -2,19 +2,19 @@
 
 ## 1. Core decorator implementation
 
-- [ ] 1.1 Change `define_component` signature in `packages/webcompy/src/webcompy/components/_generator.py` to `custom_element_name: str | None = None` (positional-or-keyword) with existing keyword-only args; keep factory-call validation of explicit tag, observed_attributes, display; add an eager bare-application guard raising when the first argument is callable (guidance to call the decorator factory), plus an isinstance guard against decorating a `ComponentGenerator`
-- [ ] 1.2 Move tag resolution into the returned decorator: derive `pascal_to_kebab(component_def.__name__)` when the argument is omitted, validate derived result via `_validate_custom_element_name` with rename-or-explicit-tag guidance, and pass the resolved tag into `_create_generator`
-- [ ] 1.3 Add re-decoration guard raising `WebComPyComponentException` when the decorated object already carries `__webcompy_component_definition__`; remove the name-mismatch block (expected-name check and derived-suggestion logic)
-- [ ] 1.4 Update `define_component` docstring (Google style, no OpenSpec references) for the new call forms; update `.pyi` stub if one exists
-- [ ] 1.5 Run `uv run pyright packages/webcompy` and `uv run ruff check packages/webcompy`
+- [x] 1.1 Change `define_component` signature in `packages/webcompy/src/webcompy/components/_generator.py` to `custom_element_name: str | None = None` (positional-or-keyword) with existing keyword-only args; keep factory-call validation of explicit tag, observed_attributes, display; add an eager bare-application guard raising when the first argument is callable (guidance to call the decorator factory), plus an isinstance guard against decorating a `ComponentGenerator`
+- [x] 1.2 Move tag resolution into the returned decorator: derive `pascal_to_kebab(component_def.__name__)` when the argument is omitted, validate derived result via `_validate_custom_element_name` with rename-or-explicit-tag guidance, and pass the resolved tag into `_create_generator`
+- [x] 1.3 Add re-decoration guard raising `WebComPyComponentException` when the decorated object already carries `__webcompy_component_definition__`; remove the name-mismatch block (expected-name check and derived-suggestion logic)
+- [x] 1.4 Update `define_component` docstring (Google style, no OpenSpec references) for the new call forms; update `.pyi` stub if one exists
+- [x] 1.5 Run `uv run pyright packages/webcompy` and `uv run ruff check packages/webcompy`
 
 ## 2. Unit tests
 
-- [ ] 2.1 Add tests for derivation success (`UserCard` → `user-card`), keyword form (`custom_element_name=`), and non-round-tripping acronym acceptance (`HTTPRequest` → `http-request`)
-- [ ] 2.2 Add tests for the derived-failure error catalog: hyphen-less (`App`), reserved (`FontFace`), regex-invalid (`my_card`) — asserting guidance mentions rename or explicit tag
-- [ ] 2.3 Add tests for explicit-tag freedom (`Card` + `"user-card"` succeeds), invalid explicit tags still rejected, and re-decoration guard raising
-- [ ] 2.4 Add a test that applying `define_component` bare (undecorated contract) does not produce a usable generator under the new API (documents D4 #7)
-- [ ] 2.5 Run `uv run python -m pytest tests/ --tb=short` and fix fallout
+- [x] 2.1 Add tests for derivation success (`UserCard` → `user-card`), keyword form (`custom_element_name=`), and non-round-tripping acronym acceptance (`HTTPRequest` → `http-request`)
+- [x] 2.2 Add tests for the derived-failure error catalog: hyphen-less (`App`), reserved (`FontFace`), regex-invalid (`my_card`) — asserting guidance mentions rename or explicit tag
+- [x] 2.3 Add tests for explicit-tag freedom (`Card` + `"user-card"` succeeds), invalid explicit tags still rejected, and re-decoration guard raising
+- [x] 2.4 Add a test that applying `define_component` bare (undecorated contract) does not produce a usable generator under the new API (documents D4 #7)
+- [x] 2.5 Run `uv run python -m pytest tests/ --tb=short` and fix fallout
 
 ## 3. Codebase sweep — pattern A (derivable names → omitted form)
 

@@ -37,7 +37,7 @@ from webcompy.components._libs import (
     generate_id,
 )
 from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
-from webcompy.utils._casing import kebab_to_pascal, pascal_to_kebab
+from webcompy.utils._casing import pascal_to_kebab
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
@@ -547,22 +547,30 @@ def _create_generator(
 
 
 def define_component(
-    name: str,
+    custom_element_name: str | None = None,
     *,
     observed_attributes: Iterable[str] = (),
     display: ComponentDisplay | None = None,
 ) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
     """Decorate a setup function into a named component generator.
 
+    The decorator factory must be called (``@define_component(...)``).
+    When ``custom_element_name`` is provided, its value forms the
+    custom element tag and is validated against the custom-element
+    naming rules; the setup function's name is not compared to it.
+    When omitted, the tag is derived from the decorated function's
+    name by converting PascalCase/camelCase to kebab-case, and only
+    the derived value is validated. Non-round-tripping names such as
+    acronyms are accepted in derived mode.
+
     The component setup function receives the ``ComponentContext`` and
     returns the component template. The decorated function keeps its
     name and becomes callable as ``ComponentName(props, slots={...})``.
-    The assigned ``name`` forms the custom element tag and is validated;
-    the setup function's name must match the Pascal-case form of it.
 
     Args:
-        name: Custom element name for the component (lowercase, must
-            contain a hyphen).
+        custom_element_name: Custom element tag name (lowercase, must
+            contain a hyphen). Derived from the decorated function's
+            name when omitted.
         observed_attributes: Attribute names mirrored into the props
             mapping.
         display: CSS ``display`` mode applied to the component element.
@@ -571,36 +579,47 @@ def define_component(
         A decorator producing a ``ComponentGenerator`` for the component.
 
     Raises:
-        WebComPyComponentException: If the custom element name or the
-            ``display`` value is invalid, or if the decorated function's
-            name does not match the element name.
+        WebComPyComponentException: If the decorator factory is applied
+            without being called, if arguments are invalid, if the
+            explicit or derived custom element name violates the
+            custom-element naming rules, or if the decorated object is
+            already a component definition.
 
     """
-    _validate_custom_element_name(name)
+    if callable(custom_element_name):
+        raise WebComPyComponentException(
+            "'define_component' must be used as a decorator factory: apply @define_component(...) with parentheses."
+        )
+    if custom_element_name is not None:
+        _validate_custom_element_name(custom_element_name)
     normalized = _normalize_observed_attributes(observed_attributes)
     if display is not None and (not isinstance(display, str) or not _is_component_display(display)):
         valid = ", ".join(get_args(ComponentDisplay))
         raise WebComPyComponentException(f"Invalid display value: {display!r}. Valid values: {valid}")
 
     def _decorator(component_def: FuncComponentDef[PropsType]) -> ComponentGenerator[PropsType]:
-        expected_name = kebab_to_pascal(name)
-        if component_def.__name__ != expected_name:
-            derived = pascal_to_kebab(component_def.__name__)
-            message = (
-                f"Component name mismatch: '{name}' resolves to '{expected_name}' "
-                f"but the setup function is named '{component_def.__name__}'. "
-                f"Rename the function to '{expected_name}'"
+        if isinstance(component_def, ComponentGenerator):
+            raise WebComPyComponentException("A ComponentGenerator cannot be used as a component definition.")
+        if getattr(component_def, "__webcompy_component_definition__", False):
+            raise WebComPyComponentException(
+                f"'{getattr(component_def, '__name__', component_def)}' is already "
+                "a component definition and cannot be decorated again."
             )
+        if custom_element_name is None:
             try:
-                _validate_custom_element_name(derived)
-            except WebComPyComponentException:
-                derived = None
-            if derived is not None and kebab_to_pascal(derived) == component_def.__name__:
-                message += f' or use @define_component("{derived}").'
-            else:
-                message += "."
-            raise WebComPyComponentException(message)
-        return _create_generator(component_def, name, normalized, display)
+                resolved = pascal_to_kebab(component_def.__name__)
+                _validate_custom_element_name(resolved)
+            except WebComPyComponentException as exc:
+                raise WebComPyComponentException(
+                    f"Cannot derive a valid custom element name from the component "
+                    f"definition name '{component_def.__name__}': {exc} "
+                    "Rename the function to a multi-word PascalCase name "
+                    "(e.g., 'TodoApp'), or pass an explicit tag: "
+                    '@define_component("<your-tag>").'
+                ) from None
+        else:
+            resolved = custom_element_name
+        return _create_generator(component_def, resolved, normalized, display)
 
     return _decorator
 

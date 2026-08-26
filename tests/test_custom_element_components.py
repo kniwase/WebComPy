@@ -105,74 +105,93 @@ class TestDefineComponentValidation:
         assert isinstance(MyCard, ComponentGenerator)
 
 
-class TestNamingConsistency:
-    def test_consistent_name_accepted(self) -> None:
-        @define_component("user-card")
+class TestFlexibleNaming:
+    @staticmethod
+    def _definition_named(name: str):
+        def component(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        component.__name__ = name
+        return component
+
+    def test_derived_name_from_multi_word_function(self) -> None:
+        @define_component()
         def UserCard(context: ComponentContext[None]):
             return html.DIV({}, "card")
 
         assert UserCard.custom_element_name == "user-card"
 
-    def test_mismatched_name_rejected(self) -> None:
-        with pytest.raises(WebComPyComponentException, match="mismatch"):
+    def test_non_round_tripping_acronym_accepted(self) -> None:
+        @define_component()
+        def HTTPRequest(context: ComponentContext[None]):
+            return html.DIV({}, "card")
 
-            @define_component("user-card")
-            def Card(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        assert HTTPRequest.custom_element_name == "http-request"
 
-    def test_acronym_name_rejected_with_guidance(self) -> None:
-        with pytest.raises(WebComPyComponentException, match="HttpRequest"):
+    def test_explicit_tag_decoupled_from_function_name(self) -> None:
+        @define_component("user-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
 
-            @define_component("http-request")
-            def HTTPRequest(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        assert Card.custom_element_name == "user-card"
 
-    def test_single_word_name_rejected(self) -> None:
-        with pytest.raises(WebComPyComponentException, match="hyphen"):
+    def test_explicit_tag_by_keyword(self) -> None:
+        @define_component(custom_element_name="user-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
 
-            @define_component("app")
-            def App(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        assert Card.custom_element_name == "user-card"
 
-    def test_underscore_prefixed_name_rejected(self) -> None:
-        with pytest.raises(WebComPyComponentException):
+    def test_kwargs_only_form_derives_name_and_normalises_attributes(self) -> None:
+        @define_component(observed_attributes=("Theme-Color",))
+        def MyCard(context: ComponentContext[None]):
+            return html.DIV({}, "card")
 
-            @define_component("_test-root")
-            def _TestRoot(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        assert MyCard.custom_element_name == "my-card"
+        assert MyCard.observed_attributes == ("theme-color",)
 
-    def test_roundtrip_rename_suggestion_offered(self) -> None:
+    @pytest.mark.parametrize("function_name", ["App", "FontFace", "my_card", "_Card"])
+    def test_derivation_failure_guides_rename_or_explicit_tag(self, function_name: str) -> None:
         with pytest.raises(WebComPyComponentException) as exc_info:
-
-            @define_component("other-widget")
-            def MyWidget(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+            define_component()(self._definition_named(function_name))
 
         message = str(exc_info.value)
-        assert "Rename the function to 'OtherWidget'" in message
-        assert 'use @define_component("my-widget")' in message
+        assert f"'{function_name}'" in message
+        assert "Rename the function" in message
+        assert "use @define_component" in message or "@define_component(" in message
 
-    def test_single_word_mismatch_offers_rename_only(self) -> None:
+    def test_reserved_derived_name_reports_derived_value(self) -> None:
         with pytest.raises(WebComPyComponentException) as exc_info:
+            define_component()(self._definition_named("FontFace"))
 
-            @define_component("user-card")
-            def Card(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        assert "font-face" in str(exc_info.value)
 
-        message = str(exc_info.value)
-        assert "Rename the function to 'UserCard'" in message
-        assert "use @define_component" not in message
+    def test_invalid_explicit_tags_still_rejected(self) -> None:
+        for name in ["nocard", "My-Card", "", "my_card", "font-face"]:
+            with pytest.raises(WebComPyComponentException):
+                define_component(name)
 
-    def test_acronym_mismatch_offers_rename_only(self) -> None:
-        with pytest.raises(WebComPyComponentException) as exc_info:
+    def test_bare_application_rejected_with_guidance(self) -> None:
+        def UserCard(context: ComponentContext[None]):
+            return html.DIV({}, "card")
 
-            @define_component("my-http-client")
-            def MyHTTPClient(context: ComponentContext[None]):
-                return html.DIV({}, "card")
+        with pytest.raises(WebComPyComponentException, match="parentheses"):
+            define_component(UserCard)
 
-        message = str(exc_info.value)
-        assert "Rename the function to 'MyHttpClient'" in message
-        assert "use @define_component" not in message
+    def test_redecorating_a_generator_rejected(self) -> None:
+        @define_component()
+        def UserCard(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with pytest.raises(WebComPyComponentException, match="component definition"):
+            define_component("other-card")(UserCard)
+
+    def test_redecorating_a_marked_function_rejected(self) -> None:
+        definition = self._definition_named("UserCard")
+        define_component("user-card")(definition)
+
+        with pytest.raises(WebComPyComponentException, match="already"):
+            define_component("other-card")(definition)
 
 
 class TestDisplayArgument:
