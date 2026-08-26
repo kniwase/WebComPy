@@ -32,10 +32,10 @@
 
 ## 5. Specs and documentation sync
 
-- [ ] 5.1 Update live-spec examples using the bare undecorated form to the called form (`openspec/specs/reactive-scoped-style/spec.md`, plus any other live spec instances found by grep excluding archive)
-- [ ] 5.2 Rewrite naming-rules section of `docs_app/documents/custom_elements.md`: optional argument, derivation rules, acronym acceptance, updated migration section from the old bare era, examples covering both paths
-- [ ] 5.3 Update `docs_app/documents/quickstart.md` examples to preferred forms
-- [ ] 5.4 Grep `docs_app/documents/` and `docs_app/` non-generated code for stale claims about mandatory name matching; fix all hits
+- [x] 5.1 Update live-spec examples using the bare undecorated form to the called form (`openspec/specs/reactive-scoped-style/spec.md`, plus any other live spec instances found by grep excluding archive)
+- [x] 5.2 Rewrite naming-rules section of `docs_app/documents/custom_elements.md`: optional argument, derivation rules, acronym acceptance, updated migration section from the old bare era, examples covering both paths
+- [x] 5.3 Update `docs_app/documents/quickstart.md` examples to preferred forms
+- [x] 5.4 Grep `docs_app/documents/` and `docs_app/` non-generated code for stale claims about mandatory name matching; fix all hits
 
 ## 6. Verification
 
