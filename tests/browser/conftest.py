@@ -169,13 +169,17 @@ def browser_harness(request: pytest.FixtureRequest):
         yield driver
     finally:
         request.session._browser_driver = None  # type: ignore[attr-defined]
-        if dual_enabled:
-            from webcompy_cli._browser_probes import run_dualrun_sweep
+        try:
+            if dual_enabled:
+                from webcompy_cli._browser_probes import run_dualrun_sweep
 
-            result = run_dualrun_sweep(repo_root=repo_root, driver=driver)
-            request.config._webcompy_dualrun_result = result  # type: ignore[attr-defined]
-        driver.close()
-        shutdown_harness(process)
+                result = run_dualrun_sweep(repo_root=repo_root, driver=driver)
+                request.config._webcompy_dualrun_result = result  # type: ignore[attr-defined]
+        except Exception as e:
+            print(f"[browser-dualrun] sweep failed during teardown: {e!r}", flush=True)
+        finally:
+            driver.close()
+            shutdown_harness(process)
 
 
 _OUTCOME_PRECEDENCE = {"failed": 3, "skipped": 2, "passed": 1}
