@@ -816,6 +816,11 @@ async def _dispatch_http_batch(
         Resolved results in call order; ``RpcError`` entries when
         ``return_exceptions`` is ``True``.
 
+    Raises:
+        RpcError: If the batch response is malformed, an entry response
+            is missing, or per-entry validation fails and
+            ``return_exceptions`` is ``False``.
+
     """
     envelopes: list[dict[str, Any]] = []
     pairs: list[tuple[int, Any]] = []
