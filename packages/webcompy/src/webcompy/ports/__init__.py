@@ -5,7 +5,7 @@ from webcompy.ports._cookie import CookiePort
 from webcompy.ports._custom_element import CustomElementPort
 from webcompy.ports._dom import DOMNode, DOMNodeList, DOMPort
 from webcompy.ports._event_source import EventSourcePort
-from webcompy.ports._fetch import FetchPort, FetchStream
+from webcompy.ports._fetch import FetchPort, FetchStream, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
@@ -31,6 +31,7 @@ from webcompy.ports._media_query import MediaQueryPort
 from webcompy.ports._middleware import (
     FetchMiddleware,
     FetchMiddlewareRegistry,
+    FetchNext,
     FetchRequest,
     add_fetch_middleware,
 )
@@ -64,6 +65,7 @@ __all__ = [
     "FFIPort",
     "FetchMiddleware",
     "FetchMiddlewareRegistry",
+    "FetchNext",
     "FetchPort",
     "FetchRequest",
     "FetchStream",
@@ -73,6 +75,7 @@ __all__ = [
     "MediaQueryPort",
     "ResourceNotFoundError",
     "ResourcePort",
+    "Response",
     "TransitionPort",
     "WebSocketConnection",
     "WebSocketPort",
