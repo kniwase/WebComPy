@@ -26,11 +26,11 @@ The initial probe set SHALL include at least one probe for each of the following
 
 ### Requirement: Version-bump sweep shall execute probes (and optionally dual-run) at two PyScript versions and emit a delta
 
-A manually-triggered version-bump sweep SHALL execute the `tests/browser/probes/**` suite (and, if `WEBCOMPY_RUN_DUAL=1` is set, the eligible dual-run tier as well) twice: once with harness runtime assets from the pinned `PYSCRIPT_VERSION` and once with assets from the candidate version supplied via `WEBCOMPY_PYSCRIPT_CANDIDATE=<version>` (downloaded via the existing `webcompy_cli/_runtime_downloader` local-asset path). Both runs SHALL use the same harness code. The sweep SHALL write `artifacts/browser-version-sweep.json` (`{pinned_version, candidate_version, probes: {only_pinned_pass, only_candidate_pass, both_pass, both_fail}, dualrun?: <same buckets as browser-dualrun>}`) and SHALL fail the CI job if any probe regresses (`only_candidate_fail` / `only_pinned_pass` non-empty for the probes suite). Candidate assets SHALL never be promoted automatically.
+A manually-triggered version-bump sweep SHALL execute the `tests/browser/probes/**` suite (and, if `WEBCOMPY_RUN_DUAL=1` is set, the eligible dual-run tier as well) twice: once with harness runtime assets from the pinned `PYSCRIPT_VERSION` and once with assets from the candidate version supplied via `WEBCOMPY_PYSCRIPT_CANDIDATE=<version>` (downloaded via the existing `webcompy_cli/_runtime_downloader` local-asset path). Both runs SHALL use the same harness code. The sweep SHALL write `artifacts/browser-version-sweep.json` (`{pinned_version, candidate_version, probes: {only_pinned_pass, only_candidate_pass, both_pass, both_fail}, dualrun?: <same buckets as browser-dualrun>}`) and SHALL fail the CI job if any probe regresses (`regressions` non-empty; equivalently `probes.only_pinned_pass` non-empty). Candidate assets SHALL never be promoted automatically.
 
 #### Scenario: Sweep detects a probe regression at the candidate version
 - **WHEN** the sweep runs with `WEBCOMPY_PYSCRIPT_CANDIDATE=2026.9.1` and a UTF-16 probe passes at the pinned version but fails at the candidate
-- **THEN** `artifacts/browser-version-sweep.json` SHALL list that probe under `probes.only_candidate_fail`
+- **THEN** `artifacts/browser-version-sweep.json` SHALL list that probe under `regressions` and in `probes.only_pinned_pass`
 - **AND** the CI job SHALL exit non-zero
 
 #### Scenario: Sweep without candidate runs no sweep
