@@ -201,11 +201,24 @@ jobs:
         run: |
           scripts/run-browser-tests.sh --tb=short 2>&1 | tee ci-browser-tests.log
           exit "${PIPESTATUS[0]}"
+      - name: Run environment probes (hard gate)
+        run: |
+          scripts/run-browser-tests.sh --probes --tb=short 2>&1 | tee ci-browser-probes.log
+          exit "${PIPESTATUS[0]}"
+      - name: Run dual-run sweep (informational)
+        continue-on-error: true
+        run: |
+          scripts/run-browser-tests.sh --dual --tb=short 2>&1 | tee ci-browser-dualrun.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ci-browser-tests-log
-          path: ci-browser-tests.log
+          path: |
+            ci-browser-tests.log
+            ci-browser-probes.log
+            ci-browser-dualrun.log
+            artifacts/browser-dualrun.json
 
   wheel-smoke:
     needs: [detect-scope]

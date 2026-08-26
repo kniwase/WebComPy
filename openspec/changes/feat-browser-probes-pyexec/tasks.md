@@ -24,6 +24,6 @@
 
 ## 6. Docs, CI, and housekeeping
 
-- [ ] 6.1 Update `AGENTS.md` File → Spec Mapping, Framework Invariants, and Current Specs list for `browser-dualrun`, `browser-probes`, and `inspect-pyexec`; update `.opencode/skills/webcompy-review/SKILL.md` to keep the mapping and invariants in sync; run `python3 scripts/check-doc-spec-refs.py` and confirm it passes.
-- [ ] 6.2 Extend the `browser-tests` CI job (Phase 1) with `dual` and `probes` modes; add a manually-triggered `browser-version-sweep` workflow (`workflow_dispatch` `pyscript_candidate_version` → `WEBCOMPY_PYSCRIPT_CANDIDATE`).
-- [ ] 6.3 Record the classifier's initial `eligible.txt`/`ineligible.json` output (reviewed) and document the probe/`PYSCRIPT_VERSION` bump procedure in `CONTRIBUTING.md` (and, if it describes test layout, the dual-run eligibility and pragma convention).
+- [x] 6.1 Update `AGENTS.md` File → Spec Mapping, Framework Invariants, and Current Specs list for `browser-dualrun`, `browser-probes`, and `inspect-pyexec`; update `.opencode/skills/webcompy-review/SKILL.md` to keep the mapping and invariants in sync; run `python3 scripts/check-doc-spec-refs.py` and confirm it passes.
+- [x] 6.2 Extend the `browser-tests` CI job (Phase 1) with `dual` and `probes` modes; add a manually-triggered `browser-version-sweep` workflow (`workflow_dispatch` `pyscript_candidate_version` → `WEBCOMPY_PYSCRIPT_CANDIDATE`).
+- [x] 6.3 Record the classifier's initial `eligible.txt`/`ineligible.json` output (reviewed) and document the probe/`PYSCRIPT_VERSION` bump procedure in `CONTRIBUTING.md` (and, if it describes test layout, the dual-run eligibility and pragma convention).
