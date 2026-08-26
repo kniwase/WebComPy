@@ -18,11 +18,11 @@
 
 ## 3. Codebase sweep — pattern A (derivable names → omitted form)
 
-- [ ] 3.1 Convert framework component definitions to the called/omitted form where names derive (`packages/webcompy/src/webcompy/ui/code_block/_component.py`, docstring examples inside framework modules such as `_reactive_scoped_style.py`, `_css_template.py`)
-- [ ] 3.2 Convert docs_app definitions (`components/`, `layout/`, `templates/`, `pages/`) that match pattern A to `@define_component()` or kwargs-only form
-- [ ] 3.3 Convert CLI scaffold templates (`packages/webcompy-cli/src/webcompy_cli/template_data/app/components/*.py`) to pattern A form; verify `webcompy init` output compiles
-- [ ] 3.4 Mechanically convert unit-test definitions whose names round-trip to the omitted form across `tests/` (full conversion per proposal); re-run full pytest
-- [ ] 3.5 Convert E2E corpus app definitions (`e2e/core/my_app/**`, `loading_app`, `profile_app`) whose names round-trip to the omitted form
+- [x] 3.1 Convert framework component definitions to the called/omitted form where names derive (`packages/webcompy/src/webcompy/ui/code_block/_component.py`, docstring examples inside framework modules such as `_reactive_scoped_style.py`, `_css_template.py`)
+- [x] 3.2 Convert docs_app definitions (`components/`, `layout/`, `templates/`, `pages/`) that match pattern A to `@define_component()` or kwargs-only form
+- [x] 3.3 Convert CLI scaffold templates (`packages/webcompy-cli/src/webcompy_cli/template_data/app/components/*.py`) to pattern A form; verify `webcompy init` output compiles
+- [x] 3.4 Mechanically convert unit-test definitions whose names round-trip to the omitted form across `tests/` (full conversion per proposal); re-run full pytest
+- [x] 3.5 Convert E2E corpus app definitions (`e2e/core/my_app/**`, `loading_app`, `profile_app`) whose names round-trip to the omitted form
 
 ## 4. Codebase sweep — pattern B (rename verbose functions, tags unchanged)
 
