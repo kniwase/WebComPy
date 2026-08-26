@@ -26,9 +26,9 @@
 
 ## 4. Codebase sweep — pattern B (rename verbose functions, tags unchanged)
 
-- [ ] 4.1 Rename demo app functions keeping explicit tags: `HelloWorldApp`→`HelloWorld`, `FetchSampleApp`→`FetchSample`, `MatplotlibSampleApp`→`MatplotlibSample`, `TeleportDemoApp`→`TeleportDemo`, `TransitionDemoApp`→`TransitionDemo` in `docs_app/static/_demos/*/app.py`
-- [ ] 4.2 Update all references to renamed functions within each demo module (route tables, templates); confirm no external imports exist
-- [ ] 4.3 Finalize list scan for any remaining doubled-qualifier names matching pattern B criteria; apply same treatment or record as intentional `-page` suffixes
+- [x] 4.1 Rename demo app functions keeping explicit tags: `HelloWorldApp`→`HelloWorld`, `FetchSampleApp`→`FetchSample`, `MatplotlibSampleApp`→`MatplotlibSample`, `TeleportDemoApp`→`TeleportDemo`, `TransitionDemoApp`→`TransitionDemo` in `docs_app/static/_demos/*/app.py`
+- [x] 4.2 Update all references to renamed functions within each demo module (route tables, templates); confirm no external imports exist
+- [x] 4.3 Finalize list scan for any remaining doubled-qualifier names matching pattern B criteria; apply same treatment or record as intentional `-page` suffixes
 
 ## 5. Specs and documentation sync
 
