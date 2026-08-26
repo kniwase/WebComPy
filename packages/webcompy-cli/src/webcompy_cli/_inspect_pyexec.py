@@ -171,6 +171,9 @@ def cmd_pyexec(args: Namespace) -> None:
             ``repl_timeout``, and ``wait_for``.
 
     """
+    from webcompy_cli._inspect import _check_playwright
+
+    _check_playwright()
     code_source = resolve_code_source(args)
 
     # Keep stdout clean: only JSON goes to stdout, harness logs go to stderr.

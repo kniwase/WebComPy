@@ -3,7 +3,7 @@
 import pytest
 
 from webcompy_cli._inspect import get_inspect_parser
-from webcompy_cli._inspect_pyexec import PyexecUsageError, resolve_code_source
+from webcompy_cli._inspect_pyexec import PyexecUsageError, cmd_pyexec, resolve_code_source
 
 
 def _parse(argv):
@@ -66,3 +66,17 @@ def test_resolve_code_missing_source_raises():
 def test_resolve_code_missing_file_raises():
     with pytest.raises(PyexecUsageError):
         resolve_code_source(_parse(["--file", "/nonexistent/nope.py"]))
+
+
+def test_cmd_pyexec_checks_playwright_before_session(monkeypatch):
+    import webcompy_cli._inspect as inspect_module
+
+    def fail() -> None:
+        raise SystemExit(1)
+
+    monkeypatch.setattr(inspect_module, "_check_playwright", fail)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_pyexec(_parse(["1+1"]))
+
+    assert exc_info.value.code == 1
