@@ -6,10 +6,10 @@
 
 The fetch port system SHALL support wrapping a concrete `FetchPort` implementation in a middleware chain that is itself a valid `FetchPort`. The wrapper SHALL delegate internal lifecycle methods (`populate_from_transfer`, `get_transfer_data`, `clear_cache`, `close`, `is_self_site_url`, and the server-side `noop` marker) to the wrapped implementation. Middleware registration SHALL NOT alter behavior when no middleware is registered.
 
-#### Scenario: Zero-middleware fast path
+#### Scenario: Zero-middleware behavioral equivalence
 
 - **WHEN** no fetch middlewares are registered
-- **THEN** `inject(FETCH_PORT_KEY)` resolves to an unwrapped chain equivalent in behavior to the bare port
+- **THEN** the installed chain wrapper delegates to the bare port with only a registry generation check, so behavior is equivalent to the unwrapped port and later registrations take effect on subsequent requests
 
 #### Scenario: Wrapper preserves hydration transfer
 
