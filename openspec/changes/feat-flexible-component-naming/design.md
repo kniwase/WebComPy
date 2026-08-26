@@ -58,17 +58,19 @@ Only `_validate_custom_element_name` rules apply to the derived value (lowercase
 | 4 | Explicit tag invalid | naming rules | existing message, unchanged |
 | 5 | Duplicate tag within app | existing registry check (unchanged) | existing message |
 | 6 | Re-decoration of a marked object | marker check | "already a component definition" |
-| 7 | Bare undecorator application | N/A — Python binds the function; factory call omitted | covered by D1 contract tests + docs; no runtime detection needed beyond the natural failure mode |
+| 7 | Bare undecorator application (`@define_component` without parentheses; Python passes the function into the `custom_element_name` parameter) | explicit guard: factory detects a callable first argument before any string validation | dedicated message directing to call the decorator factory: use `@define_component(...)` with parentheses |
 
 The old mismatch error (#8 in exploration) disappears entirely. Derived-mode errors mention both remedies (rename or explicit tag); explicit-mode errors keep today's wording.
 
 Re-decoration guard (#6): applying the returned decorator to an object having `__webcompy_component_definition__` raises instead of corrupting state. This replaces the protection the mismatch check accidentally provided.
 
+Implementation note (decided during implementation planning, supersedes the earlier "natural failure only" stance of this row): the bare-application case gets an explicit eager guard at factory-call time — if the first argument is callable, raise with guidance before any naming validation runs. A secondary isinstance check rejects passing a `ComponentGenerator` as a definition.
+
 ### D5: Codebase sweep pattern classification
 
 Existing definitions are classified into four patterns:
 
-- **A — name already derives**: function name equals `pascal_to_kebab(tag)` round-trip. Convert to the omitted/kwargs-only form (`@define_component()`, `@define_component(observed_attributes=..., ...)`). Scope: `docs_app/components|layout|templates|pages`, framework components (`ui/code_block/_component.py`), CLI scaffold `template_data/app/components/*.py`, and **all unit-test definitions whose names derive naturally** (full conversion per user decision).
+- **A — name already derives**: function name equals `pascal_to_kebab(tag)` round-trip. Convert to the omitted/kwargs-only form (`@define_component()`, `@define_component(observed_attributes=..., ...)`). Scope: `docs_app/components|layout|templates|pages`, framework components (`ui/code_block/_component.py`), CLI scaffold `template_data/app/components/*.py`, E2E corpus apps (`e2e/core/my_app/**`, `loading_app`, `profile_app` — included per implementation-planning decision), and **all unit-test definitions whose names derive naturally** (full conversion per user decision).
 - **B — verbose name mirroring the tag**: demo apps with doubled qualifiers. Rename the function simpler, keep the explicit tag unchanged: `HelloWorldApp`→`HelloWorld`, `FetchSampleApp`→`FetchSample`, `MatplotlibSampleApp`→`MatplotlibSample`, `TeleportDemoApp`→`TeleportDemo`, `TransitionDemoApp`→`TransitionDemo`. Suffix `-page` stays (role information). Final list confirmed during task execution.
 - **C — live spec examples using the bare form**: update example snippets in `openspec/specs/reactive-scoped-style/spec.md` and any other live spec using bare `@define_component` above examples to the called form. Archived changes are historical records — untouched.
 - **D — documentation prose**: `docs_app/documents/custom_elements.md` (rewrite naming-rules section: single-word failure now surfaces only via derivation error, acronyms allowed, migration section updated), `quickstart.md`.

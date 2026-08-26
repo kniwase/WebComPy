@@ -2,7 +2,7 @@
 
 ## 1. Core decorator implementation
 
-- [ ] 1.1 Change `define_component` signature in `packages/webcompy/src/webcompy/components/_generator.py` to `custom_element_name: str | None = None` (positional-or-keyword) with existing keyword-only args; keep factory-call validation of explicit tag, observed_attributes, display
+- [ ] 1.1 Change `define_component` signature in `packages/webcompy/src/webcompy/components/_generator.py` to `custom_element_name: str | None = None` (positional-or-keyword) with existing keyword-only args; keep factory-call validation of explicit tag, observed_attributes, display; add an eager bare-application guard raising when the first argument is callable (guidance to call the decorator factory), plus an isinstance guard against decorating a `ComponentGenerator`
 - [ ] 1.2 Move tag resolution into the returned decorator: derive `pascal_to_kebab(component_def.__name__)` when the argument is omitted, validate derived result via `_validate_custom_element_name` with rename-or-explicit-tag guidance, and pass the resolved tag into `_create_generator`
 - [ ] 1.3 Add re-decoration guard raising `WebComPyComponentException` when the decorated object already carries `__webcompy_component_definition__`; remove the name-mismatch block (expected-name check and derived-suggestion logic)
 - [ ] 1.4 Update `define_component` docstring (Google style, no OpenSpec references) for the new call forms; update `.pyi` stub if one exists
@@ -22,6 +22,7 @@
 - [ ] 3.2 Convert docs_app definitions (`components/`, `layout/`, `templates/`, `pages/`) that match pattern A to `@define_component()` or kwargs-only form
 - [ ] 3.3 Convert CLI scaffold templates (`packages/webcompy-cli/src/webcompy_cli/template_data/app/components/*.py`) to pattern A form; verify `webcompy init` output compiles
 - [ ] 3.4 Mechanically convert unit-test definitions whose names round-trip to the omitted form across `tests/` (full conversion per proposal); re-run full pytest
+- [ ] 3.5 Convert E2E corpus app definitions (`e2e/core/my_app/**`, `loading_app`, `profile_app`) whose names round-trip to the omitted form
 
 ## 4. Codebase sweep — pattern B (rename verbose functions, tags unchanged)
 
