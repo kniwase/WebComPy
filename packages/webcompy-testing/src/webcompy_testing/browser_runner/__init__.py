@@ -3,6 +3,7 @@
 from webcompy_testing.browser_runner._runner import (
     UnknownFixtureError,
     bootstrap,
+    evaluate,
     normalize_traceback,
     parse_test_id,
     resolve_parametrize_payload,
@@ -14,6 +15,7 @@ from webcompy_testing.browser_runner._runner import (
 __all__ = [
     "UnknownFixtureError",
     "bootstrap",
+    "evaluate",
     "normalize_traceback",
     "parse_test_id",
     "resolve_parametrize_payload",

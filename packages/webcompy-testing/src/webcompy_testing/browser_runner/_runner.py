@@ -136,12 +136,12 @@ _console_start_index = 0
 
 
 def bootstrap() -> None:
-    """Expose ``run_one`` on ``window`` and mark the harness page ready."""
+    """Expose ``run_one`` / ``evaluate`` on ``window`` and mark the harness page ready."""
     global _console_start_index
     _ensure_pytest_shim()
     ffi = importlib.import_module("pyscript").ffi
     js = importlib.import_module("js")
-    js.window.__webcompy_test__ = ffi.create_proxy({"run_one": run_one})
+    js.window.__webcompy_test__ = ffi.create_proxy({"run_one": run_one, "evaluate": evaluate})
     js.document.documentElement.setAttribute("data-webcompy-test-ready", "1")
     _console_start_index = js.window.__webcompy_test_console__.length
 
@@ -405,3 +405,76 @@ async def run_one(test_id: str) -> str:
             if module_name:
                 sys.modules.pop(module_name, None)
         _console_start_index = console_buffer.length
+
+
+_EVAL_GLOBALS: dict[str, Any] | None = None
+
+
+def _eval_globals() -> dict[str, Any]:
+    """Return the persistent globals dict shared by ``evaluate`` calls.
+
+    Keeping one dict across invocations preserves interpreter state between
+    REPL turns; single-shot evaluations simply start from an empty namespace.
+
+    """
+    global _EVAL_GLOBALS
+    if _EVAL_GLOBALS is None:
+        _EVAL_GLOBALS = {"__name__": "__main__"}
+    return _EVAL_GLOBALS
+
+
+async def evaluate(code: str) -> str:
+    """Evaluate Python code inside the harness interpreter.
+
+    The last expression's value is returned as its ``repr`` (``None`` for
+    statement-only code), mirroring a REPL. State persists across calls via
+    the shared globals dict. Unlike :func:`run_one`, the console error delta
+    is emitted as structured ``{"type", "text"}`` objects.
+
+    Args:
+        code: Python source to evaluate; may span multiple lines and use
+            top-level ``await``.
+
+    Returns:
+        JSON string of shape ``{"stdout", "stderr", "result_repr",
+        "console_error_delta", "exc_type", "traceback"}``. Evaluation
+        failures are reported in the payload instead of raising.
+
+    """
+    global _console_start_index
+    js = importlib.import_module("js")
+    console_buffer = js.window.__webcompy_test_console__
+    console_start = _console_start_index
+    stdout_io = io.StringIO()
+    stderr_io = io.StringIO()
+    result_repr: str | None = None
+    exc_type: str | None = None
+    tb = ""
+    try:
+        from pyodide.code import eval_code_async
+
+        with redirect_stdout(stdout_io), redirect_stderr(stderr_io):
+            result = await eval_code_async(code, globals=_eval_globals())
+        if result is not None:
+            try:
+                result_repr = repr(result)
+            except Exception:
+                result_repr = f"<unrepresentable {type(result).__name__}>"
+    except Exception as e:
+        exc_type = type(e).__name__
+        tb = normalize_traceback("".join(traceback.format_exception(type(e), e, e.__traceback__)))
+    payload = json.dumps(
+        {
+            "stdout": stdout_io.getvalue(),
+            "stderr": stderr_io.getvalue(),
+            "result_repr": result_repr,
+            "console_error_delta": [
+                {"type": str(console_buffer[i].type), "text": str(console_buffer[i].text)}
+                for i in range(console_start, console_buffer.length)
+            ],
+            "exc_type": exc_type,
+            "traceback": tb,
+        }
+    )
+    _console_start_index = console_buffer.length
+    return payload

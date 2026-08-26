@@ -716,6 +716,10 @@ def get_inspect_parser() -> ArgumentParser:
     verify_parser.add_argument("--wait-for", type=str, default=None, help="CSS selector to wait for before checking")
     verify_parser.set_defaults(func=cmd_verify)
 
+    from webcompy_cli._inspect_pyexec import register_pyexec_parser
+
+    register_pyexec_parser(subparsers)
+
     return parser
 
 
