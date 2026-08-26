@@ -91,6 +91,7 @@
   "tests/test_router_view_hydration.py": "module-scope side-effecting call at line 18",
   "tests/test_rpc_contracts_typing.py": "module-scope side-effecting call at line 34",
   "tests/test_rpc_integration.py": "top-level import from 'webcompy_cli._build' at line 14",
+  "tests/test_rpc_middleware.py": "module-scope side-effecting call at line 123",
   "tests/test_rpc_mount.py": "top-level import from 'webcompy_cli._build' at line 13",
   "tests/test_rpc_stream_client.py": "top-level import of 'webcompy_testing.FakeFetchPort' at line 17",
   "tests/test_rpc_ws_client.py": "top-level import of 'webcompy_testing.FakeWebSocketPort' at line 18",

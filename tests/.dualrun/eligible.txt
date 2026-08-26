@@ -25,6 +25,7 @@ tests/test_elements.py
 tests/test_error_boundary.py
 tests/test_event_error_routing.py
 tests/test_exception.py
+tests/test_fetch_middleware.py
 tests/test_fetch_port_stream.py
 tests/test_forms.py
 tests/test_framework_css_access.py
@@ -68,6 +69,7 @@ tests/test_serde_meta.py
 tests/test_server_dom_port.py
 tests/test_server_fetch_cache.py
 tests/test_server_fetch_port.py
+tests/test_server_middleware_assembly.py
 tests/test_server_resource_port.py
 tests/test_signal.py
 tests/test_signal_consumer_isolation.py
