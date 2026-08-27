@@ -39,8 +39,8 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run full local CI subset: `uv run ruff check . && uv run ruff format --check . && uv run pyright`
-- [ ] 6.2 Run `uv run python -m pytest tests/ --tb=short --cov=webcompy`
-- [ ] 6.3 Run `uv run python -m webcompy generate` on docs_app successfully
-- [ ] 6.4 Run E2E groups exercising swept code: `scripts/run-e2e-tests.sh components` and `scripts/run-e2e-tests.sh docs-home` (plus custom-elements-related group if present)
-- [ ] 6.5 Verify browser behavior manually if feasible via `uv run python -m webcompy inspect verify` on a page using a derived-form component (registration/hydration unaffected)
+- [x] 6.1 Run full local CI subset: `uv run ruff check . && uv run ruff format --check . && uv run pyright`
+- [x] 6.2 Run `uv run python -m pytest tests/ --tb=short --cov=webcompy`
+- [x] 6.3 Run `uv run python -m webcompy generate` on docs_app successfully
+- [x] 6.4 Run E2E groups exercising swept code: `scripts/run-e2e-tests.sh components` and `scripts/run-e2e-tests.sh docs-home` (plus custom-elements-related group if present)
+- [x] 6.5 Verify browser behavior manually if feasible via `uv run python -m webcompy inspect verify` on a page using a derived-form component (registration/hydration unaffected)
