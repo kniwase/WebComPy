@@ -2,8 +2,8 @@
 
 ## 1. Package skeleton
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/ui/headless/` and `packages/webcompy/src/webcompy/ui/components/` packages with `__init__.py` exports; re-export themed components from `webcompy/ui/__init__.py` top level (keep `theme` and `code_block` exports unchanged)
-- [ ] 1.2 Document the two-layer contract in `webcompy/ui/README.md`: headless behavior-only rules (structural CSS only, `data-state` vocabularies, class pass-through), themed composition rules, and the three import paths
+- [x] 1.1 Create `packages/webcompy/src/webcompy/ui/headless/` and `packages/webcompy/src/webcompy/ui/components/` packages with `__init__.py` exports; re-export themed components from `webcompy/ui/__init__.py` top level (keep `theme` and `code_block` exports unchanged)
+- [x] 1.2 Document the two-layer contract in `webcompy/ui/README.md`: headless behavior-only rules (structural CSS only, `data-state` vocabularies, class pass-through), themed composition rules, and the three import paths
 
 ## 2. Headless Spinner
 

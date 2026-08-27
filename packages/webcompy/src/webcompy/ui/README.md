@@ -6,7 +6,40 @@ First-party UI toolkit for WebComPy applications. This package provides the them
 
 - `webcompy.ui.theme` — `Theme` enum (LIGHT/DARK/SYSTEM), `ThemeManager` (DI-managed), `use_theme()` composable, cookie persistence, and SSR-safe initial render.
 - `webcompy.ui.code_block` — `CodeBlock` component, `highlight()` function, `Lexer` protocol, built-in lexers (Python, Bash, TOML), and a Pygments adapter skeleton.
-- `webcompy.ui._styles` — static CSS files (`tokens.css`, `reset.css`, `components.css`, `code-block.css`, `syntax-theme.css`, `index.css`). The framework auto-injects `/_webcompy-ui/index.css` into the page head.
+- `webcompy.ui.headless` — behavior-only primitives: state management, ARIA roles/attributes, and focus logic with no visual styling.
+- `webcompy.ui.components` — themed primitives composed from the headless layer, styled with the design tokens.
+- `webcompy.ui._styles` — static CSS files (`tokens.css`, `reset.css`, `components.css`, `primitives.css`, `code-block.css`, `syntax-theme.css`, `index.css`). The framework auto-injects `/_webcompy-ui/index.css` into the page head.
+
+## UI primitives: the two-layer model
+
+Reusable components ship in two layers with the same component name in each:
+
+```
+webcompy.ui.headless.Spinner     behavior core  (state, ARIA, focus; no styling)
+webcompy.ui.components.Spinner   themed skin    (token-based defaults)
+webcompy.ui.Spinner              the themed variant (default import path)
+```
+
+**Headless layer** — owns all behavior: state management, ARIA roles and attributes, keyboard interaction, and focus management. It never emits visual styles (colors, spacing, typography, borders, shadows, decorative animation); only structural CSS required by behavior (positioning, display toggling, visibility) is allowed. Interaction state is exposed on the DOM through `data-state` attributes with a per-component vocabulary (e.g. `data-state="loading"` for `Spinner`), so user CSS can react to state declaratively:
+
+```css
+.my-spinner[data-state="loading"] { /* user styling */ }
+```
+
+**Themed layer** — renders the corresponding headless component and adds default class names whose rules live in the shipped stylesheet (`primitives.css`, inside the `@layer components` cascade) and consume design tokens (`var(--color-*)`, `var(--space-*)`, ...). The themed layer carries zero behavior logic. `prefers-reduced-motion` is honored by themed components that animate.
+
+**Styling hooks** — every component accepts a `class_name` prop applied to its root element (named `class_name` because `class` is a Python keyword; it maps to the DOM `class` attribute). Multi-part components expose part-specific class props (`class_panel`, `class_overlay`, ...). User classes are appended after framework classes, so user rules win at equal specificity:
+
+```python
+from webcompy.ui import Spinner          # themed (default)
+from webcompy.ui.headless import Spinner  # headless, full control
+
+Spinner({"label": "Loading data"})
+Spinner({"label": "Loading data", "size": "lg"})
+Spinner({"label": "Loading data", "class_name": "my-spinner"})
+```
+
+**Cascade note** — themed defaults live inside `@layer components`. Unlayered user CSS always overrides them without specificity escalation. User CSS placed inside `@layer components` competes by source order (framework stylesheets are imported first).
 
 ## Registering a custom Lexer
 
