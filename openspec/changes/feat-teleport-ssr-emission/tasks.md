@@ -7,9 +7,9 @@
 
 ## 2. Virtual DOM selector engine
 
-- [ ] 2.1 Implement selector tokenizer/parser subset (type/class/id/compound/descendant/child/comma) as pure functions over `VirtualDOMNode` in `webcompy_server`; `ValueError` on unsupported syntax
-- [ ] 2.2 Implement read-only depth-first matching returning first match; comments never match
-- [ ] 2.3 Unit tests: id/class/type/compound/descendant/child/comma cases, document-order first-match (nested same-class), unsupported syntax raises, no-tree-attached returns None, query does not mutate tree
+- [x] 2.1 Implement selector tokenizer/parser subset (type/class/id/compound/descendant/child/comma) as pure functions over `VirtualDOMNode` in `webcompy_server`; `ValueError` on unsupported syntax
+- [x] 2.2 Implement read-only depth-first matching returning first match; comments never match
+- [x] 2.3 Unit tests: id/class/type/compound/descendant/child/comma cases, document-order first-match (nested same-class), unsupported syntax raises, no-tree-attached returns None, query does not mutate tree
 
 ## 3. Server DOM port document attachment
 
