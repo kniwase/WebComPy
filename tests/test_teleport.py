@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from html.parser import HTMLParser
 
 import pytest
@@ -529,7 +530,7 @@ class TestTeleportHydration:
 
 
 class TestTeleportSSR:
-    def test_ssr_output_contains_no_teleported_content(self):
+    def test_ssr_emits_content_under_body_by_default(self):
         @define_component()
         def TeleportPage(context):
             return html.DIV(
@@ -547,12 +548,214 @@ class TestTeleportSSR:
             prerender=True,
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
-        assert "MODAL-SECRET" not in html_str
-        assert 'id="ssr-modal"' not in html_str
-        assert "before-marker" in html_str
-        assert "after-marker" in html_str
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert '<div id="ssr-modal"' in html_str
+        assert "MODAL-SECRET" in html_str
+        assert html_str.index("<!--wc-teleport-block:0:body-->") > html_str.index('id="webcompy-app"')
+        block_end_index = html_str.index("<!--wc-teleport-block-end:0-->")
+        assert block_end_index < html_str.index("</body>")
         assert "<!--webcompy-teleport-anchor-->" in html_str
         assert "\u200b" not in html_str
+
+    def test_ssr_opt_out_emits_anchor_only(self):
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.P({}, "before-marker"),
+                Teleport({"to": "body", "ssr": False}, html.DIV({"id": "ssr-modal"}, "MODAL-SECRET")),
+                html.P({}, "after-marker"),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "MODAL-SECRET" not in html_str
+        assert 'id="ssr-modal"' not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+        assert "before-marker" in html_str
+        assert "after-marker" in html_str
+
+    def test_ssr_unresolvable_target_falls_back_to_anchor_only(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "#nowhere-container"}, html.DIV({}, "orphan-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("nowhere-container" in record.getMessage() for record in caplog.records)
+        assert "orphan-content" not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+
+    def test_ssr_app_subtree_target_is_rejected(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.DIV({"id": "inner-root"}),
+                Teleport({"to": "#inner-root"}, html.DIV({}, "inner-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("inner-root" in record.getMessage() for record in caplog.records)
+        assert "inner-content" not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+
+    def test_ssr_rejects_selector_with_unsupported_syntax(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "div[attr=x]"}, html.DIV({}, "attr-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("unsupported selector syntax" in record.getMessage() for record in caplog.records)
+        assert "attr-content" not in html_str
+
+    def test_ssr_repeated_children_emit_n_items(self):
+        from webcompy.signal import ReactiveList
+
+        items = ReactiveList(["a", "b", "c"])
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, repeat(items, lambda item: html.LI({}, item))),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        block_start = html_str.index("<!--wc-teleport-block:0:")
+        block_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        block = html_str[block_start:block_end]
+        assert block.count("<li") == 3
+
+    def test_ssr_async_child_settles_before_serialization(self):
+        @define_component()
+        async def AsyncInner(context):
+            await asyncio.sleep(0)
+            return html.DIV({"id": "async-child"}, "async-resolved")
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, AsyncInner(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert "async-resolved" in html_str
+
+    def test_ssr_teleported_component_signal_is_transferred(self):
+        from webcompy.signal import use_state
+
+        @define_component()
+        def InnerComponent(context):
+            label = use_state(lambda: "transfer-secret")
+            return html.SPAN({}, label)
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, InnerComponent(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        data_start = html_str.index("__webcompy_data__")
+        data_section = html_str[data_start : html_str.index("</script>", data_start)]
+        assert "transfer-secret" in data_section
+
+    def test_ssr_nested_teleport_gets_next_ordinal_and_anchor(self):
+        @define_component()
+        def InnerComp(context):
+            return html.DIV({}, Teleport({"to": "body"}, html.SPAN({}, "nested")))
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV({}, Teleport({"to": "body"}, InnerComp(None)))
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert "<!--wc-teleport-block:1:body-->" in html_str
+        outer_anchor_in_subtree = html_str.index("<!--webcompy-teleport-anchor-->") < html_str.index(
+            "<!--wc-teleport-block:0:"
+        )
+        del outer_anchor_in_subtree
+        nested_start = html_str.index("<!--wc-teleport-block:1:body-->")
+        outer_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        assert nested_start > outer_end
+        assert "nested" in html_str
 
     @pytest.mark.asyncio
     async def test_ssr_render_mounts_anchor_only(self, server_di_scope):

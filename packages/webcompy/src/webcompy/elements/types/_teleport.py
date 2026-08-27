@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TypedDict, cast
+from urllib.parse import quote
 
 from webcompy import logging
 from webcompy.di import inject
@@ -17,10 +19,40 @@ from webcompy.signal import SignalBase
 from webcompy.signal._graph import consumer_destroy
 from webcompy.utils._environment import ENVIRONMENT
 
+_BLOCK_START_PREFIX = "wc-teleport-block:"
+_BLOCK_END_PREFIX = "wc-teleport-block-end:"
+
+
+@dataclass
+class _PendingTeleportEntry:
+    """Server-side pending emission entry for one Teleport instance."""
+
+    ordinal: int
+    to: str
+    teleport: TeleportElement
+
+    @property
+    def children(self) -> list[ElementAbstract]:
+        """Return the teleport's child elements."""
+        return self.teleport._children
+
+
+@dataclass
+class _BlockSlot:
+    """Client-side bookkeeping for one teleported block under a target."""
+
+    ordinal: int
+    base: int
+    teleport: TeleportElement | None = field(default=None)
+
 
 class _TeleportTargetRegistry:
     def __init__(self) -> None:
         self._registrations: dict[int, list[TeleportElement]] = {}
+        self._pending: list[_PendingTeleportEntry] = []
+        self._next_ordinal = 0
+        self._consumed: set[int] = set()
+        self._slots: dict[int, list[_BlockSlot]] = {}
 
     def register(self, target: DOMNode, teleport: TeleportElement) -> None:
         registrations = self._registrations.setdefault(id(target), [])
@@ -38,6 +70,107 @@ class _TeleportTargetRegistry:
 
     def shared_target_teleports(self, target: DOMNode) -> list[TeleportElement]:
         return list(self._registrations.get(id(target), ()))
+
+    def enqueue_pending(self, to: str, teleport: TeleportElement) -> int:
+        """Record a server-side emission request and return its ordinal.
+
+        Args:
+            to: The Teleport's ``to`` selector.
+            teleport: The Teleport element whose children are emitted.
+
+        Returns:
+            The document-order ordinal assigned to this entry.
+
+        """
+        entry = _PendingTeleportEntry(self._next_ordinal, to, teleport)
+        self._next_ordinal += 1
+        self._pending.append(entry)
+        return entry.ordinal
+
+    def take_pending_entries(self) -> list[_PendingTeleportEntry]:
+        """Drain and return all pending entries in ordinal order.
+
+        Returns:
+            Previously pending entries; the queue is emptied.
+
+        """
+        entries = self._pending
+        self._pending = []
+        return entries
+
+    def reserve_ordinal(self) -> int:
+        """Reserve the next hydration ordinal for a client Teleport.
+
+        Returns:
+            A monotonically increasing ordinal unique within the context.
+
+        """
+        ordinal = self._next_ordinal
+        self._next_ordinal += 1
+        return ordinal
+
+    def is_consumed(self, ordinal: int) -> bool:
+        """Return whether ``ordinal`` has already been claimed.
+
+        Args:
+            ordinal: Hydration block ordinal.
+
+        Returns:
+            ``True`` when previously claimed via :meth:`mark_consumed`.
+
+        """
+        return ordinal in self._consumed
+
+    def mark_consumed(self, ordinal: int) -> None:
+        """Mark ``ordinal`` as claimed so it cannot be consumed again.
+
+        Args:
+            ordinal: Hydration block ordinal.
+
+        Returns:
+            ``None``.
+
+        """
+        self._consumed.add(ordinal)
+
+    def slots_for(self, target: DOMNode) -> list[_BlockSlot] | None:
+        """Return tracked slot ledger for ``target`` or ``None``.
+
+        Args:
+            target: Shared target node.
+
+        Returns:
+            Ordered slot ledger when any Teleport under this target has a
+            claimed/tracked block; otherwise ``None``.
+
+        """
+        return self._slots.get(id(target))
+
+    def ensure_slots(self, target: DOMNode) -> list[_BlockSlot]:
+        """Return (creating if absent) the ordered slot ledger for ``target``.
+
+        Args:
+            target: Shared target node.
+
+        Returns:
+            Ordered slot ledger list.
+
+        """
+        return self._slots.setdefault(id(target), [])
+
+    def drop_slots_if_empty(self, target: DOMNode) -> None:
+        """Remove the ledger for ``target`` when it holds no slots.
+
+        Args:
+            target: Shared target node.
+
+        Returns:
+            ``None``.
+
+        """
+        slots = self._slots.get(id(target))
+        if slots is not None and not slots:
+            del self._slots[id(target)]
 
 
 def _mounted_direct_count(target: DOMNode, element: ElementAbstract) -> int:
@@ -58,8 +191,39 @@ def _mounted_direct_count(target: DOMNode, element: ElementAbstract) -> int:
     return 1
 
 
-class TeleportProps(TypedDict):
+class _TeleportPropsOptional(TypedDict, total=False):
+    ssr: bool
+
+
+class TeleportProps(_TeleportPropsOptional):
     to: str
+
+
+def block_start_data(ordinal: int, to: str) -> str:
+    """Build the start marker comment data for an emitted block.
+
+    Args:
+        ordinal: Document-order ordinal of the teleport.
+        to: The ``to`` selector of the teleport.
+
+    Returns:
+        Comment data string.
+
+    """
+    return f"{_BLOCK_START_PREFIX}{ordinal}:{quote(to, safe='')}"
+
+
+def block_end_data(ordinal: int) -> str:
+    """Build the end marker comment data for an emitted block.
+
+    Args:
+        ordinal: Document-order ordinal of the teleport.
+
+    Returns:
+        Comment data string.
+
+    """
+    return f"{_BLOCK_END_PREFIX}{ordinal}"
 
 
 class TeleportElement(DynamicElement):
@@ -71,7 +235,9 @@ class TeleportElement(DynamicElement):
     shared by multiple teleports interleave their children by registration.
 
     Args:
-        props: Mapping holding the ``to`` CSS selector.
+        props: Mapping holding the ``to`` CSS selector and the optional
+            ``ssr`` flag (default ``True``) controlling server-side
+            emission of the children into the resolved target.
         *children: Child elements, strings, or reactive values moved to the
             target container.
 
@@ -87,6 +253,8 @@ class TeleportElement(DynamicElement):
         if not isinstance(to, str) or not to:
             raise ValueError("Teleport requires 'to' to be a non-empty static string selector.")
         self._to = to
+        self._ssr_emit = props.get("ssr", True) is not False
+        self._ssr_ordinal = -1
         self._target_node: DOMNode | None = None
         self._inline = False
         self._resolved = False
@@ -167,10 +335,16 @@ class TeleportElement(DynamicElement):
             registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
             if registry is not None:
                 registry.register(target, self)
+                if self._ssr_emit:
+                    self._ssr_ordinal = registry.reserve_ordinal()
 
     async def _render(self) -> None:
         if ENVIRONMENT != "pyscript":
             self._mount_node()
+            if self._ssr_emit:
+                registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
+                if registry is not None:
+                    registry.enqueue_pending(self._to, self)
             return
         if not self._resolved:
             self._resolve_target()

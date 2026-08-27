@@ -17,6 +17,8 @@ from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
+from webcompy_server._teleport_emission import emit_teleport_blocks
+from webcompy_server.ports._dom import ServerDOMPort
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
@@ -688,41 +690,53 @@ async def _generate_html_impl(
             ),
         ]
 
-    html_output = "<!doctype html>" + (
-        await _HtmlElement(
-            "html",
-            ctx._root.html_attrs,
+    document = _HtmlElement(
+        "html",
+        ctx._root.html_attrs,
+        _HtmlElement(
+            "head",
+            {},
+            _HtmlElement("base", {"href": ctx.config.base_url}),
+            _HtmlElement("meta", {"name": "color-scheme", "content": "light dark"}),
             _HtmlElement(
-                "head",
+                "link",
+                {"rel": "stylesheet", "href": f"{base_url}_webcompy-ui/index.css"},
+            ),
+            _HtmlElement(
+                "link",
+                {"rel": "stylesheet", "href": core_css_url},
+            ),
+            *_load_scripts(scripts_head),
+            *plugin_head_scripts,
+        ),
+        _HtmlElement(
+            "body",
+            body_attrs,
+            *loading_body,
+            _HtmlElement(
+                "script",
                 {},
-                _HtmlElement("base", {"href": ctx.config.base_url}),
-                _HtmlElement("meta", {"name": "color-scheme", "content": "light dark"}),
-                _HtmlElement(
-                    "link",
-                    {"rel": "stylesheet", "href": f"{base_url}_webcompy-ui/index.css"},
-                ),
-                _HtmlElement(
-                    "link",
-                    {"rel": "stylesheet", "href": core_css_url},
-                ),
-                *_load_scripts(scripts_head),
-                *plugin_head_scripts,
+                _loading_controller_script(loading_config, loading_mode, ctx.config.selector),
             ),
-            _HtmlElement(
-                "body",
-                body_attrs,
-                *loading_body,
-                _HtmlElement(
-                    "script",
-                    {},
-                    _loading_controller_script(loading_config, loading_mode, ctx.config.selector),
-                ),
-                app_root,
-                *_load_scripts(scripts_body),
-                *plugin_body_scripts,
-            ),
-        ).render_html()
+            app_root,
+            *_load_scripts(scripts_body),
+            *plugin_body_scripts,
+        ),
     )
+
+    dom_port = inject(DOM_PORT_KEY)
+    dummy_root = dom_port.create_element("div")
+    document._parent = cast("ElementWithChildren", _DummyParent(dummy_root))
+    document._node_idx = 0
+    document._clear_node_cache()
+    await document._render()
+    scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+    await scheduler.await_pending()
+    if isinstance(dom_port, ServerDOMPort) and dummy_root.childNodes.length > 0:
+        dom_port._attach_document_root(dummy_root.childNodes[0])
+        await emit_teleport_blocks(ctx._root._node_cache)
+        await scheduler.await_pending()
+    html_output = "<!doctype html>" + dom_port.render_html(dummy_root.childNodes[0])
 
     if custom_template is not None:
         if _LOADING_TEMPLATE_MARKER not in html_output:

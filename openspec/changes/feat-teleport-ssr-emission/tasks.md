@@ -19,12 +19,12 @@
 
 ## 4. Teleport server-side emission
 
-- [ ] 4.1 Extend `_TeleportTargetRegistry` (per-DI-scope) with ordered pending entries + ordinal counter + consumed-id set shared by both environments; keep existing registration semantics intact
-- [ ] 4.2 Add `ssr` key to `TeleportProps` (default True) threading into element state; opted-out teleports register nothing and emit anchor only
-- [ ] 4.3 During non-PyScript render, mount anchor as today and enqueue `{ordinal, to, ssr, children}` into registry instead of returning immediately unregistered
-- [ ] 4.4 Implement registry drain in `_html.py`: resolve selector → reject app-subtree/head targets by parent-chain walk (warn, skip) → unresolved warn+skip → else render children under target wrapped in start/end marker comments with sequential child indices; run second `await_pending()` after drain before transfer-data collection
-- [ ] 4.5 Capture html/body node references during assembly and attach document root to the port before drain; serialize tree once at the end
-- [ ] 4.6 Unit tests: emission string contains markers+content under body; opted-out path unchanged; unresolvable/app-subtree/head rejections log warning and stay anchor-only; async child settles before serialization; repeated `<repeat>` inside teleport emits N items; signal values of teleported components appear in hydration payload (ordering vs collect)
+- [x] 4.1 Extend `_TeleportTargetRegistry` (per-DI-scope) with ordered pending entries + ordinal counter + consumed-id set shared by both environments; keep existing registration semantics intact
+- [x] 4.2 Add `ssr` key to `TeleportProps` (default True) threading into element state; opted-out teleports register nothing and emit anchor only
+- [x] 4.3 During non-PyScript render, mount anchor as today and enqueue `{ordinal, to, ssr, children}` into registry instead of returning immediately unregistered
+- [x] 4.4 Implement registry drain in `_html.py`: resolve selector → reject app-subtree/head targets by parent-chain walk (warn, skip) → unresolved warn+skip → else render children under target wrapped in start/end marker comments with sequential child indices; run second `await_pending()` after drain before transfer-data collection
+- [x] 4.5 Capture html/body node references during assembly and attach document root to the port before drain; serialize tree once at the end
+- [x] 4.6 Unit tests: emission string contains markers+content under body; opted-out path unchanged; unresolvable/app-subtree/head rejections log warning and stay anchor-only; async child settles before serialization; repeated `<repeat>` inside teleport emits N items; signal values of teleported components appear in hydration payload (ordering vs collect)
 
 ## 5. Hydration consumption
 
