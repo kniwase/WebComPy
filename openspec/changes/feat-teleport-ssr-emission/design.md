@@ -117,3 +117,13 @@ Alpha policy: land on `main`; CI regenerates static artifacts; downstream users 
 ## Open Questions
 
 (none — the custom-template interference item is task-scoped with a defined fallback: reorder the two string surgeries.)
+
+## Spike Results
+
+(Task 1.1 / 1.2 verification, executed before implementation.)
+
+- **Two-phase serialization is byte-identical.** Replicated `generate_html_impl`'s document construction with a manual flow — build the `_HtmlElement("html", ...)` tree under a `_DummyParent(dummy_div)`, call `doc._render()`, then serialize once via `ServerDOMPort.render_html(dummy.childNodes[0])` — and compared against the one-shot `render_html()` path. Outputs matched byte-for-byte (hydration payload normalized). Serialization timing does not alter emitted bytes; attribute order follows per-node insertion order (`VirtualDOMNode._attributes` dict), which is unaffected.
+- **Custom loading template composes cleanly.** The `_LOADING_TEMPLATE_MARKER` `<div id="webcompy-loading" data-wc-template-marker=""></div>` serializes verbatim under the new flow, so the post-serialization `str.replace` contract is unchanged. Baseline probe confirmed default bar structure and injected-custom-template behavior both hold today and are orthogonal to when serialization happens.
+- **Pipeline ordering (final):** inside `_generate_html_impl` → construct scaffold + app root → manually `_render()` document → `await scheduler.await_pending()` (first settle) → attach `dummy.firstChild` (document html node) via `ServerDOMPort._attach_document_root()` → drain teleport registry → `await scheduler.await_pending()` (second settle for teleported async children) → single serialize. Outer `generate_html` keeps its own settle + head/scoped-style collection + payload/loader injection unchanged; payload collection therefore naturally observes teleported components' transfer state.
+- **`create_comment` parity (task 1.2):** implemented across `DOMPort` ABC (`packages/webcompy/src/webcompy/ports/_dom.py`), browser port, `ServerDOMPort`, and `FakeBrowserDOMPort`; fake HTML parser handles comments (`handle_comment`). Hydration-side comment adoption helpers (`TeleportElement._node_matches_existing` / `_adopt_node`) are directly reusable for anchor adoption; no gaps found.
+

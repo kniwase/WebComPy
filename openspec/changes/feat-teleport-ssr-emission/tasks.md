@@ -2,8 +2,8 @@
 
 ## 1. Spike and groundwork
 
-- [ ] 1.1 Spike: render a scaffold with the planned two-phase flow in a scratch branch and confirm custom loading template marker replacement, payload/loader injection, head/scoped-style injection all compose cleanly after single serialization; record findings in this change's design.md (append "Spike results" note) or adjust ordering
-- [ ] 1.2 Add `create_comment` coverage check for FakeBrowserDOMPort/test renderer parity already in place from #267; confirm hydrate-side comment adoption helpers are reusable and note gaps
+- [x] 1.1 Spike: render a scaffold with the planned two-phase flow in a scratch branch and confirm custom loading template marker replacement, payload/loader injection, head/scoped-style injection all compose cleanly after single serialization; record findings in this change's design.md (append "Spike results" note) or adjust ordering
+- [x] 1.2 Add `create_comment` coverage check for FakeBrowserDOMPort/test renderer parity already in place from #267; confirm hydrate-side comment adoption helpers are reusable and note gaps
 
 ## 2. Virtual DOM selector engine
 
