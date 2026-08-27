@@ -1,3 +1,5 @@
 """Themed UI primitives composing headless components with token-based styling."""
 
-__all__: list[str] = []
+from webcompy.ui.components._spinner import Spinner
+
+__all__ = ["Spinner"]

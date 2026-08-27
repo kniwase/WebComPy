@@ -9,5 +9,6 @@ from webcompy.ui import code_block as code_block
 from webcompy.ui import components as components
 from webcompy.ui import headless as headless
 from webcompy.ui import theme as theme
+from webcompy.ui.components import Spinner as Spinner
 
-__all__ = ["code_block", "components", "headless", "theme"]
+__all__ = ["Spinner", "code_block", "components", "headless", "theme"]

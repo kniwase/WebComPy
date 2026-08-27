@@ -12,7 +12,7 @@
 ## 3. Themed Spinner and stylesheet delivery
 
 - [x] 3.1 Create `_styles/primitives.css` with the themed Spinner rules consuming design tokens (border/spin indicator using `--color-*`), including a `prefers-reduced-motion` rule that pauses animation; import it from `_styles/index.css` within the existing `@layer` ordering
-- [ ] 3.2 Implement themed `Spinner` composing the headless Spinner with the default themed classes and forwarding class pass-through props
+- [x] 3.2 Implement themed `Spinner` composing the headless Spinner with the default themed classes and forwarding class pass-through props
 
 ## 4. Unit tests (`tests/test_ui_primitives_foundation.py`, browserless via TestRenderer)
 
