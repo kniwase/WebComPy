@@ -529,6 +529,55 @@ class TestTeleportHydration:
         assert spans[0].textContent == "teleported"
 
 
+class TestTeleportMarkerEncoding:
+    def test_encode_selector_escapes_dashes(self):
+        from webcompy.elements.types._teleport import _encode_selector
+
+        assert _encode_selector("#a--b") == "%23a%2D%2Db"
+        assert _encode_selector("#x-") == "%23x%2D"
+        assert _encode_selector("body") == "body"
+
+    def test_marker_start_data_uses_safe_encoding(self):
+        from webcompy.elements.types._teleport import block_start_data
+
+        assert block_start_data(3, "#a--b") == "wc-teleport-block:3:%23a%2D%2Db"
+
+    def test_emission_serializes_dash_selector_without_valueerror(self, server_di_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.elements.types._teleport import _TeleportTargetRegistry
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_server._teleport_emission import emit_teleport_blocks
+
+        server_di_scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
+        dom_port = inject(DOM_PORT_KEY)
+        doc = dom_port.create_element("html")
+        body = dom_port.create_element("body")
+        target = dom_port.create_element("div")
+        target.setAttribute("id", "dialog--root")
+        body.appendChild(target)
+        doc.appendChild(body)
+        dom_port._attach_document_root(doc)
+
+        teleport = Teleport(
+            {"to": "#dialog--root"},
+            Element("div", {"id": "modal"}, {}, None, [TextElement("modal")]),
+        )
+        parent = Element("div")
+        parent._node_cache = body
+        parent._mounted = True
+        teleport._parent = parent
+        teleport._node_idx = 0
+        asyncio.run(teleport._render())
+
+        asyncio.run(emit_teleport_blocks(None))
+        html_out = dom_port.render_html(doc)
+        assert "<!--wc-teleport-block:0:%23dialog%2D%2Droot-->" in html_out
+        assert "wc-teleport-block:0:#dialog--root" not in html_out
+        assert "<!--wc-teleport-block-end:0-->" in html_out
+        assert 'id="modal"' in html_out
+
+
 class TestTeleportSSR:
     def test_ssr_emits_content_under_body_by_default(self):
         @define_component()
@@ -556,6 +605,27 @@ class TestTeleportSSR:
         assert block_end_index < html_str.index("</body>")
         assert "<!--webcompy-teleport-anchor-->" in html_str
         assert "\u200b" not in html_str
+
+    def test_non_prerender_emits_no_markers(self):
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, html.DIV({"id": "ssr-modal"}, "MODAL-SECRET")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=False,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "wc-teleport-block:" not in html_str
+        assert "MODAL-SECRET" not in html_str
+        assert 'id="webcompy-app"' in html_str
+        assert 'hidden=""' in html_str
 
     def test_ssr_opt_out_emits_anchor_only(self):
         @define_component()
@@ -1184,11 +1254,13 @@ class TestTeleportSSRHydrationRoundTrip:
         assert modals[0].textContent == "MODAL-SECRET"
 
     def _install_manual_block(self, dom_port, ordinal: int, selector: str, child_id: str, text: str):
-        start = dom_port.create_comment(f"wc-teleport-block:{ordinal}:{selector}")
+        from webcompy.elements.types._teleport import block_end_data, block_start_data
+
+        start = dom_port.create_comment(block_start_data(ordinal, selector))
         content = dom_port.create_element("div")
         content.setAttribute("id", child_id)
         content.appendChild(dom_port.create_text_node(text))
-        end = dom_port.create_comment(f"wc-teleport-block-end:{ordinal}")
+        end = dom_port.create_comment(block_end_data(ordinal))
         for node in (start, content, end):
             node.__webcompy_prerendered_node__ = True
             dom_port._body.appendChild(node)
@@ -1287,6 +1359,10 @@ class TestTeleportSSRHydrationRoundTrip:
         modal_ids = [dom_port._body.childNodes[i].getAttribute("id") for i in range(dom_port._body.childNodes.length)]
         modal_ids = [k for k in modal_ids if k in ("modal-a", "modal-b")]
         assert sorted(modal_ids) == ["modal-a", "modal-b"]
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+
+        registry = inject(_TELEPORT_REGISTRY_KEY)
+        assert registry._next_ordinal == 2
 
     @pytest.mark.asyncio
     async def test_stale_html_falls_back_with_warning_and_single_copy(self, monkeypatch, fake_browser_full, caplog):
@@ -1333,3 +1409,56 @@ class TestTeleportSSRHydrationRoundTrip:
             if dom_port._body.childNodes[i].getAttribute("id") == "modal"
         ]
         assert modals == []
+
+    @pytest.mark.asyncio
+    async def test_sweep_ambiguous_same_selector_blocks_left_inert(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport_a = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport_b = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "y", "y")
+        # No _hydrate_node: teleports stay unreserved, exercising the suffix sweep path.
+        teleport_a._remove_element(True, True)
+        assert len(self._body_marker_datas(dom_port)) == 4
+        teleport_b._remove_element(True, True)
+        assert len(self._body_marker_datas(dom_port)) == 4
+        modals = [dom_port._body.childNodes[i].getAttribute("id") for i in range(dom_port._body.childNodes.length)]
+        assert sorted(k for k in modals if k in ("modal-a", "modal-b")) == ["modal-a", "modal-b"]
+
+    @pytest.mark.asyncio
+    async def test_sweep_unreserved_removes_unique_matching_block(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport._remove_element(True, True)
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert modals == []
+
+    @pytest.mark.asyncio
+    async def test_sweep_suffix_does_not_touch_other_selectors(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-body", "CONTENT-BODY")
+        self._install_manual_block(dom_port, 1, "#footer-root", "modal-footer", "CONTENT-FOOTER")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport._remove_element(True, True)
+        remaining = [
+            (dom_port._body.childNodes[i].textContent or "")
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].nodeName == "#comment"
+            and str(dom_port._body.childNodes[i].textContent or "").startswith("wc-teleport-block")
+        ]
+        assert remaining == ["wc-teleport-block:1:%23footer%2Droot", "wc-teleport-block-end:1"]
