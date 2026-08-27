@@ -13,9 +13,9 @@
 
 ## 3. Server DOM port document attachment
 
-- [ ] 3.1 Add attach-document-root mechanism to `ServerDOMPort` (context-scoped); `query_selector` resolves via engine once attached, `None` before attachment; `get_element_by_id` stays `None`
-- [ ] 3.2 Update port docstrings (`packages/webcompy-server/src`) to describe resolution contract and ValueError behavior
-- [ ] 3.3 Unit tests for attached/unattached resolution paths through the port API
+- [x] 3.1 Add attach-document-root mechanism to `ServerDOMPort` (context-scoped); `query_selector` resolves via engine once attached, `None` before attachment; `get_element_by_id` stays `None`
+- [x] 3.2 Update port docstrings (`packages/webcompy-server/src`) to describe resolution contract and ValueError behavior
+- [x] 3.3 Unit tests for attached/unattached resolution paths through the port API
 
 ## 4. Teleport server-side emission
 
