@@ -1,3 +1,5 @@
+from typing import Any
+
 from webcompy.elements import html
 from webcompy.template import MarkdownDocument
 
@@ -7,8 +9,11 @@ def _toc_href(current_path: str, heading_id: str) -> str:
     return f"{path}#{heading_id}"
 
 
-def docs_page_template(doc: MarkdownDocument, current_path: str):
-    children: list = [html.ARTICLE({"class": "prose"}, doc.content)]
+def docs_page_template(doc: MarkdownDocument, current_path: str, extra_content: Any = None):
+    article_children: list = [doc.content]
+    if extra_content is not None:
+        article_children.append(extra_content)
+    children: list = [html.ARTICLE({"class": "prose"}, *article_children)]
     if doc.toc:
         children.append(
             html.ASIDE(

@@ -97,6 +97,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
             },
+            {
+                "label": "UI Primitives",
+                "path": "/documents/ui-primitives",
+                "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
+            },
         ],
     },
 ]

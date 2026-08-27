@@ -23,8 +23,8 @@
 
 ## 5. Docs and dogfooding
 
-- [ ] 5.1 Add a docs_app section describing the two-layer model (headless vs themed, `data-state` styling, class overrides, layer cascade note) with the Spinner as the worked example; link from docs navigation
-- [ ] 5.2 Adopt the themed Spinner in docs_app where loading indicators are used (dogfooding validation)
+- [x] 5.1 Add a docs_app section describing the two-layer model (headless vs themed, `data-state` styling, class overrides, layer cascade note) with the Spinner as the worked example; link from docs navigation
+- [x] 5.2 Adopt the themed Spinner in docs_app where loading indicators are used (dogfooding validation)
 
 ## 6. Validation
 
