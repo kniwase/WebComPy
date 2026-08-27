@@ -65,8 +65,5 @@ def test_ssr_emitted_block_consumed_without_duplication_after_boot(page_on):
         "  static_count: document.querySelectorAll('[data-testid=\"static-teleport\"]').length,"
         "})"
     )
-    assert counts["markers"] == 0, (
-        f"markers left={counts['markers']} static={counts['static_count']} "
-        f"tail={page.evaluate('document.body.innerHTML.slice(-600)')}"
-    )
+    assert counts["markers"] == 0
     assert counts["static_count"] == 1

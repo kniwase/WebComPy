@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-
-os.environ.setdefault("WC_DBG", "1")
 import pathlib
 import shutil
 import subprocess

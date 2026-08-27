@@ -48,8 +48,8 @@
 
 ## 8. E2E and full verification
 
-- [ ] 8.1 Extend `e2e/core/test_teleport.py`: prod and static modes assert `page.content()` (pre-hydration) contains emitted block + markers; post-boot no duplicates; conditional removal cleans content+markers
-- [ ] 8.2 Extend docs-home E2E: initial HTML contains navbar dropdown links (crawlability acceptance criterion) alongside the existing pre-hydration height equality test
-- [ ] 8.3 Update any unit/E2E assertions broken by default-on output change (search for `\u200b` / anchor-only / marker-count expectations repo-wide)
-- [ ] 8.4 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short --cov=webcompy`, and browser test scripts; fix fallout
-- [ ] 8.5 Run `scripts/run-e2e-tests.sh` full matrix locally; confirm green
+- [x] 8.1 Extend `e2e/core/test_teleport.py`: prod and static modes assert `page.content()` (pre-hydration) contains emitted block + markers; post-boot no duplicates; conditional removal cleans content+markers
+- [x] 8.2 Extend docs-home E2E: initial HTML contains navbar dropdown links (crawlability acceptance criterion) alongside the existing pre-hydration height equality test
+- [x] 8.3 Update any unit/E2E assertions broken by default-on output change (search for `\u200b` / anchor-only / marker-count expectations repo-wide)
+- [x] 8.4 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short --cov=webcompy`, and browser test scripts; fix fallout
+- [x] 8.5 Run `scripts/run-e2e-tests.sh` full matrix locally; confirm green
