@@ -10,7 +10,7 @@ A developer SHALL be able to declare a reactive scoped style inside the componen
 #### Scenario: Declaring a reactive style with a constant dict
 - **WHEN** a developer writes:
   ```python
-  @define_component
+  @define_component()
   def MyComponent(context):
       context.use_reactive_scoped_style(
           reactive_scoped_style(lambda: {".my-class": {"color": "blue"}})
@@ -23,7 +23,7 @@ A developer SHALL be able to declare a reactive scoped style inside the componen
 #### Scenario: Declaring a reactive style that reads a signal
 - **WHEN** a developer writes:
   ```python
-  @define_component
+  @define_component()
   def MyComponent(context):
       color = Signal("blue")
       context.use_reactive_scoped_style(
@@ -65,7 +65,7 @@ A component MAY define both a static `scoped_style` dictionary AND one or more r
 #### Scenario: Component with both static and reactive styles
 - **WHEN** a developer defines:
   ```python
-  @define_component
+  @define_component()
   def MyComponent(context):
       color = Signal("blue")
       context.use_reactive_scoped_style(

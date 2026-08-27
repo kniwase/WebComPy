@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.signal import use_state
 
 
-@define_component("bundled-deps-page")
+@define_component()
 def BundledDepsPage(context: ComponentContext[None]):
     context.set_title("Bundled Deps - E2E")
 

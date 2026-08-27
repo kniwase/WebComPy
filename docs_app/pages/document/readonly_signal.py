@@ -5,7 +5,7 @@ from webcompy.template import load_markdown_document
 from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
 
 
-@define_component("readonly-signal-page")
+@define_component()
 async def ReadonlySignalPage(context: ComponentContext[RouterContext]):
     doc = await load_markdown_document("documents/readonly_signal.md")
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")

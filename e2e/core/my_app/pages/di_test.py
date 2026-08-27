@@ -7,7 +7,7 @@ from ..keys import AppThemeKey
 ThemeKey = InjectKey[str]("e2e-theme")
 
 
-@define_component("di-provider-wrapper")
+@define_component()
 def DiProviderWrapper(context: ComponentContext[None]):
     context.set_title("DI - E2E")
     provide(ThemeKey, "dark-theme")
@@ -18,13 +18,13 @@ def DiProviderWrapper(context: ComponentContext[None]):
     )
 
 
-@define_component("di-child-component")
+@define_component()
 def DiChildComponent(context: ComponentContext[None]):
     theme = inject(ThemeKey)
     return html.SPAN({"data-testid": "child-theme"}, theme)
 
 
-@define_component("di-inject-page")
+@define_component()
 def DiInjectPage(context: ComponentContext[None]):
     context.set_title("DI Inject - E2E")
     app_theme = inject(AppThemeKey)

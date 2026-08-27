@@ -92,7 +92,7 @@ def _make_rpc_fetch_root():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component("rpc-fetch-root")
+    @define_component()
     def RpcFetchRoot(context):
         client = RpcHttpClient()
         result = use_async_result(lambda: add(client, AddParams(a=1, b=2)))
@@ -109,7 +109,7 @@ def _make_rpc_fetch_root_no_transfer():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component("rpc-fetch-root-no-transfer")
+    @define_component()
     def RpcFetchRootNoTransfer(context):
         client = RpcHttpClient()
         result = use_async_result(lambda: add(client, AddParams(a=1, b=2)), transfer=False)
@@ -126,7 +126,7 @@ def _make_rpc_notify_root():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component("rpc-notify-root")
+    @define_component()
     def RpcNotifyRoot(context):
         client = RpcHttpClient()
 
@@ -144,7 +144,7 @@ def _make_rpc_batch_root():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component("rpc-batch-root")
+    @define_component()
     def RpcBatchRoot(context):
         client = RpcHttpClient()
         result = use_async_result(lambda: batch(add(client, AddParams(a=1)), add(client, AddParams(a=2))))

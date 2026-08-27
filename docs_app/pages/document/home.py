@@ -6,7 +6,7 @@ from ...components.ui import DocsCard
 from ...docs_manifest import DOCS_SECTIONS
 
 
-@define_component("document-home-page")
+@define_component()
 def DocumentHomePage(context: ComponentContext[RouterContext]):
     context.set_title("Documents - WebComPy Docs")
 

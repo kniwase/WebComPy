@@ -8,10 +8,10 @@ Component setup functions may be `async def`, enabling developers to `await` asy
 
 ### Requirement: Component setup functions may be async def
 
-A component definition decorated with `@define_component` SHALL be `async def`. The async keyword SHALL be detected via `inspect.iscoroutinefunction()`, and the resulting coroutine SHALL be stored and resolved during `_render()`. Synchronous definitions SHALL be initialized immediately as before.
+A component definition decorated with `@define_component(...)` SHALL be `async def`. The async keyword SHALL be detected via `inspect.iscoroutinefunction()`, and the resulting coroutine SHALL be stored and resolved during `_render()`. Synchronous definitions SHALL be initialized immediately as before.
 
 #### Scenario: Defining an async component
-- **WHEN** a developer writes `@define_component async def MyComponent(context): ... return html.DIV({}, "hello")`
+- **WHEN** a developer writes `@define_component() async def MyComponent(context): ... return html.DIV({}, "hello")`
 - **THEN** the component SHALL be created without error
 - **AND** `MyComponent(props)` SHALL return a `Component` instance
 - **AND** the component SHALL render correctly when `_render()` is awaited
@@ -19,7 +19,7 @@ A component definition decorated with `@define_component` SHALL be `async def`. 
 #### Scenario: Awaiting an async operation during setup
 - **WHEN** a developer writes:
   ```python
-  @define_component
+  @define_component()
   async def MyComponent(context):
       data = await fetch("/api/data")
       return html.DIV({}, str(data))
@@ -29,7 +29,7 @@ A component definition decorated with `@define_component` SHALL be `async def`. 
 - **AND** the component SHALL render the fetched data in the DOM
 
 #### Scenario: Sync component continues to work unchanged
-- **WHEN** a developer writes `@define_component def MyComponent(context): return html.DIV({}, "hello")`
+- **WHEN** a developer writes `@define_component() def MyComponent(context): return html.DIV({}, "hello")`
 - **THEN** the component SHALL initialize immediately in `__init__()`
 - **AND** behavior SHALL be identical to pre-async-component-setup
 
@@ -141,10 +141,10 @@ The `ComponentProperty` TypedDict SHALL type `template` as `ElementChildren | No
 
 ### Requirement: FuncComponentDef type shall accept async callables
 
-The `FuncComponentDef` type alias SHALL accept both `Callable[[Context[Any]], ElementChildren]` and `Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]`. The `define_component` decorator SHALL similarly accept both sync and async callables. The `__webcompy_component_definition__` attribute SHALL be set on async callables as it is on sync callables.
+The `FuncComponentDef` type alias SHALL accept both `Callable[[Context[Any]], ElementChildren]` and `Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]`. The `define_component` decorator factory SHALL similarly accept both sync and async callables. The `__webcompy_component_definition__` attribute SHALL be set on async callables as it is on sync callables.
 
 #### Scenario: Type checking an async component definition
-- **WHEN** a developer writes `@define_component async def MyComponent(context): ...`
+- **WHEN** a developer writes `@define_component() async def MyComponent(context): ...`
 - **THEN** the decorator SHALL accept the async callable without type errors
 - **AND** the return type SHALL be `ComponentGenerator[PropsType]`
 
@@ -277,10 +277,10 @@ If the `await self._pending_async_template` in `_render()` raises, the exception
 
 ### Requirement: define_component decorator shall preserve async def
 
-The `define_component` decorator SHALL set `__webcompy_component_definition__` on the callable and return a `ComponentGenerator` without wrapping the callable in a way that breaks `inspect.iscoroutinefunction()`. The original callable SHALL be stored in `ComponentGenerator._component_def` and called from `Component.__init__()`.
+The `define_component` decorator factory SHALL set `__webcompy_component_definition__` on the callable and return a `ComponentGenerator` without wrapping the callable in a way that breaks `inspect.iscoroutinefunction()`. The original callable SHALL be stored in `ComponentGenerator._component_def` and called from `Component.__init__()`.
 
 #### Scenario: define_component decorates an async function
-- **WHEN** `@define_component` decorates `async def MyComponent(context): ...`
+- **WHEN** `@define_component()` decorates `async def MyComponent(context): ...`
 - **THEN** `MyComponent.__webcompy_component_definition__` SHALL be `True`
 - **AND** `inspect.iscoroutinefunction(MyComponent)` SHALL be `True`
 - **AND** calling `MyComponent(props)` SHALL return a `Component` instance

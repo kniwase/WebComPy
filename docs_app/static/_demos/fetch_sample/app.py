@@ -20,7 +20,7 @@ class UsersResponse:
 
 
 @define_component("fetch-sample-app")
-def FetchSampleApp(context: ComponentContext[None]):
+def FetchSample(context: ComponentContext[None]):
     users = use_reactive_list(lambda: [])
     scalar_text = use_state(lambda: "")
     raw_text = use_state(lambda: "")
@@ -103,7 +103,7 @@ def FetchSampleApp(context: ComponentContext[None]):
     )
 
 
-FetchSampleApp.scoped_style = {
+FetchSample.scoped_style = {
     ".user-data": {
         "margin": "10px auto",
         "padding": "10px",
@@ -112,5 +112,5 @@ FetchSampleApp.scoped_style = {
     },
 }
 
-app = WebComPyApp(root_component=FetchSampleApp)
+app = WebComPyApp(root_component=FetchSample)
 app.run()

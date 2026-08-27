@@ -8,7 +8,7 @@ from webcompy.rpc import RpcWsClient
 from webcompy.signal import use_computed, use_state
 
 
-@define_component("rpc-ws-page")
+@define_component()
 def RpcWsPage(context: ComponentContext[None]):
     context.set_title("RPC WebSocket - E2E")
 

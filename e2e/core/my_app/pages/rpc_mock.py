@@ -6,7 +6,7 @@ from webcompy.rpc import RpcHttpClient
 from webcompy.signal import use_state
 
 
-@define_component("rpc-mock-page")
+@define_component()
 def RpcMockPage(context: ComponentContext[None]):
     """Page demonstrating browser-side mock of fetch and RPC via middleware."""
 

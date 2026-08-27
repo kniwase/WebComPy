@@ -28,7 +28,7 @@ def _messages(stream) -> list[str]:
     return [item for item in stream.items.value if not item.startswith("conn:")]
 
 
-@define_component("web-socket-page")
+@define_component()
 def WebSocketPage(context: ComponentContext[None]):
     context.set_title("WebSocket - E2E")
 

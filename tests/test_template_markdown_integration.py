@@ -38,7 +38,7 @@ def _read_payload(html_content: str) -> dict | None:
 
 class TestMarkdownComponentWithLocals:
     def test_render_markdown_with_locals_inside_define_component(self):
-        @define_component("markdown-page")
+        @define_component()
         def MarkdownPage(context):
             name = use_state(lambda: "World")
             return html.ARTICLE(
@@ -66,7 +66,7 @@ class TestMarkdownComponentWithLocals:
 
 class TestMarkdownReactiveUpdate:
     def test_signal_change_updates_markdown_text(self):
-        @define_component("reactive-markdown-page")
+        @define_component()
         def ReactiveMarkdownPage(context):
             count = use_state(lambda: 0)
             return html.DIV(
@@ -104,7 +104,7 @@ class TestMarkdownReactiveUpdate:
 
 class TestMarkdownForLoopReactiveItems:
     def test_reactive_list_in_markdown_for_loop_produces_single_ul(self):
-        @define_component("markdown-for-page")
+        @define_component()
         def MarkdownForPage(context):
             items = use_reactive_list(lambda: ["alpha", "beta", "gamma"])
             return html.DIV(
@@ -152,7 +152,7 @@ class TestMarkdownForLoopReactiveItems:
         (see tests/test_app_instance.py).
         """
 
-        @define_component("markdown-refresh-page")
+        @define_component()
         def MarkdownRefreshPage(context):
             items = use_reactive_list(lambda: ["alpha", "beta"])
             return html.DIV(
@@ -189,7 +189,7 @@ class TestMarkdownDynamicProps:
     def test_kebab_dynamic_prop_passes_signal_to_component(self):
         captured: dict[str, Any] = {}
 
-        @define_component("my-card")
+        @define_component()
         def MyCard(context):
             captured["props"] = dict(context.props)
             n = context.props.get("count", 0)
@@ -197,7 +197,7 @@ class TestMarkdownDynamicProps:
                 n = n.value
             return html.SPAN({"data-testid": "card"}, f"count={n}")
 
-        @define_component("dynamic-prop-page")
+        @define_component()
         def DynamicPropPage(context):
             sig = Signal(7)
             return html.DIV(
@@ -223,7 +223,7 @@ class TestMarkdownDynamicProps:
     def test_kebab_dynamic_prop_resolves_plain_value(self):
         captured: dict[str, Any] = {}
 
-        @define_component("static-card")
+        @define_component()
         def StaticCard(context):
             captured["props"] = dict(context.props)
             n = context.props.get("count", 0)
@@ -231,7 +231,7 @@ class TestMarkdownDynamicProps:
                 n = n.value
             return html.SPAN({"data-testid": "card"}, f"count={n}")
 
-        @define_component("plain-prop-page")
+        @define_component()
         def PlainPropPage(context):
             return html.DIV(
                 {},
@@ -253,7 +253,7 @@ class TestMarkdownDynamicProps:
 
 class TestMarkdownSSR:
     def test_ssr_contains_rendered_markdown_html(self):
-        @define_component("markdown-ssr-page")
+        @define_component()
         def MarkdownSsrPage(context):
             return html.ARTICLE(
                 {},
@@ -273,7 +273,7 @@ class TestMarkdownSSR:
         assert "SSR Title" in html_str
 
     def test_ssr_payload_includes_hydration_script(self):
-        @define_component("markdown-payload-page")
+        @define_component()
         def MarkdownPayloadPage(context):
             return html.SECTION(
                 {},
@@ -293,7 +293,7 @@ class TestMarkdownSSR:
         assert "Hydration Section" in html_str
 
     def test_ssr_contains_single_ul_with_merged_lis(self):
-        @define_component("markdown-list-for-ssr-page")
+        @define_component()
         def MarkdownListForSsrPage(context):
             return html.ARTICLE(
                 {},
@@ -330,7 +330,7 @@ class TestCustomMarkdownParserInjection:
 
         custom = _CustomMarkdownParser()
 
-        @define_component("custom-parser-page")
+        @define_component()
         def CustomParserPage(context):
             return html.SECTION(
                 {},
@@ -356,7 +356,7 @@ class TestCustomMarkdownParserInjection:
         from webcompy.app._config import WebComPyAppConfig
         from webcompy_server import configure_server_context
 
-        @define_component("app-provide-page")
+        @define_component()
         def AppProvidePage(context):
             return html.HEADER({}, render_markdown("# App Provide", {}))
 
@@ -378,7 +378,7 @@ class TestCustomMarkdownParserInjection:
 
 class TestMarkdownForMixedBodies:
     def test_list_body_and_non_list_body_in_same_document(self):
-        @define_component("mixed-for-page")
+        @define_component()
         def MixedForPage(context):
             items = ["a", "b"]
             return html.ARTICLE(

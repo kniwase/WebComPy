@@ -498,7 +498,7 @@ class TestPreloadDedup:
 
         try:
 
-            @define_component("shared-leaf")
+            @define_component()
             def SharedLeaf(ctx):
                 return html.DIV({})
 
@@ -547,7 +547,7 @@ class TestResolvedLazyReRegistration:
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.router._lazy import LazyComponentGenerator
 
-        @define_component("re-registered-leaf")
+        @define_component()
         def ReRegisteredLeaf(ctx):
 
             return html.DIV({})
@@ -599,13 +599,13 @@ class TestPreloadTreeWalk:
 
         try:
 
-            @define_component("tree-layout")
+            @define_component()
             def TreeLayout(ctx):
                 return html.DIV({})
 
             layout_gen = TreeLayout
 
-            @define_component("tree-leaf")
+            @define_component()
             def TreeLeaf(ctx):
                 return html.DIV({})
 

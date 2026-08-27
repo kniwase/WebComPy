@@ -11,12 +11,12 @@ from webcompy_testing import TestRenderer
 _crash = {"leaf": True, "default": True}
 
 
-@define_component("root-layout")
+@define_component()
 def RootLayout(context: ComponentContext[None]):
     return html.DIV({"data-testid": "root"}, RouterView())
 
 
-@define_component("docs-layout")
+@define_component()
 def DocsLayout(context: ComponentContext[RouterContext]):
     return html.DIV(
         {"data-testid": "docs-layout"},
@@ -25,24 +25,24 @@ def DocsLayout(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component("crashing-page")
+@define_component()
 def CrashingPage(context: ComponentContext[RouterContext]):
     if _crash["leaf"]:
         raise RuntimeError("leaf crash")
     return html.DIV({"data-testid": "crashing-page"}, "leaf ok")
 
 
-@define_component("guide-page")
+@define_component()
 def GuidePage(context: ComponentContext[RouterContext]):
     return html.DIV({"data-testid": "guide-page"}, "guide")
 
 
-@define_component("crashing-child")
+@define_component()
 def CrashingChild(context: ComponentContext[None]):
     raise RuntimeError("inner crash")
 
 
-@define_component("page-with-inner-boundary")
+@define_component()
 def PageWithInnerBoundary(context: ComponentContext[RouterContext]):
     return html.DIV(
         {"data-testid": "inner-page"},
@@ -53,7 +53,7 @@ def PageWithInnerBoundary(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component("crashing-default")
+@define_component()
 def CrashingDefault(context: ComponentContext[RouterContext]):
     if _crash["default"]:
         raise RuntimeError("default crash")

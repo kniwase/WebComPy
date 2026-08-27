@@ -34,7 +34,7 @@ class TestReactiveRerenderErrors:
                 raise RuntimeError("repeat refresh boom")
             return html.LI({"data-testid": f"item-{v}"}, v)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             items = use_reactive_list(lambda: ["a"])
             counter = use_state(lambda: 0)
@@ -69,7 +69,7 @@ class TestReactiveRerenderErrors:
         def bad_branch():
             raise RuntimeError("switch refresh boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             mode = use_state(lambda: "ok")
             captured["mode"] = mode
@@ -102,7 +102,7 @@ class TestReactiveRerenderErrors:
         def bad_generator():
             raise RuntimeError("transition refresh boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             crash = use_state(lambda: False)
             captured["crash"] = crash
@@ -137,7 +137,7 @@ class TestLifecycleHookErrors:
     def test_on_before_rendering_error_engages_boundary(self):
         captured: dict[str, object] = {}
 
-        @define_component("hook-crashing")
+        @define_component()
         def HookCrashing(context):
             @on_before_rendering
             def hook():
@@ -149,7 +149,7 @@ class TestLifecycleHookErrors:
 
             return html.DIV({"data-testid": "hook-content"}, "content")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -169,7 +169,7 @@ class TestLifecycleHookErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component("destroy-crashing")
+        @define_component()
         def DestroyCrashing(context):
             @on_before_destroy
             def hook():
@@ -177,7 +177,7 @@ class TestLifecycleHookErrors:
 
             return html.DIV({"data-testid": "destroy-content"}, "content")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -205,12 +205,12 @@ class TestLifecycleHookErrors:
 
 class TestSuspenseErrorRouting:
     def test_suspense_server_error_propagates_to_boundary(self):
-        @define_component("async-crashing")
+        @define_component()
         async def AsyncCrashing(context):
             await asyncio.sleep(0)
             raise RuntimeError("suspense child boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -231,12 +231,12 @@ class TestSuspenseErrorRouting:
     async def test_suspense_browser_error_routes_to_boundary(self, monkeypatch):
         monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
 
-        @define_component("async-crashing")
+        @define_component()
         async def AsyncCrashing(context):
             await asyncio.sleep(0)
             raise RuntimeError("browser suspense boom")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},

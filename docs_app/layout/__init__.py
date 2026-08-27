@@ -8,7 +8,7 @@ from ..components.navigation import DocsNavbar, Page
 from ..docs_manifest import flatten_pages, route_pages
 
 
-@define_component("docs-root")
+@define_component()
 def DocsRoot(_: ComponentContext[None]):
     @on_mounted
     def _prefetch_docs_resources():

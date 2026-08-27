@@ -6,7 +6,7 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component("loading-root")
+@define_component()
 def LoadingRoot(context):
     from webcompy.elements import html
 

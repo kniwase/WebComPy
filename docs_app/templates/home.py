@@ -11,7 +11,7 @@ def _code(code: str) -> str:
     return strip_multiline_text(code).strip()
 
 
-@define_component("home-content")
+@define_component()
 def HomeContent(_: ComponentContext[None]):
     return html.DIV(
         {"class": "page-container"},

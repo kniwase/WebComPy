@@ -14,17 +14,17 @@ from webcompy.router._lazy import lazy
 from webcompy_server import configure_server_context
 
 
-@define_component("profile-test-root")
+@define_component()
 def ProfileTestRoot(context):
     return html.DIV({}, "hello")
 
 
-@define_component("profile-router-root")
+@define_component()
 def ProfileRouterRoot(context):
     return html.DIV({}, RouterView())
 
 
-@define_component("profile-lazy-page")
+@define_component()
 def ProfileLazyPage(context):
     return html.DIV({}, "lazy")
 

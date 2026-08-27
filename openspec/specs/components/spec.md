@@ -493,33 +493,63 @@ Component setup SHALL support registering error-capture hooks via `context.on_er
 - **WHEN** a component with captured-error hooks is destroyed
 - **THEN** its hooks SHALL no longer be invoked for subsequent errors
 
-### Requirement: Component definitions shall declare a custom-element name consistent with the setup function name
+### Requirement: define_component shall support an optional custom-element-name argument with derivation
 
-`define_component` SHALL require a custom-element name as its first argument; the bare no-argument decorator form SHALL NOT be available. At decoration time the framework SHALL validate that the decorated function's name equals `kebab_to_pascal(custom_element_name)`. A mismatch SHALL raise `WebComPyComponentException` whose message includes the function name, the declared custom-element name, and the expected name derived from the function. The existing custom-element-name validation (lowercase, contains a hyphen, not reserved) SHALL continue to apply, so Python names that cannot yield a valid hyphenated name — single-word names such as `App`, acronym-style names that do not round-trip such as `HTTPRequest` (whose normalized form is `HttpRequest`), and underscore-prefixed names — SHALL be rejected at definition time with guidance.
+`define_component` SHALL be used as a decorator factory (`@define_component(...)`); applying the raw undecorated callable as a bare decorator SHALL NOT be supported and SHALL raise `WebComPyComponentException` (or fail fast) with guidance to call the decorator. `define_component` SHALL accept a first positional-or-keyword argument `custom_element_name: str | None = None` in addition to the existing keyword-only arguments (`observed_attributes`, `display`). When `custom_element_name` is provided, its value SHALL form the custom-element tag and SHALL satisfy the custom-element naming rules (lowercase, contains a hyphen, not reserved). When omitted, the tag SHALL be derived from the decorated setup function's name by converting PascalCase/camelCase to kebab-case, and only the derived result SHALL be validated against the same naming rules. The framework SHALL NOT require any relationship between the setup function name and an explicitly provided tag. A round-trip check requiring `kebab_to_pascal(derived_tag) == function.__name__` SHALL NOT be performed; non-round-tripping names such as acronyms SHALL be accepted. Decorating a callable that already carries the component-definition marker SHALL raise `WebComPyComponentException`.
 
-#### Scenario: Consistent definition is accepted
+#### Scenario: Derived name from multi-word function
 
-- **WHEN** a developer decorates `def UserCard(context)` with `@define_component("user-card")`
+- **WHEN** a developer decorates `def UserCard(context)` with `@define_component()`
 - **THEN** definition SHALL succeed
-- **AND** the generator SHALL retain `user-card` as its custom-element name and `UserCard` as its component name
+- **AND** the generator SHALL retain `user-card` as its custom-element name
 
-#### Scenario: Mismatched name is rejected
+#### Scenario: Non-round-tripping acronym is accepted in derived form
+
+- **WHEN** a developer decorates `def HTTPRequest(context)` with `@define_component()`
+- **THEN** definition SHALL succeed
+- **AND** the generator SHALL retain `http-request` as its custom-element name while the setup function keeps the name `HTTPRequest`
+
+#### Scenario: Derived name without hyphen fails with guidance
+
+- **WHEN** a developer decorates `def App(context)` with `@define_component()`
+- **THEN** definition SHALL raise `WebComPyComponentException` because the derived name `app` has no hyphen
+- **AND** the message SHALL guide the developer toward either renaming the function to a multi-word name or passing an explicit tag to `define_component`
+
+#### Scenario: Reserved derived name fails
+
+- **WHEN** a developer decorates `def FontFace(context)` with `@define_component()`
+- **THEN** definition SHALL raise `WebComPyComponentException` because the derived name `font-face` is reserved by the custom-elements specification
+- **AND** the message SHALL guide the developer toward either renaming the function or passing an explicit tag to `define_component`
+
+#### Scenario: Explicit tag decoupled from function name
 
 - **WHEN** a developer decorates `def Card(context)` with `@define_component("user-card")`
+- **THEN** definition SHALL succeed
+- **AND** the generator SHALL retain `user-card` as its custom-element name and `Card` as the setup function name
+- **AND** no mismatch error SHALL be raised
+
+#### Scenario: Explicit tag passed by keyword
+
+- **WHEN** a developer decorates any setup function with `@define_component(custom_element_name="user-card")`
+- **THEN** definition SHALL behave identically to `@define_component("user-card")`
+
+#### Scenario: Invalid explicit tag rejected
+
+- **WHEN** a developer supplies an explicit tag that is not lowercase, lacks a hyphen, or is reserved
 - **THEN** definition SHALL raise `WebComPyComponentException`
-- **AND** the message SHALL identify the function name `Card`, the declared name `user-card`, and the expected consistent name
+- **AND** the component SHALL not be registered
 
-#### Scenario: Acronym-style name is rejected in favor of the normalized form
+#### Scenario: Bare undecorator form guides toward calling the factory
 
-- **WHEN** a developer decorates `def HTTPRequest(context)` with `@define_component("http-request")`
-- **THEN** definition SHALL raise `WebComPyComponentException` because `kebab_to_pascal("http-request")` is `HttpRequest`, not `HTTPRequest`
-- **AND** the message SHALL guide the developer to rename the function to `HttpRequest`
+- **WHEN** a developer applies `define_component` directly as `@define_component` above a setup function definition
+- **THEN** definition SHALL NOT silently produce a component generator for that function under the optional-name contract
+- **AND** the failure SHALL direct the developer to use `@define_component(...)` with parentheses
 
-#### Scenario: Single-word name is rejected
+#### Scenario: Re-decorating a component definition is rejected
 
-- **WHEN** a developer decorates `def App(context)` with `@define_component("app")`
-- **THEN** definition SHALL raise `WebComPyComponentException` because `app` is not a valid custom-element name (no hyphen)
-- **AND** the message SHALL guide the developer toward a multi-word component name
+- **WHEN** a developer applies `@define_component(...)` a second time to an object that already carries the component-definition marker
+- **THEN** definition SHALL raise `WebComPyComponentException`
+- **AND** the message SHALL identify that the object is already a component definition
 
 ### Requirement: define_component shall accept a display keyword argument for the wrapper element
 

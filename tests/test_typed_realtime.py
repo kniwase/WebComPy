@@ -378,7 +378,7 @@ class TestSsr:
         with pytest.warns(UserWarning, match="no app DI scope"):
             register_realtime_type_handler(Money, _encode_money, _decode_money)
 
-        @define_component("typed-ssr-comp")
+        @define_component()
         def TypedSsrComp(context: ComponentContext[None]):
             ws = use_websocket("/ws", message_type=ChatMessage)
             return html.SPAN({}, ws.state.value.name)

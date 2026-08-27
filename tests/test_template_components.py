@@ -240,7 +240,7 @@ class TestRealComponentEndToEnd:
     """End-to-end: ``@define_component`` + binder renders a ``Component``."""
 
     def test_define_component_runs_via_template_tag(self):
-        @define_component("user-card")
+        @define_component()
         def UserCard(context):
             title = context.props.get("title", "")
             return Element("section", {}, [], None, [f"Card:{title}"])

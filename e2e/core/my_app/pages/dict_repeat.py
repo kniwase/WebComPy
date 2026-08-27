@@ -3,7 +3,7 @@ from webcompy.elements import html, repeat
 from webcompy.signal import use_reactive_dict, use_state
 
 
-@define_component("dict-repeat-page")
+@define_component()
 def DictRepeatPage(context: ComponentContext[None]):
     context.set_title("Dict Repeat - E2E")
 

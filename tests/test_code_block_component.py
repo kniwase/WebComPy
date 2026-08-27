@@ -150,7 +150,7 @@ def test_codeblock_reactive_update_rerenders_token_spans() -> None:
     replace the old ones in the rendered output."""
     captured: dict[str, Any] = {}
 
-    @define_component("code-block-render-page")
+    @define_component()
     def CodeBlockRenderPage(context):
         code = use_state(lambda: "def foo(): pass")
         captured["code"] = code

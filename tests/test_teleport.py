@@ -33,7 +33,7 @@ def _find_by_attr(body, tag: str, attr: str, value: str):
 
 class TestTeleportMount:
     def test_children_mount_under_body_and_anchor_at_logical_position(self, teleport_env):
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -52,7 +52,7 @@ class TestTeleportMount:
             assert (root_children[0].textContent or "") == "webcompy-teleport-anchor"
 
     def test_invisible_anchor_not_matched_by_find_by_text(self, teleport_env):
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -70,7 +70,7 @@ class TestTeleportSiblingStability:
     def test_sibling_positions_stable_while_teleported_content_changes(self, teleport_env):
         items = ReactiveList(["x", "y"])
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -107,7 +107,7 @@ class TestTeleportMissingTarget:
         warnings: list[tuple] = []
         monkeypatch.setattr("webcompy.logging.warning", lambda *values: warnings.append(values))
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -127,7 +127,7 @@ class TestTeleportInlineFallbackStability:
         items = ReactiveList(["x", "y"])
         trailing = ReactiveList(["a"])
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -166,7 +166,7 @@ class TestTeleportInlineFallbackStability:
         leading = ReactiveList(["a"])
         inner = ReactiveList(["x", "y"])
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -217,7 +217,7 @@ class TestTeleportInlineFallbackStability:
 
 class TestTeleportMultipleTargets:
     def test_multiple_teleports_append_in_mount_order(self, teleport_env):
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -241,7 +241,7 @@ class TestTeleportSharedTargetReindex:
         a_items = ReactiveList(["a1"])
         b_items = ReactiveList(["b1"])
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -289,7 +289,7 @@ class TestTeleportSharedTargetReindex:
         scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
         release = asyncio.Event()
 
-        @define_component("pending-cmp")
+        @define_component()
         async def PendingCmp(context):
             await release.wait()
             return html.DIV({"data-t": "a"}, "resolved")
@@ -414,7 +414,7 @@ class TestTeleportRemoval:
     def test_conditional_removal_cleans_target_and_anchor(self, teleport_env):
         open_state = Signal(True)
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -449,7 +449,7 @@ class TestTeleportReactivity:
     def test_reactive_update_applies_at_target(self, teleport_env):
         message = Signal("initial")
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV({}, Teleport({"to": "body"}, html.SPAN({}, message)))
 
@@ -466,13 +466,13 @@ class TestTeleportReactivity:
     def test_scoped_attrs_and_event_handlers_survive_relocation(self, teleport_env):
         clicked: list[int] = []
 
-        @define_component("teleport-modal")
+        @define_component()
         def TeleportModal(context):
             return html.BUTTON({"class": "modal-btn", "@click": lambda ev: clicked.append(1)}, "click me")
 
         TeleportModal.scoped_style = {" .modal-btn": {"color": "red"}}
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV({}, Teleport({"to": "body"}, TeleportModal(None)))
 
@@ -530,7 +530,7 @@ class TestTeleportHydration:
 
 class TestTeleportSSR:
     def test_ssr_output_contains_no_teleported_content(self):
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -572,7 +572,7 @@ class TestTeleportSSR:
         assert el._children[0]._node_cache is None
 
     def test_ssr_anchor_emits_comment_without_zero_width_space(self):
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -656,7 +656,7 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -735,7 +735,7 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -820,7 +820,7 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},
@@ -905,7 +905,7 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component("teleport-page")
+        @define_component()
         def TeleportPage(context):
             return html.DIV(
                 {},

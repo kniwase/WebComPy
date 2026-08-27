@@ -526,11 +526,11 @@ class TestComponentPatchingDecision:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component("cmp-a")
+        @define_component()
         def CmpA(context):
             return html.DIV({}, "a")
 
-        @define_component("cmp-b")
+        @define_component()
         def CmpB(context):
             return html.DIV({}, "b")
 
@@ -558,11 +558,11 @@ class TestComponentPatchingDecision:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component("cmp-div")
+        @define_component()
         def CmpDiv(context):
             return html.DIV({}, "div")
 
-        @define_component("cmp-span")
+        @define_component()
         def CmpSpan(context):
             return html.SPAN({}, "span")
 

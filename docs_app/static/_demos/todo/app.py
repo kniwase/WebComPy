@@ -6,7 +6,7 @@ from webcompy.elements import DOMEvent, DomNodeRef, html, repeat
 from webcompy.signal import Signal, use_computed, use_reactive_dict, use_state
 
 
-@define_component("to-do-item")
+@define_component()
 def ToDoItem(context: ComponentContext[dict]):
     input_ref = DomNodeRef()
 
@@ -47,7 +47,7 @@ ToDoItem.scoped_style = {
 }
 
 
-@define_component("todo-app")
+@define_component()
 def TodoApp(_: ComponentContext[None]):
     input_ref = DomNodeRef()
     data = use_reactive_dict(

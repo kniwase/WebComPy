@@ -17,7 +17,7 @@ class _TestApp:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV({}, "test")
 

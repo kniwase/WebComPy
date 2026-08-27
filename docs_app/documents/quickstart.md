@@ -27,7 +27,7 @@ The server prints the URL of your app (default: `http://localhost:8080`). Open i
 
 ## Your first component
 
-Components are plain functions decorated with `@define_component("<name>")`, where `<name>` is the component's custom element name. Open `app/components/home.py` and replace its body with your own view:
+Components are plain functions decorated with the `@define_component()` factory. Open `app/components/home.py` and replace its body with your own view:
 
 ```python
 from webcompy.components import ComponentContext, define_component
@@ -35,7 +35,7 @@ from webcompy.elements import html
 from webcompy.router import RouterContext
 
 
-@define_component("home-page")
+@define_component()
 def HomePage(context: ComponentContext[RouterContext]):
     context.set_title("My First App")
 
@@ -45,7 +45,7 @@ def HomePage(context: ComponentContext[RouterContext]):
     )
 ```
 
-The decorator argument is the component's custom element name (lowercase, with a hyphen); it must be the kebab-case form of the Python function name (`HomePage` → `home-page`). Every component renders as a custom element, so the name is mandatory.
+The custom element name is derived from the function name (`HomePage` → `<home-page>`); pass it explicitly with `@define_component(custom_element_name="home-page")` when you want a different tag. Every component renders as a custom element.
 
 Components return an element tree built with the `html` helpers. Reactive state comes from `Signal`, `use_state`, and `use_computed`; the framework refreshes the DOM automatically when the state changes.
 

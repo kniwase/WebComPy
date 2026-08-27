@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ...components.demo_display import DemoDisplay
 
 
-@define_component("matplotlib-sample-page")
+@define_component()
 def MatplotlibSamplePage(context: ComponentContext[RouterContext]):
     context.set_title("Matplotlib Sample - WebCompy Demo")
     return html.DIV(

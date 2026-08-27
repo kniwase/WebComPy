@@ -9,7 +9,7 @@ from webcompy.elements import html
 from webcompy.router import Router, RouterView
 
 
-@define_component("loading-app-home")
+@define_component()
 def LoadingAppHome(context):
     return html.DIV(
         {},
@@ -19,12 +19,12 @@ def LoadingAppHome(context):
     )
 
 
-@define_component("loading-app-other")
+@define_component()
 def LoadingAppOther(context):
     return html.DIV({}, html.P({"data-testid": "loading-other"}, "Other"))
 
 
-@define_component("loading-app-root")
+@define_component()
 def LoadingAppRoot(_: ComponentContext[None]):
     return html.DIV({}, RouterView())
 

@@ -25,7 +25,7 @@ class Page(_PageRequired, total=False):
     children: list[_SubPage]
 
 
-@define_component("docs-navbar")
+@define_component()
 def DocsNavbar(context: ComponentContext[list[Page]]):
     _open_states: dict[int, Signal[bool]] = {}
     positions, update_positions = use_readonly_signal({})

@@ -2,7 +2,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import ClientOnly, html
 
 
-@define_component("client-only-page")
+@define_component()
 def ClientOnlyPage(context: ComponentContext[None]):
     context.set_title("ClientOnly - E2E")
 

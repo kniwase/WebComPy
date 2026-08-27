@@ -51,7 +51,7 @@ class TestSyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             def boom(_):
                 raise RuntimeError("sync event boom")
@@ -76,7 +76,7 @@ class TestSyncEventHandlerErrors:
             assert result.to_html() == html_before
 
     def test_sync_handler_error_engages_catch_events_boundary(self):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             def boom(_):
                 raise RuntimeError("caught event boom")
@@ -104,7 +104,7 @@ class TestSyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             def boom(_):
                 raise RuntimeError("uncaught event boom")
@@ -139,7 +139,7 @@ class TestAsyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             async def boom(_):
                 await asyncio.sleep(0)
@@ -162,7 +162,7 @@ class TestAsyncEventHandlerErrors:
 
     @pytest.mark.asyncio
     async def test_async_handler_error_engages_catch_events_boundary(self):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             async def boom(_):
                 await asyncio.sleep(0)
@@ -191,7 +191,7 @@ class TestAsyncEventHandlerErrors:
 
 class TestProxyLifecycle:
     def test_proxy_destroyed_on_element_removal(self):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             def noop(_):
                 return None

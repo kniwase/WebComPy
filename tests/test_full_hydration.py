@@ -292,7 +292,7 @@ class TestWebComPyAppHydrate:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("hydrate-root1")
+        @define_component()
         def HydrateRoot1(context):
             return html.DIV({}, "hello")
 
@@ -304,7 +304,7 @@ class TestWebComPyAppHydrate:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("hydrate-root2")
+        @define_component()
         def HydrateRoot2(context):
             return html.DIV({}, "hello")
 
@@ -317,7 +317,7 @@ class TestWebComPyAppHydrate:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component("hydrate-root3")
+        @define_component()
         def HydrateRoot3(context):
             return html.DIV({}, "hello")
 

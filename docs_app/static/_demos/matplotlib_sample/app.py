@@ -11,7 +11,7 @@ from webcompy.signal import use_computed, use_state
 
 
 @define_component("matplotlib-sample-app")
-def MatplotlibSampleApp(context: ComponentContext[None]):
+def MatplotlibSample(context: ComponentContext[None]):
     input_ref = DomNodeRef()
 
     fig, ax = plt.subplots()
@@ -88,7 +88,7 @@ def MatplotlibSampleApp(context: ComponentContext[None]):
     )
 
 
-MatplotlibSampleApp.scoped_style = {
+MatplotlibSample.scoped_style = {
     "button": {
         "display": "inline-block",
         "text-decoration": "none",
@@ -109,5 +109,5 @@ MatplotlibSampleApp.scoped_style = {
     },
 }
 
-app = WebComPyApp(root_component=MatplotlibSampleApp)
+app = WebComPyApp(root_component=MatplotlibSample)
 app.run()

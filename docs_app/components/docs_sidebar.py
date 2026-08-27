@@ -6,7 +6,7 @@ from webcompy.signal import Signal, use_computed
 from ..docs_manifest import DOCS_SECTIONS
 
 
-@define_component("docs-sidebar")
+@define_component()
 def DocsSidebar(_: ComponentContext[None]):
     open_states: dict[int, Signal[bool]] = {}
 

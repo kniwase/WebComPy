@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ...components.demo_display import DemoDisplay
 
 
-@define_component("fizzbuzz-page")
+@define_component()
 def FizzbuzzPage(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebCompy Demo")
     return html.DIV(

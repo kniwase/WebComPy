@@ -43,7 +43,7 @@ def _make_router_root():
     from webcompy.elements import html
     from webcompy.router import RouterView
 
-    @define_component("app-root")
+    @define_component()
     def AppRoot(ctx):
         return html.DIV({}, RouterView())
 
@@ -58,7 +58,7 @@ def _make_cookie_setting_page():
     from webcompy.elements import html
     from webcompy.ports._keys import COOKIE_PORT_KEY
 
-    @define_component("test-page")
+    @define_component()
     def TestPage(ctx):
         inject(COOKIE_PORT_KEY).set(
             "session",
@@ -135,7 +135,7 @@ class TestSsrSetCookieHeaders:
         from webcompy.components import define_component
         from webcompy.elements import html
 
-        @define_component("test-page")
+        @define_component()
         def TestPage(ctx):
             return html.DIV({})
 
@@ -222,7 +222,7 @@ def _make_cookie_setting_root():
     from webcompy.elements import html
     from webcompy.ports._keys import COOKIE_PORT_KEY
 
-    @define_component("app-root")
+    @define_component()
     def AppRoot(ctx):
         inject(COOKIE_PORT_KEY).set("session", "abc")
         return html.DIV({}, "cookie-root")

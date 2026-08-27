@@ -9,7 +9,7 @@ from ..components.docs_sidebar import DocsSidebar
 from ..docs_manifest import prev_next
 
 
-@define_component("docs-layout")
+@define_component()
 def DocsLayout(context: ComponentContext[RouterContext]):
     router = use_router()
     mobile_open = use_state(lambda: False)

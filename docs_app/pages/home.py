@@ -5,6 +5,6 @@ from webcompy.router import RouterContext
 from ..templates.home import HomeContent
 
 
-@define_component("home-page")
+@define_component()
 def HomePage(context: ComponentContext[RouterContext]):
     return html.DIV({}, HomeContent(None))

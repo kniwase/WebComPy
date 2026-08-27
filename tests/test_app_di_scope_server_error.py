@@ -6,7 +6,7 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app
 
 
-@define_component("error-test-root")
+@define_component()
 def ErrorTestRoot(context):
     from webcompy.elements import html
 

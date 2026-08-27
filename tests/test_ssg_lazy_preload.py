@@ -120,7 +120,7 @@ class TestGenerateLazyRoutePreload:
         pkg, build_config = _setup_app_pkg(tmp_path)
         artifacts = _make_artifacts(tmp_path)
 
-        @define_component("lazy-page")
+        @define_component()
         def LazyPage(ctx):
 
             return html.DIV({})
@@ -162,7 +162,7 @@ class TestGenerateLazyRoutePreload:
         pkg, build_config = _setup_app_pkg(tmp_path)
         artifacts = _make_artifacts(tmp_path)
 
-        @define_component("eager-page")
+        @define_component()
         def EagerPage(ctx):
 
             return html.DIV({})
@@ -192,7 +192,7 @@ class TestGenerateLazyRoutePreload:
 
         sidebar_mod = types.ModuleType("nested_sidebar_mod")
 
-        @define_component("nested-sidebar")
+        @define_component()
         def NestedSidebar(ctx):
             return html.DIV({}, "sidebar")
 
@@ -205,14 +205,14 @@ class TestGenerateLazyRoutePreload:
             "from webcompy.components import define_component\n"
             "from webcompy.elements import html\n"
             "from nested_sidebar_mod import NestedSidebar\n"
-            "@define_component('nested-layout')\n"
+            "@define_component()\n"
             "def NestedLayout(context):\n"
             "    return html.DIV({}, NestedSidebar(None))\n",
             layout_mod.__dict__,
         )
         sys.modules["nested_layout_mod"] = layout_mod
 
-        @define_component("nested-page")
+        @define_component()
         def NestedPage(ctx):
             return html.DIV({}, "page")
 
@@ -254,7 +254,7 @@ class TestGenerateLazyRoutePreload:
 
         sidebar_mod = types.ModuleType("pd_sidebar_mod")
 
-        @define_component("pd-sidebar")
+        @define_component()
         def PdSidebar(ctx):
             return html.DIV({}, "sidebar")
 
@@ -267,14 +267,14 @@ class TestGenerateLazyRoutePreload:
             "from webcompy.components import define_component\n"
             "from webcompy.elements import html\n"
             "from pd_sidebar_mod import PdSidebar\n"
-            "@define_component('pd-layout')\n"
+            "@define_component()\n"
             "def PdLayout(context):\n"
             "    return html.DIV({}, PdSidebar(None))\n",
             layout_mod.__dict__,
         )
         sys.modules["pd_layout_mod"] = layout_mod
 
-        @define_component("pd-page")
+        @define_component()
         def PdPage(ctx):
             return html.DIV({}, "page")
 

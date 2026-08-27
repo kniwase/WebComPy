@@ -5,7 +5,7 @@ from webcompy.realtime import use_event_source
 from webcompy.signal import use_computed
 
 
-@define_component("event-source-post-page")
+@define_component()
 def EventSourcePostPage(context: ComponentContext[None]):
     context.set_title("EventSource POST - E2E")
 

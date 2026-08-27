@@ -9,7 +9,7 @@ from webcompy_server._html import generate_html
 from webcompy_testing._utils import run_sync
 
 
-@define_component("test-root")
+@define_component()
 def TestRoot(context):
     from webcompy.elements import html
 

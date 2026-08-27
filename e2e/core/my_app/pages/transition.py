@@ -11,7 +11,7 @@ def _slide_box():
     return html.DIV({"data-testid": "slide-box", "class": "e2e-slide-box"}, "slide content")
 
 
-@define_component("comp-box")
+@define_component()
 def CompBox(context):
     return html.SPAN({"data-testid": "comp-box"}, "comp content")
 
@@ -25,7 +25,7 @@ CompBox.scoped_style = {
 }
 
 
-@define_component("block-box", display="block")
+@define_component(display="block")
 def BlockBox(context):
     return html.SPAN({"data-testid": "block-box"}, "block content")
 
@@ -39,7 +39,7 @@ BlockBox.scoped_style = {
 }
 
 
-@define_component("transition-page")
+@define_component()
 def TransitionPage(context: ComponentContext[None]):
     context.set_title("Transition - E2E")
     fade_visible = use_state(lambda: False)

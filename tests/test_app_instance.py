@@ -10,7 +10,7 @@ from webcompy.router import Router
 from webcompy_server import configure_server_context
 
 
-@define_component("dummy-root")
+@define_component()
 def DummyRoot(context):
     from webcompy.elements import html
 
@@ -182,7 +182,7 @@ class TestDeferredComponentRegistration:
     def test_import_time_component_registers_into_first_app_only(self):
         from webcompy.elements import html
 
-        @define_component("deferred-page")
+        @define_component()
         def DeferredPage(context):
             return html.DIV({}, "deferred")
 
@@ -201,7 +201,7 @@ class TestDeferredComponentRegistration:
     def test_same_app_later_contexts_receive_import_time_components(self):
         from webcompy.elements import html
 
-        @define_component("deferred-page")
+        @define_component()
         def DeferredPage(context):
             return html.DIV({}, "deferred")
 
@@ -218,7 +218,7 @@ class TestDeferredComponentRegistration:
     def test_registered_flag_set_after_registration(self):
         from webcompy.elements import html
 
-        @define_component("deferred-page")
+        @define_component()
         def DeferredPage(context):
             return html.DIV({}, "deferred")
 
@@ -235,7 +235,7 @@ class TestDeferredComponentRegistration:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component("deferred-page")
+        @define_component()
         def DeferredPage(context):
             return html.DIV({}, "deferred")
 

@@ -5,7 +5,7 @@ from webcompy.elements import html
 from webcompy.router import RouterContext
 
 
-@define_component("home-page")
+@define_component()
 def HomePage(context: ComponentContext[RouterContext]):
     context.set_title("WebCompy Template")
 

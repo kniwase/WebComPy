@@ -36,7 +36,7 @@ def make_state(component_name: str = "TestComp") -> ComponentRenderState:
 
 class TestWindowEvent:
     def test_transform_updates_signal_and_notifies_consumers(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             label = use_computed(lambda: str(width.value))
@@ -52,7 +52,7 @@ class TestWindowEvent:
     def test_repeating_width_produces_no_notification(self):
         captured: dict[str, Any] = {}
 
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             captured["width"] = width
@@ -67,7 +67,7 @@ class TestWindowEvent:
         assert notified == [800]
 
     def test_single_listener_per_component_instance(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             return html.DIV({}, str(width.value))
@@ -77,7 +77,7 @@ class TestWindowEvent:
             assert len(host._window_listeners.get("resize", [])) == 1
 
     def test_component_destroy_removes_listener(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             return html.DIV({}, str(width.value))
@@ -91,7 +91,7 @@ class TestWindowEvent:
     def test_no_update_after_destroy(self):
         captured: dict[str, Any] = {}
 
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             captured["width"] = width
@@ -106,7 +106,7 @@ class TestWindowEvent:
 
 class TestDocumentEvent:
     def test_document_event_updates_signal(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             visibility, _ = use_document_event("visibilitychange", "visible", transform=lambda e: e["state"])
             label = use_computed(lambda: str(visibility.value))
@@ -120,7 +120,7 @@ class TestDocumentEvent:
             assert el.textContent == "hidden"
 
     def test_component_destroy_removes_document_listener(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             visibility, _ = use_document_event("visibilitychange", "visible")
             return html.DIV({}, str(visibility.value))
@@ -181,7 +181,7 @@ class TestLifecycleGuarantees:
         def _broken_transform(e: dict[str, int]) -> int:
             return e["innerWidth"] // 0
 
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=_broken_transform)
             captured["width"] = width
@@ -197,7 +197,7 @@ class TestLifecycleGuarantees:
     def test_chaining_with_existing_destroy_hook(self):
         order: list[str] = []
 
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             @on_before_destroy
             def _user_hook():
@@ -227,7 +227,7 @@ class TestSsrBehavior:
         )
 
     def test_ssr_renders_initial_without_warning(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             return html.DIV({"data-testid": "w"}, str(width.value))
@@ -240,7 +240,7 @@ class TestSsrBehavior:
         assert ">0<" in html_str
 
     def test_ssr_payload_contains_no_readonly_state(self):
-        @define_component("event-source-page")
+        @define_component()
         def EventSourcePage(context):
             width, _ = use_window_event("resize", 0, transform=lambda e: e["innerWidth"])
             label = use_computed(lambda: str(width.value))

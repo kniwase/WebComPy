@@ -246,7 +246,7 @@ class TestComponentIntegration:
         monkeypatch.setattr(storage_composable, "_local_storage", lambda: fake)
         captured: dict[str, Signal] = {}
 
-        @define_component("storage-page")
+        @define_component()
         def StoragePage(context):
             theme = use_local_storage("theme", lambda: "light")
             captured["theme"] = theme

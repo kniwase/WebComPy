@@ -11,8 +11,8 @@ Covers:
 import pytest
 from playwright.sync_api import expect
 
-HELLOWORLD_MARKER = "HelloWorldApp"
-FIZZBUZZ_MARKER = "fizzbuzz-app"
+HELLOWORLD_MARKER = "HelloWorld"
+FIZZBUZZ_MARKER = "FizzbuzzApp"
 
 
 @pytest.mark.e2e

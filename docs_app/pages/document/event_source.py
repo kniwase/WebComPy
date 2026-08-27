@@ -5,7 +5,7 @@ from webcompy.template import load_markdown_document
 from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
 
 
-@define_component("event-source-page")
+@define_component()
 async def EventSourcePage(context: ComponentContext[RouterContext]):
     doc = await load_markdown_document("documents/event_source.md")
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")

@@ -11,7 +11,7 @@ from webcompy_server import configure_server_context
 from webcompy_testing import create_test_app
 
 
-@define_component("plugin-test-root")
+@define_component()
 def PluginTestRoot(context):
     from webcompy.elements import html
 

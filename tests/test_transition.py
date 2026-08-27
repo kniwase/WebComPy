@@ -36,7 +36,7 @@ def _wrapper_box_classes(result, testid: str) -> list[str]:
 
 
 def _toggle_root(show: Signal[bool], name: str = "fade", duration: int | None = 100):
-    @define_component("test-root")
+    @define_component()
     def TestRoot(context):
         return html.DIV(
             {},
@@ -87,7 +87,7 @@ class TestEnterSequence:
         show = Signal(True)
         text = Signal("a")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -110,7 +110,7 @@ class TestEnterSequence:
     def test_same_tag_patch_renders_structural_inner_change(self) -> None:
         flag = Signal(True)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -147,7 +147,7 @@ class TestEnterSequence:
         events: list[str] = []
 
         def make_child(label: str):
-            @define_component("test-child")
+            @define_component()
             def TestChild(context):
                 @on_before_rendering
                 def _before():
@@ -161,7 +161,7 @@ class TestEnterSequence:
 
             return TestChild
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -186,7 +186,7 @@ class TestEnterSequence:
 
 class TestLeaveSequence:
     def _destroy_root(self, show: Signal[bool], destroyed: list[int]):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             @on_before_destroy
             def _cleanup():
@@ -228,7 +228,7 @@ class TestLeaveSequence:
         counter = Signal(0)
         destroyed: list[int] = []
 
-        @define_component("test-child")
+        @define_component()
         def TestChild(context):
             @on_before_destroy
             def _cleanup():
@@ -236,7 +236,7 @@ class TestLeaveSequence:
 
             return html.SPAN({"data-testid": "box", "data-x": counter}, "box")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -382,11 +382,11 @@ class TestDurationResolution:
             assert _box_classes(result, "box") == []
 
     def _component_toggle_root(self, show: Signal[bool]):
-        @define_component("box-child")
+        @define_component()
         def BoxChild(context):
             return html.SPAN({"data-testid": "box"}, "box")
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -491,7 +491,7 @@ class TestDurationResolution:
 
         show = Signal(True)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -647,7 +647,7 @@ class TestNodeAccounting:
 
 class TestReplacementAndInterruption:
     def _replacement_root(self, a_show: Signal[bool], b_show: Signal[bool]):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -774,7 +774,7 @@ class TestReplacementAndInterruption:
             assert result.find_by_attribute("data-testid", "box") is None
 
     def _two_signal_root(self, show: Signal[bool], extra: Signal[bool]):
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -809,7 +809,7 @@ class TestReplacementAndInterruption:
     def _switch_root(self, show: Signal[bool], wrap: Signal[bool]):
         from webcompy.elements import switch
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -898,7 +898,7 @@ class TestReplacementAndInterruption:
         extra = Signal(False)
         invalid = Signal(False)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -983,7 +983,7 @@ class TestReplacementAndInterruption:
             "box",
         )
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -1028,7 +1028,7 @@ class TestSsrAndHydration:
     def test_ssr_output_has_no_transition_classes(self) -> None:
         show = Signal(True)
 
-        @define_component("ssr-root")
+        @define_component()
         def SsrRoot(context):
             return html.DIV(
                 {},
@@ -1110,7 +1110,7 @@ class TestValidation:
 
         show = Signal(True)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -1128,7 +1128,7 @@ class TestValidation:
 
         show = Signal(True)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},
@@ -1146,7 +1146,7 @@ class TestValidation:
 
         invalid = Signal(False)
 
-        @define_component("test-root")
+        @define_component()
         def TestRoot(context):
             return html.DIV(
                 {},

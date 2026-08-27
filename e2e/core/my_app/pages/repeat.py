@@ -3,7 +3,7 @@ from webcompy.elements import html, repeat
 from webcompy.signal import use_reactive_list, use_state
 
 
-@define_component("repeat-page")
+@define_component()
 def RepeatPage(context: ComponentContext[None]):
     context.set_title("Repeat - E2E")
 
