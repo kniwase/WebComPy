@@ -35,7 +35,7 @@ The system SHALL provide browser implementations for all 6 ports using `pyscript
 - **THEN** its `value` property returns the current `window.location.pathname`
 
 ### Requirement: Server port implementations shall provide equivalent behavior
-Server port implementations SHALL provide the same method signatures and return types as browser implementations. ServerDOMPort SHALL construct a virtual DOM tree via `VirtualDOMNode` instances instead of raising exceptions. `ServerDOMPort.create_element()` SHALL return a `VirtualDOMNode`. `ServerDOMPort.create_text_node()` SHALL return a virtual text node. `ServerDOMPort.query_selector()` and `get_element_by_id()` SHALL return `None` (SSG does not query existing DOM). `ServerDOMPort.set_title()` SHALL be a no-op. `ServerDOMPort.schedule_macro_task()` SHALL execute the callback synchronously.
+Server port implementations SHALL provide the same method signatures and return types as browser implementations. ServerDOMPort SHALL construct a virtual DOM tree via `VirtualDOMNode` instances instead of raising exceptions. `ServerDOMPort.create_element()` SHALL return a `VirtualDOMNode`. `ServerDOMPort.create_text_node()` SHALL return a virtual text node. `ServerDOMPort.query_selector()` SHALL resolve a documented CSS selector subset against the completed virtual document tree of its render context (returning the first depth-first match, or `None` when unmatched, unsupported syntax is supplied, or no document has been attached yet — see the virtual-dom capability for the resolution contract). `ServerDOMPort.get_element_by_id()` SHALL continue to return `None`. `ServerDOMPort.set_title()` SHALL be a no-op. `ServerDOMPort.schedule_macro_task()` SHALL execute the callback synchronously.
 
 ServerDOMPort SHALL additionally provide `render_html(node: DOMNode) -> str` for serializing virtual trees to HTML strings.
 
@@ -51,12 +51,17 @@ ServerDOMPort SHALL additionally provide `render_html(node: DOMNode) -> str` for
 - **THEN** a valid HTML string SHALL be returned
 - **AND** void elements SHALL be self-closing and text SHALL be escaped
 
+#### Scenario: ServerDOMPort resolves selectors after document assembly
+- **WHEN** a render context's virtual document has been assembled and attached to the port
+- **AND** `query_selector("body")` is called
+- **THEN** the body node of that context's document SHALL be returned
+
 #### Scenario: ServerFetchPort uses httpx
 - **WHEN** `ServerFetchPort.fetch("https://example.com/api")` is called
 - **THEN** an httpx request is sent and a `Response` object is returned
 
 #### Scenario: ServerHistoryPort stores path internally
-- **WHEN** `ServerHistoryPort.navigate("/test")` is called
+- **WHEN** a `ServerHistoryPort` is constructed with mode="history"
 - **THEN** the port's `value` property returns "/test"
 
 #### Scenario: ServerCookiePort ignores Set-Cookie attributes (current limitation)

@@ -45,49 +45,75 @@ The Teleport element SHALL contribute exactly one DOM node — a placeholder —
 - **AND** the anchor SHALL introduce no rendered content or text into the document
 - **AND** the teleported children SHALL exist only under the target container
 
-### Requirement: Server-side rendering shall emit only the anchor
+### Requirement: Server-side rendering shall emit teleported children at the resolved target by default
 
-During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a comment node with data `webcompy-teleport-anchor` (`<!--webcompy-teleport-anchor-->`), so that its node slot survives HTML parsing without creating a layout box and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. Because comment nodes break text runs during HTML parsing, bare text siblings adjacent to the anchor SHALL remain distinct nodes after parsing; hydration SHALL adopt the anchor and each sibling in index order, so that each sibling appears exactly once in the final document. When the anchor comment is absent from the parsed DOM at the teleport position (for example a third-party sanitizer stripped comments), the adjacent text runs merge into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document. During hydration a Teleport SHALL schedule its own client render whenever its children are not yet rendered, including when the anchor had to be recreated instead of adopted; the teleport's mounting SHALL NOT depend on an app-level post-hydration render pass.
+During server-side rendering and static generation, a Teleport SHALL render its children's content under the resolved target node unless explicitly opted out via `"ssr": False` in its props. Emission SHALL occur after the application tree and document scaffold have fully rendered and pending async work has settled: the teleport registers itself in a per-render-context ordered registry during the main pass, and the HTML assembly drains that registry by resolving each `to` selector against the completed virtual document tree, rendering the children under the resolved target wrapped in start/end block markers, before serializing the final HTML. Reactive initial state (including computed inline styles such as a closed dropdown's `display: none`) SHALL be evaluated normally so that emitted markup represents the true initial UI state. A Teleport whose target cannot be resolved on the server, or whose resolution is rejected, SHALL fall back to emitting only the anchor comment at its logical position (current behavior) after logging a warning. When emission succeeds, the logical position SHALL still contain exactly the anchor comment.
 
-#### Scenario: SSR output contains no teleported content
+#### Scenario: SSR output contains teleported content under the target
 
-- **WHEN** a page containing `Teleport({"to": "body"}, modal)` is server-rendered
-- **THEN** the SSR HTML SHALL contain the anchor placeholder at the logical position
-- **AND** the SSR HTML SHALL NOT contain the modal markup under `<body>` or anywhere else
+- **WHEN** a page containing `Teleport({"to": "body"}, modal)` is server-rendered with default props
+- **THEN** the SSR HTML SHALL contain the modal markup under `<body>`, delimited by block markers
+- **AND** the SSR HTML SHALL contain the anchor placeholder at the modal's logical position
+- **AND** the anchor SHALL remain the teleport's single node contribution at the logical position
 
-#### Scenario: SSR anchor occupies a parseable slot
+#### Scenario: Opted-out teleport emits anchor only
 
-- **WHEN** a tree containing `[element, Teleport, element]` is server-rendered
-- **THEN** the SSR HTML SHALL contain `<!--webcompy-teleport-anchor-->` between the two elements at the logical position
-- **AND** a browser parsing that HTML SHALL produce a distinct comment node whose data is `webcompy-teleport-anchor` for the anchor slot
+- **WHEN** a page contains `Teleport({"to": "body", "ssr": False}, child)` and is server-rendered
+- **THEN** the SSR HTML SHALL NOT contain the child's markup anywhere
+- **AND** the SSR HTML SHALL contain the anchor comment at the logical position
+- **AND** the child SHALL be mounted client-side during hydration as today
 
-#### Scenario: Text-adjacent SSR anchors preserve sibling order through parsing
+#### Scenario: Unresolvable target falls back to anchor-only
 
-- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered
-- **THEN** the SSR HTML SHALL contain `<!--webcompy-teleport-anchor-->` between the two text runs at the logical position
-- **AND** a browser parsing that HTML SHALL produce three distinct nodes — text, comment, text — with no merging of the text runs
-- **AND** hydration SHALL adopt the comment anchor and each text sibling in index order, so that each sibling appears exactly once in the final document
-- **AND** the Teleport SHALL schedule its own client render during hydration, so that its children mount under the target without relying on a post-hydration render pass
+- **WHEN** a Teleport with default props targets a selector that matches no node in the completed virtual document tree
+- **THEN** a warning SHALL be logged
+- **AND** the SSR HTML SHALL contain only the anchor comment for that teleport
+- **AND** the client SHALL mount the children itself during hydration without requiring any server-emitted block
 
-#### Scenario: Text-adjacent SSR anchors merge on parse and recover on hydration
+#### Scenario: Async children settle before emission
 
-- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered and the anchor comment is absent from the parsed DOM at the teleport position (for example a third-party sanitizer stripped comments)
-- **THEN** the adjacent text runs SHALL be merged by the parser into a single text node, leaving no distinct anchor slot
-- **AND** hydration SHALL adopt the merged node as the preceding text sibling and recreate the anchor and the following text sibling in index order, so that each sibling appears exactly once in the final document
-- **AND** the Teleport SHALL schedule its own client render during hydration even though its anchor was recreated, so that its children mount under the target without relying on a post-hydration render pass
+- **WHEN** a teleported child performs an async setup during server rendering
+- **THEN** the emitted markup SHALL reflect the setup's result
+- **AND** SSG error policy for errors surfacing from that child SHALL follow the standard SSG fail-fast behavior
 
-#### Scenario: Client mounts teleported content after hydration
+### Requirement: Teleport block markers shall delimit emitted blocks for deterministic hydration consumption
 
-- **WHEN** the hydrated application completes its client render pass
-- **THEN** the teleported children SHALL be mounted under the target node
-- **AND** the anchor placeholder SHALL remain at the logical position
+Each server-emitted Teleport block SHALL be delimited by a start marker comment and an end marker comment carrying a per-document ordinal and the URL-encoded `to` selector (`wc-teleport-block:<n>:<selector>` / `wc-teleport-block-end:<n>`), such that: markers survive HTML parsing as distinct comment nodes; ordinals are assigned in registry order, which equals the application's document-order traversal of Teleports and is identical in the server render pass and the client hydration pass; a hydration Teleport can locate its own block by scanning its resolved target for the first unclaimed start marker that matches its selector sequence. Markers SHALL carry no styling or layout impact.
 
-#### Scenario: Hydration adopts the anchor without duplicating siblings
+#### Scenario: Marker format survives parsing
 
-- **WHEN** the browser hydrates the SSR output of a tree containing `[paragraph, Teleport, paragraph]`
-- **THEN** the comment anchor SHALL be adopted as the prerendered node at its logical position
-- **AND** each sibling paragraph SHALL appear exactly once in the document (no duplicated or orphaned SSR nodes)
-- **AND** the teleported children SHALL be mounted under the target node
+- **WHEN** the SSR output of a teleporting page is parsed by an HTML parser
+- **THEN** each emitted block boundary SHALL appear as a distinct comment node
+- **AND** no text-run merging around markers SHALL occur
+
+#### Scenario: Ordinals match between server and client passes
+
+- **WHEN** a page contains multiple Teleports, some sharing a target and some targeting different targets
+- **THEN** the ordinal assignment order in the SSR output SHALL equal the ordinal consumption order in the client hydration pass
+- **AND** each Teleport claims exactly one block, so every emitted block is consumed at most once
+
+#### Scenario: Divergent ordinal discovery degrades safely
+
+- **WHEN** client hydration cannot find an unclaimed marker matching a Teleport (e.g. serving stale HTML generated before this change, or ordinals diverged due to out-of-tree DOM edits)
+- **THEN** the Teleport SHALL log a warning and mount its children via the normal client path
+- **AND** no duplicate visible content SHALL exist beyond the leftover inert server-emitted block, which remains part of the served document's original content
+
+### Requirement: Server emission shall reject targets produced by the application subtree and head
+
+When a Teleport's `to` selector resolves, during server emission, to the application's own rendered subtree, to the app mount container itself, or to the `<head>` element, the resolver SHALL treat the target as rejected: log a warning naming the selector, skip emission, and emit only the anchor (same fallback as unresolvable targets). This enforces the documented rule that teleport targets must be stable nodes outside the reactive tree. Resolution MAY proceed for stable scaffolding containers outside the app subtree (typically `body`).
+
+#### Scenario: Target inside app subtree is rejected
+
+- **WHEN** a component renders a container `<div id="inner-root">` and a Teleport targeting `#inner-root`, and the page is server-rendered
+- **THEN** a warning naming `#inner-root` SHALL be logged
+- **AND** the SSR output SHALL emit only the anchor comment for that Teleport
+- **AND** the client SHALL resolve `#inner-root` normally at mount time and behave per existing client rules
+
+#### Scenario: Head target is rejected
+
+- **WHEN** a Teleport targets `head` during server rendering
+- **THEN** a warning SHALL be logged
+- **AND** the SSR output SHALL contain no teleported content inside `<head>`
 
 ### Requirement: Teleport shall degrade to inline rendering with a warning when the target is missing
 
@@ -101,7 +127,7 @@ When the `to` selector matches no node at mount time, the Teleport SHALL log a w
 
 ### Requirement: Multiple Teleports targeting the same node shall append in mount order
 
-When multiple Teleport elements resolve to the same target node, each SHALL append its children to the target when it mounts, and no reordering pass SHALL run afterwards. The observable order of teleported content under a shared target SHALL be the mount order of the Teleport elements. Shared-target bookkeeping is scoped per app: the registry tracks Teleports of a single `RenderContext`, so mount-order guarantees apply between Teleports of the same app instance, and the spec's shared-target requirements assume targets are stable nodes outside the app's reactive tree. The shared-target block model derives the first block's base index from the target's current child count minus the mounted teleported counts, which assumes the teleported blocks are the last nodes in the target container; any non-teleported node appended to the target after the teleports mount (external scripts, host-page code, a second app instance sharing the target) falls outside the shared-target guarantee and MAY skew subsequent block re-indexing. Shared-target guarantees SHALL apply only to Teleports that are not nested within one another; a Teleport nested inside another Teleport SHALL NOT target the same node as its ancestor, because the shared-target block model cannot represent such nesting.
+When multiple Teleport elements resolve to the same target node, each SHALL append its children to the target when it mounts, and no reordering pass SHALL run afterwards. The observable order of teleported content under a shared target SHALL be the mount order of the Teleport elements, both for client-mounted blocks and for server-emitted blocks consumed during hydration. Shared-target bookkeeping SHALL be anchored at each block's start marker (client-side, at the claimed block's insertion slot) instead of assuming teleported blocks are the trailing nodes of the target; nodes appended to the target by anything other than Teleports (hydration payload scripts, host-page code, external widgets) SHALL NOT skew sibling-block positioning. Shared-target guarantees SHALL apply only to Teleports that are not nested within one another; a Teleport nested inside another Teleport SHALL NOT target the same node as its ancestor, because the block model cannot represent such nesting. Shared-target bookkeeping is scoped per app: the registry tracks Teleports of a single `RenderContext`, so mount-order guarantees apply between Teleports of the same app instance.
 
 #### Scenario: Two teleports to body
 
@@ -126,6 +152,12 @@ When multiple Teleport elements resolve to the same target node, each SHALL appe
 - **THEN** B's teleported content SHALL remain positioned after A's block under the shared target, with no interleaving
 - **AND** when A's pending child completes, its nodes SHALL be placed within A's own block, preceding B's content
 - **AND** subsequent changes to B's subtree SHALL keep both teleports' blocks contiguous
+
+#### Scenario: External appends do not skew shared-target blocks
+
+- **WHEN** a non-Teleport script or widget appends nodes to the shared target after Teleport A and Teleport B have mounted
+- **THEN** subsequent A/B block growth SHALL remain anchored at the respective block positions
+- **AND** external nodes SHALL NOT be absorbed into either block
 
 ### Requirement: Removing a Teleport shall remove both teleported nodes and the anchor
 
