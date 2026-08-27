@@ -127,3 +127,18 @@ Alpha policy: land on `main`; CI regenerates static artifacts; downstream users 
 - **Pipeline ordering (final):** inside `_generate_html_impl` → construct scaffold + app root → manually `_render()` document → `await scheduler.await_pending()` (first settle) → attach `dummy.firstChild` (document html node) via `ServerDOMPort._attach_document_root()` → drain teleport registry → `await scheduler.await_pending()` (second settle for teleported async children) → single serialize. Outer `generate_html` keeps its own settle + head/scoped-style collection + payload/loader injection unchanged; payload collection therefore naturally observes teleported components' transfer state.
 - **`create_comment` parity (task 1.2):** implemented across `DOMPort` ABC (`packages/webcompy/src/webcompy/ports/_dom.py`), browser port, `ServerDOMPort`, and `FakeBrowserDOMPort`; fake HTML parser handles comments (`handle_comment`). Hydration-side comment adoption helpers (`TeleportElement._node_matches_existing` / `_adopt_node`) are directly reusable for anchor adoption; no gaps found.
 
+## Follow-up hardening (post-implementation fixes)
+
+- **Comment-safe marker encoding** — `to` selectors are dash-escaped
+  (`-` → `%2D`) after percent-encoding in `block_start_data` /
+  `_block_start_marker_data` / sweep matching, so marker comments can never
+  carry `--` or a trailing `-`, which would fail `ServerDOMPort` comment
+  serialization validation and abort generation.
+- **Single ordinal reservation** — `_early_claim_ssr_block` marks the teleport
+  resolved, and `_resolve_target` reserves only when unreserved. This keeps
+  the server/client ordinal counters aligned so fresh mounts and sweep
+  identity checks reference the ordinals issued at claim time.
+- **Uniquely-identifiable sweep + prerender guard** — the selector-based
+  sweep removes a block only when exactly one unclaimed candidate matches;
+  ambiguous cases leave inert served markup per the elements contract. Emission
+  and document-root attachment run only under `prerender`.
