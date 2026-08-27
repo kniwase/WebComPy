@@ -12,6 +12,7 @@ def test_get_styles_files_returns_all_files() -> None:
         "tokens.css",
         "reset.css",
         "components.css",
+        "primitives.css",
         "code-block.css",
         "syntax-theme.css",
         "prose.css",
