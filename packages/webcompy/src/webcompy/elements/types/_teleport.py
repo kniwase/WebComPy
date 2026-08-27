@@ -286,6 +286,8 @@ class TeleportElement(DynamicElement):
         self._to = to
         self._ssr_emit = props.get("ssr", True) is not False
         self._ssr_ordinal = -1
+        self._claimed_slot: int | None = None
+        self._claimed_anchor: DOMNode | None = None
         self._target_node: DOMNode | None = None
         self._inline = False
         self._resolved = False
@@ -402,30 +404,53 @@ class TeleportElement(DynamicElement):
                 if target is None:
                     return
                 self._children_rendered = True
-                slot: int | None = None
-                if self._ssr_emit and self._ssr_ordinal >= 0:
-                    registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
-                    if registry is not None:
-                        slot = self._claim_ssr_block(target, registry)
-                        if slot is None:
-                            logging.warning(
-                                f"Teleport SSR block {self._ssr_ordinal} for '{self._to}' not found; "
-                                "mounting via client render."
-                            )
-                        else:
-                            registry.mark_consumed(self._ssr_ordinal)
-                            slots = registry.ensure_slots(target)
-                            slots.append(_BlockSlot(self._ssr_ordinal, slot, self))
-                            slots.sort(key=lambda entry: entry.base)
-                idx = slot if slot is not None else target.childNodes.length
-                idx = slot if slot is not None else target.childNodes.length
+                anchor = self._claimed_anchor
+                if anchor is not None and anchor.parentNode is not target:
+                    anchor = None
+                if anchor is not None:
+                    idx = 0
+                    while idx < target.childNodes.length and target.childNodes[idx] is not anchor:
+                        idx += 1
+                else:
+                    idx = target.childNodes.length
                 for child in self._children:
                     child._node_idx = idx
                     if child._mounted is None:
                         await child._render()
                     idx += child._node_count
+                self._claimed_anchor = None
             self._re_index_shared_target()
         self._parent._re_index_children(False)
+
+    def _early_claim_ssr_block(self) -> None:
+        if not self._ssr_emit or self._claimed_slot is not None:
+            return
+        try:
+            target = inject(DOM_PORT_KEY).query_selector(self._to)
+        except ValueError:
+            return
+        if target is None:
+            return
+        self._target_node = target
+        registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
+        if registry is None:
+            return
+        registry.register(target, self)
+        if self._ssr_ordinal < 0:
+            self._ssr_ordinal = registry.reserve_ordinal()
+        slot = self._claim_ssr_block(target, registry)
+        if slot is None:
+            logging.warning(
+                f"Teleport SSR block {self._ssr_ordinal} for '{self._to}' not found; mounting via client render."
+            )
+            return
+        registry.mark_consumed(self._ssr_ordinal)
+        self._claimed_slot = slot
+        remaining = target.childNodes
+        self._claimed_anchor = remaining[slot] if slot < remaining.length else None
+        slots = registry.ensure_slots(target)
+        slots.append(_BlockSlot(self._ssr_ordinal, slot, self))
+        slots.sort(key=lambda entry: entry.base)
 
     def _block_start_marker_data(self) -> str:
         return f"{_BLOCK_START_PREFIX}{self._ssr_ordinal}:{quote(self._to, safe='')}"
@@ -477,6 +502,7 @@ class TeleportElement(DynamicElement):
             # Scheduling unconditionally also makes the fresh-anchor path
             # (parser-merged anchors) self-contained instead of relying on the
             # app-level post-hydration render pass.
+            self._early_claim_ssr_block()
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             task = scheduler.schedule(self._render(), render=True)
             self._pending_render_tasks.append((self, task))

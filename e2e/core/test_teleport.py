@@ -47,3 +47,26 @@ def test_ssr_static_teleport_mounts_under_body_without_duplication(page_on):
     expect(page.locator("[data-testid='before-marker']")).to_have_count(1)
     expect(page.locator("[data-testid='after-marker']")).to_have_count(1)
     expect(page.locator("[data-testid='after-marker']")).to_have_text("after-marker")
+
+
+def test_ssr_initial_html_contains_emitted_blocks_before_boot(page, server_url, console_messages):
+    page.goto(f"{server_url}teleport", wait_until="domcontentloaded")
+    raw = page.content()
+    assert "<!--wc-teleport-block:0:body-->" in raw
+    assert "<!--wc-teleport-block-end:0-->" in raw
+
+
+def test_ssr_emitted_block_consumed_without_duplication_after_boot(page_on):
+    page = page_on("/teleport")
+    counts = page.evaluate(
+        "() => ({"
+        "  markers: [...document.body.childNodes].filter("
+        "    n => n.nodeType === 8 && n.data.startsWith('wc-teleport-block')).length,"
+        "  static_count: document.querySelectorAll('[data-testid=\"static-teleport\"]').length,"
+        "})"
+    )
+    assert counts["markers"] == 0, (
+        f"markers left={counts['markers']} static={counts['static_count']} "
+        f"tail={page.evaluate('document.body.innerHTML.slice(-600)')}"
+    )
+    assert counts["static_count"] == 1
