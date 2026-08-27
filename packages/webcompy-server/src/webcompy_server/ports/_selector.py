@@ -86,8 +86,20 @@ def resolve_first(root: DOMNode, selector: str) -> DOMNode | None:
         ValueError: When the selector uses unsupported syntax.
 
     """
+    return resolve_parsed(root, parse_selector(selector))
 
-    chains = parse_selector(selector)
+
+def resolve_parsed(root: DOMNode, chains: list[_SelectorChain]) -> DOMNode | None:
+    """Return the first node matching pre-parsed ``chains``.
+
+    Args:
+        root: Node whose subtree (including itself) is searched.
+        chains: Parsed selector chains from :func:`parse_selector`.
+
+    Returns:
+        First matching element node, or ``None`` when nothing matches.
+
+    """
     stack: list[DOMNode] = [root]
     while stack:
         node = stack.pop()
