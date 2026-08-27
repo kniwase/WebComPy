@@ -42,7 +42,7 @@
 
 ## 7. Spec sync and governance
 
-- [ ] 7.1 Sync deltas into `openspec/specs/teleport/spec.md`, `virtual-dom/spec.md`, `port-abstraction/spec.md`, `elements/spec.md` per openspec-sync workflow when archiving
+- [x] 7.1 Sync deltas into `openspec/specs/teleport/spec.md`, `virtual-dom/spec.md`, `port-abstraction/spec.md`, `elements/spec.md` per openspec-sync workflow when archiving
 - [ ] 7.2 Update AGENTS.md Framework Invariants list and `.opencode/skills/webcompy-review/SKILL.md` critical-invariants headings referencing teleport/hydration/elements specs
 - [ ] 7.3 Run `python3 scripts/check-doc-spec-refs.py` and fix dangling references (e.g. "anchor-only" phrasing in universal docs)
 
