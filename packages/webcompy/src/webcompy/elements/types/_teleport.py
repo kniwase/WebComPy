@@ -212,6 +212,23 @@ class TeleportProps(_TeleportPropsOptional):
     to: str
 
 
+def _encode_selector(to: str) -> str:
+    """Encode ``to`` selector for safe inclusion in HTML comment data.
+
+    Uses percent-encoding and additionally escapes ``-`` to avoid ``--``
+    or trailing ``-`` inside comment data, which would break HTML
+    serialization.
+
+    Args:
+        to: The ``to`` selector of the teleport.
+
+    Returns:
+        Comment-safe percent-encoded selector string.
+
+    """
+    return quote(to, safe="").replace("-", "%2D")
+
+
 def block_start_data(ordinal: int, to: str) -> str:
     """Build the start marker comment data for an emitted block.
 
@@ -223,7 +240,7 @@ def block_start_data(ordinal: int, to: str) -> str:
         Comment data string.
 
     """
-    return f"{_BLOCK_START_PREFIX}{ordinal}:{quote(to, safe='')}"
+    return f"{_BLOCK_START_PREFIX}{ordinal}:{_encode_selector(to)}"
 
 
 def block_end_data(ordinal: int) -> str:
@@ -453,7 +470,7 @@ class TeleportElement(DynamicElement):
         slots.sort(key=lambda entry: entry.base)
 
     def _block_start_marker_data(self) -> str:
-        return f"{_BLOCK_START_PREFIX}{self._ssr_ordinal}:{quote(self._to, safe='')}"
+        return f"{_BLOCK_START_PREFIX}{self._ssr_ordinal}:{_encode_selector(self._to)}"
 
     def _find_ssr_block_range(self, target: DOMNode, registry: _TeleportTargetRegistry) -> tuple[int, int] | None:
         children = target.childNodes
@@ -633,7 +650,7 @@ class TeleportElement(DynamicElement):
                     target.removeChild(target.childNodes[index])
                 registry.mark_consumed(self._ssr_ordinal)
             return
-        expected_suffix = f":{quote(self._to, safe='')}"
+        expected_suffix = f":{_encode_selector(self._to)}"
         children = target.childNodes
         start_index: int | None = None
         start_ordinal: int | None = None
