@@ -45,9 +45,12 @@ def TeleportDemoPage(context: ComponentContext[None]):
             slots={
                 "default": lambda: html.P(
                     {},
-                    "During SSR and static generation, Teleport emits only a single anchor "
-                    "placeholder at its logical position; the teleported content is mounted under "
-                    "the target by the browser after hydration.",
+                    "During SSR and static generation, Teleport renders its children into the "
+                    "resolved target by default, so the content is present in the served HTML "
+                    "for crawlers and no-JS clients. Pass ",
+                    html.CODE({}, '"ssr": False'),
+                    " in the props to opt out and keep the anchor-only output; the browser "
+                    "then mounts the children during hydration as before.",
                 )
             },
         ),

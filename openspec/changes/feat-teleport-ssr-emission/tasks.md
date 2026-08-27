@@ -36,9 +36,9 @@
 
 ## 6. Docs site updates
 
-- [ ] 6.1 Update `/sample/teleport` demo page copy (SSR section now describes default emission, opt-out, markers)
-- [ ] 6.2 Update navbar-related docs text if any page describes anchor-only SSR of dropdowns
-- [ ] 6.3 Verify docs_app SSG output contains hidden dropdown link lists under body (manual spot-check or script assertion)
+- [x] 6.1 Update `/sample/teleport` demo page copy (SSR section now describes default emission, opt-out, markers)
+- [x] 6.2 Update navbar-related docs text if any page describes anchor-only SSR of dropdowns
+- [x] 6.3 Verify docs_app SSG output contains hidden dropdown link lists under body (manual spot-check or script assertion)
 
 ## 7. Spec sync and governance
 
