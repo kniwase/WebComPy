@@ -16,10 +16,10 @@
 
 ## 4. Unit tests (`tests/test_ui_primitives_foundation.py`, browserless via TestRenderer)
 
-- [ ] 4.1 Headless Spinner: `role="status"`, accessible label rendering (label prop and aria-label fallback), `data-state="loading"`, no visual styling beyond structural CSS
-- [ ] 4.2 Class pass-through: user class appended after framework classes on headless and themed variants
-- [ ] 4.3 Themed composition: themed Spinner renders the headless behavior with themed default classes; imports resolve per the three-path requirement (`webcompy.ui.headless`, `webcompy.ui.components`, `webcompy.ui` top level yields themed)
-- [ ] 4.4 Stylesheet wiring: `primitives.css` is imported by `index.css` and contains the reduced-motion rule
+- [x] 4.1 Headless Spinner: `role="status"`, accessible label rendering (label prop and aria-label fallback), `data-state="loading"`, no visual styling beyond structural CSS
+- [x] 4.2 Class pass-through: user class appended after framework classes on headless and themed variants
+- [x] 4.3 Themed composition: themed Spinner renders the headless behavior with themed default classes; imports resolve per the three-path requirement (`webcompy.ui.headless`, `webcompy.ui.components`, `webcompy.ui` top level yields themed)
+- [x] 4.4 Stylesheet wiring: `primitives.css` is imported by `index.css` and contains the reduced-motion rule
 
 ## 5. Docs and dogfooding
 
