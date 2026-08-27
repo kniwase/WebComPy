@@ -732,7 +732,7 @@ async def _generate_html_impl(
     await document._render()
     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
     await scheduler.await_pending()
-    if isinstance(dom_port, ServerDOMPort) and dummy_root.childNodes.length > 0:
+    if prerender and isinstance(dom_port, ServerDOMPort) and dummy_root.childNodes.length > 0:
         dom_port._attach_document_root(dummy_root.childNodes[0])
         await emit_teleport_blocks(ctx._root._node_cache)
         await scheduler.await_pending()

@@ -653,6 +653,7 @@ class TeleportElement(DynamicElement):
             return
         expected_suffix = f":{_encode_selector(self._to)}"
         children = target.childNodes
+        candidates: list[tuple[int, int, int]] = []
         start_index: int | None = None
         start_ordinal: int | None = None
         for index in range(children.length):
@@ -670,10 +671,15 @@ class TeleportElement(DynamicElement):
                 start_ordinal = _parse_marker_ordinal(data)
                 continue
             if start_index is not None and start_ordinal is not None and data == f"{_BLOCK_END_PREFIX}{start_ordinal}":
-                for remove_index in range(index, start_index - 1, -1):
-                    target.removeChild(children[remove_index])
-                registry.mark_consumed(start_ordinal)
-                return
+                candidates.append((start_index, index, start_ordinal))
+                start_index = None
+                start_ordinal = None
+        if len(candidates) != 1:
+            return
+        start_index, end_index, start_ordinal = candidates[0]
+        for remove_index in range(end_index, start_index - 1, -1):
+            target.removeChild(children[remove_index])
+        registry.mark_consumed(start_ordinal)
 
 
 Teleport = TeleportElement
