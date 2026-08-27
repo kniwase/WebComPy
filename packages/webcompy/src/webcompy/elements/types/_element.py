@@ -46,6 +46,24 @@ for _i in range(100):
     _WEBCOMPY_INTERNAL_ATTRS.add(f"webcompy-cid-{_i}")
 _WEBCOMPY_INTERNAL_ATTRS = frozenset(_WEBCOMPY_INTERNAL_ATTRS)
 
+_TELEPORT_MARKER_PREFIXES = ("wc-teleport-block:", "wc-teleport-block-end:")
+
+
+def _is_teleport_block_marker(node: DOMNode) -> bool:
+    """Return whether ``node`` is an unclaimed Teleport SSR block marker.
+
+    Args:
+        node: Candidate sibling node.
+
+    Returns:
+        ``True`` for comment nodes carrying Teleport block marker data.
+
+    """
+    if node.nodeName.lower() != "#comment":
+        return False
+    data = str(node.textContent or "")
+    return data.startswith(_TELEPORT_MARKER_PREFIXES)
+
 
 class ElementBase(ElementWithChildren):
     """Base of concrete DOM element nodes.
@@ -117,15 +135,18 @@ class ElementBase(ElementWithChildren):
                 return existing_node
             # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
-                from webcompy.hydration import record_mismatch
+                if _is_teleport_block_marker(existing_node):
+                    pass
+                else:
+                    from webcompy.hydration import record_mismatch
 
-                record_mismatch(
-                    "tag",
-                    self._tag_name,
-                    getattr(existing_node, "nodeName", None),
-                    self._get_belonging_component(),
-                )
-                existing_node.remove()
+                    record_mismatch(
+                        "tag",
+                        self._tag_name,
+                        getattr(existing_node, "nodeName", None),
+                        self._get_belonging_component(),
+                    )
+                    existing_node.remove()
         node = self._create_node()
         self._init_new_node(node)
         return node

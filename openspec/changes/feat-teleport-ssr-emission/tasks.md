@@ -28,11 +28,11 @@
 
 ## 5. Hydration consumption
 
-- [ ] 5.1 Implement block discovery on client: scan resolved target's children for start markers, selector+ordinal sequence match, exclusive claim via consumed set; warn+fallback to existing self-scheduled render when absent/mismatched
-- [ ] 5.2 On claim: record insertion index, remove start/end markers plus enclosed nodes, mark indices updated for following target siblings, then run normal client render inserting at recorded index
-- [ ] 5.3 Rework `_re_index_shared_target` to marker/slot-anchored bases (drop tail assumption) covering fresh-mount blocks and recreated blocks uniformly
-- [ ] 5.4 Destruction sweep: teleport destroyed during hydration removes its uniquely identifiable unconsumed block; otherwise leaves inert content
-- [ ] 5.5 Unit tests (fake HTML parser round-trip): exactly-once consumption single & shared target; stale-HTML fallback keeps one live copy; double-consumption prevented across mixed selectors hitting one target; destruction sweep; inline-fallback regression suite still green
+- [x] 5.1 Implement block discovery on client: scan resolved target's children for start markers, selector+ordinal sequence match, exclusive claim via consumed set; warn+fallback to existing self-scheduled render when absent/mismatched
+- [x] 5.2 On claim: record insertion index, remove start/end markers plus enclosed nodes, mark indices updated for following target siblings, then run normal client render inserting at recorded index
+- [x] 5.3 Rework `_re_index_shared_target` to marker/slot-anchored bases (drop tail assumption) covering fresh-mount blocks and recreated blocks uniformly
+- [x] 5.4 Destruction sweep: teleport destroyed during hydration removes its uniquely identifiable unconsumed block; otherwise leaves inert content
+- [x] 5.5 Unit tests (fake HTML parser round-trip): exactly-once consumption single & shared target; stale-HTML fallback keeps one live copy; double-consumption prevented across mixed selectors hitting one target; destruction sweep; inline-fallback regression suite still green
 
 ## 6. Docs site updates
 

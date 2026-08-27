@@ -1182,3 +1182,154 @@ class TestTeleportSSRHydrationRoundTrip:
         modals = [child for child in body_children if child.getAttribute("id") == "modal"]
         assert len(modals) == 1
         assert modals[0].textContent == "MODAL-SECRET"
+
+    def _install_manual_block(self, dom_port, ordinal: int, selector: str, child_id: str, text: str):
+        start = dom_port.create_comment(f"wc-teleport-block:{ordinal}:{selector}")
+        content = dom_port.create_element("div")
+        content.setAttribute("id", child_id)
+        content.appendChild(dom_port.create_text_node(text))
+        end = dom_port.create_comment(f"wc-teleport-block-end:{ordinal}")
+        for node in (start, content, end):
+            node.__webcompy_prerendered_node__ = True
+            dom_port._body.appendChild(node)
+        return content
+
+    def _body_marker_datas(self, dom_port) -> list[str]:
+        return [
+            (dom_port._body.childNodes[i].textContent or "")
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].nodeName == "#comment"
+            and str(dom_port._body.childNodes[i].textContent or "").startswith("wc-teleport-block")
+        ]
+
+    def _make_prerendered_page(self, dom_port):
+        page_div = FakeDOMNode("div")
+        page_div.setAttribute("id", "webcompy-page-root")
+        anchor_comment = FakeDOMNode("#comment", text_content="webcompy-teleport-anchor")
+        page_div.appendChild(anchor_comment)
+        _mark_prerendered(page_div)
+        dom_port._body.appendChild(page_div)
+        return page_div
+
+    def _build_hydration_pair(self, monkeypatch, dom_port, page_div, props: dict, child_id: str, text: str):
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+        teleport = Teleport(props, Element("div", {"id": child_id}, {}, None, [TextElement(text)]))
+        wrapper = Element("div", {}, {}, None, None)
+        wrapper._node_cache = page_div
+        wrapper._mounted = True
+        teleport._parent = wrapper
+        teleport._node_idx = 0
+        return teleport
+
+    @pytest.mark.asyncio
+    async def test_hydration_claims_emitted_block_exactly_once(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        teleport._hydrate_node()
+        await teleport._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert len(modals) == 1
+        assert modals[0].textContent == "MODAL-SECRET"
+        assert getattr(teleport._node_cache, "__webcompy_prerendered_node__", False) is True
+
+    @pytest.mark.asyncio
+    async def test_shared_target_blocks_claimed_by_matching_ordinals(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        page_div = self._make_prerendered_page(dom_port)
+
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        page_root = Element("div", {}, {}, None, None)
+        page_root._node_cache = page_div
+        page_root._mounted = True
+
+        class _PageRoot:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        page_root._parent = _PageRoot()
+
+        teleport_a = Teleport({"to": "body"}, Element("div", {"id": "modal-a"}, {}, None, [TextElement("CONTENT-A")]))
+        teleport_a._parent = page_root
+        teleport_a._node_idx = 0
+        teleport_b = Teleport({"to": "body"}, Element("div", {"id": "modal-b"}, {}, None, [TextElement("CONTENT-B")]))
+        teleport_b._parent = page_root
+        teleport_b._node_idx = 1
+
+        teleport_a._hydrate_node()
+        teleport_b._hydrate_node()
+        await teleport_a._render()
+        await teleport_b._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        modal_ids = [dom_port._body.childNodes[i].getAttribute("id") for i in range(dom_port._body.childNodes.length)]
+        modal_ids = [k for k in modal_ids if k in ("modal-a", "modal-b")]
+        assert sorted(modal_ids) == ["modal-a", "modal-b"]
+
+    @pytest.mark.asyncio
+    async def test_stale_html_falls_back_with_warning_and_single_copy(self, monkeypatch, fake_browser_full, caplog):
+        import logging as _logging
+
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        with caplog.at_level(_logging.WARNING, logger="webcompy"):
+            teleport._hydrate_node()
+            await teleport._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert any(
+            "not found" in record.getMessage() and "mounting via client render" in record.getMessage()
+            for record in caplog.records
+        )
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert len(modals) == 1
+
+    @pytest.mark.asyncio
+    async def test_destroyed_before_claim_sweeps_unconsumed_block(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        teleport._hydrate_node()
+        teleport._remove_element(True, True)
+
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert modals == []

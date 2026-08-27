@@ -158,6 +158,19 @@ class _TeleportTargetRegistry:
         """
         return self._slots.setdefault(id(target), [])
 
+    def set_slots(self, target: DOMNode, slots: list[_BlockSlot]) -> None:
+        """Replace the slot ledger for ``target``.
+
+        Args:
+            target: Shared target node.
+            slots: New ordered slot ledger.
+
+        Returns:
+            ``None``.
+
+        """
+        self._slots[id(target)] = slots
+
     def drop_slots_if_empty(self, target: DOMNode) -> None:
         """Remove the ledger for ``target`` when it holds no slots.
 
@@ -224,6 +237,24 @@ def block_end_data(ordinal: int) -> str:
 
     """
     return f"{_BLOCK_END_PREFIX}{ordinal}"
+
+
+def _parse_marker_ordinal(data: str) -> int:
+    """Extract the ordinal from a block start marker comment data.
+
+    Args:
+        data: Start marker comment data (``wc-teleport-block:<n>:...``).
+
+    Returns:
+        The parsed ordinal, or ``-1`` when the data is malformed.
+
+    """
+    rest = data[len(_BLOCK_START_PREFIX) :]
+    head = rest.split(":", 1)[0]
+    try:
+        return int(head)
+    except ValueError:
+        return -1
 
 
 class TeleportElement(DynamicElement):
@@ -371,7 +402,23 @@ class TeleportElement(DynamicElement):
                 if target is None:
                     return
                 self._children_rendered = True
-                idx = target.childNodes.length
+                slot: int | None = None
+                if self._ssr_emit and self._ssr_ordinal >= 0:
+                    registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
+                    if registry is not None:
+                        slot = self._claim_ssr_block(target, registry)
+                        if slot is None:
+                            logging.warning(
+                                f"Teleport SSR block {self._ssr_ordinal} for '{self._to}' not found; "
+                                "mounting via client render."
+                            )
+                        else:
+                            registry.mark_consumed(self._ssr_ordinal)
+                            slots = registry.ensure_slots(target)
+                            slots.append(_BlockSlot(self._ssr_ordinal, slot, self))
+                            slots.sort(key=lambda entry: entry.base)
+                idx = slot if slot is not None else target.childNodes.length
+                idx = slot if slot is not None else target.childNodes.length
                 for child in self._children:
                     child._node_idx = idx
                     if child._mounted is None:
@@ -379,6 +426,37 @@ class TeleportElement(DynamicElement):
                     idx += child._node_count
             self._re_index_shared_target()
         self._parent._re_index_children(False)
+
+    def _block_start_marker_data(self) -> str:
+        return f"{_BLOCK_START_PREFIX}{self._ssr_ordinal}:{quote(self._to, safe='')}"
+
+    def _find_ssr_block_range(self, target: DOMNode, registry: _TeleportTargetRegistry) -> tuple[int, int] | None:
+        children = target.childNodes
+        start_index: int | None = None
+        for index in range(children.length):
+            node = children[index]
+            if getattr(node, "nodeType", 0) != 8:
+                continue
+            data = str(node.textContent or "")
+            if (
+                start_index is None
+                and data == self._block_start_marker_data()
+                and not registry.is_consumed(self._ssr_ordinal)
+            ):
+                start_index = index
+                continue
+            if data == f"{_BLOCK_END_PREFIX}{self._ssr_ordinal}" and start_index is not None:
+                return start_index, index
+        return None
+
+    def _claim_ssr_block(self, target: DOMNode, registry: _TeleportTargetRegistry) -> int | None:
+        found = self._find_ssr_block_range(target, registry)
+        if found is None:
+            return None
+        slot, end = found
+        for index in range(end, slot - 1, -1):
+            target.removeChild(target.childNodes[index])
+        return slot
 
     def _hydrate_node(self) -> None:
         existing = self._get_existing_node()
@@ -432,7 +510,50 @@ class TeleportElement(DynamicElement):
         teleports = registry.shared_target_teleports(target)
         if not teleports:
             return
-        base = target.childNodes.length - sum(_mounted_direct_count(target, teleport) for teleport in teleports)
+        slots = registry.slots_for(target)
+        measured: dict[int, int] = {id(tp): _mounted_direct_count(target, tp) for tp in teleports}
+        if slots is None:
+            base = target.childNodes.length - sum(measured.values())
+            self._assign_block_indices(target, teleports, measured, base)
+            return
+        ledger = [slot for slot in slots if slot.teleport is not None and id(slot.teleport) in measured]
+        untracked = [tp for tp in teleports if all(slot.teleport is not tp for slot in ledger)]
+        for teleport in untracked:
+            last_end = max((slot.base + measured.get(id(slot.teleport), 0) for slot in ledger), default=None)
+            anchor_base = (
+                target.childNodes.length - sum(measured.values())
+                if not ledger
+                else (last_end if last_end is not None else target.childNodes.length)
+            )
+            slot = _BlockSlot(-1, anchor_base, teleport)
+            ledger.append(slot)
+        registry.set_slots(target, ledger)
+        ledger.sort(key=lambda entry: entry.base)
+        position = ledger[0].base
+        ordered = []
+        for slot in ledger:
+            count = measured.get(id(slot.teleport), 0) if slot.teleport is not None else 0
+            slot.base = position
+            position += count
+            ordered.append(slot)
+        for slot in ordered:
+            if slot.teleport is None or id(slot.teleport) not in measured:
+                continue
+            idx = slot.base
+            for child in slot.teleport._children:
+                child._node_idx = idx
+                idx += _mounted_direct_count(target, child)
+            for child in slot.teleport._children:
+                if isinstance(child, DynamicElement):
+                    child._re_index_children(True)
+
+    def _assign_block_indices(
+        self,
+        target: DOMNode,
+        teleports: list[TeleportElement],
+        measured: dict[int, int],
+        base: int,
+    ) -> None:
         for teleport in teleports:
             idx = base
             for child in teleport._children:
@@ -454,12 +575,61 @@ class TeleportElement(DynamicElement):
         if recursive:
             for child in self._children:
                 child._remove_element(True, True)
+        if self._ssr_emit:
+            registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
+            if registry is not None:
+                self._sweep_unconsumed_block(registry)
         target = self._target_node
         if target is not None:
             registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
             if registry is not None:
                 registry.unregister(target, self)
             self._re_index_shared_target()
+
+    def _sweep_unconsumed_block(self, registry: _TeleportTargetRegistry) -> None:
+        if not self._ssr_emit:
+            return
+        try:
+            target = inject(DOM_PORT_KEY).query_selector(self._to)
+        except ValueError:
+            return
+        if target is None:
+            target = self._target_node
+        if target is None:
+            return
+        if self._ssr_ordinal >= 0:
+            if registry.is_consumed(self._ssr_ordinal):
+                return
+            found = self._find_ssr_block_range(target, registry)
+            if found is not None:
+                slot, end = found
+                for index in range(end, slot - 1, -1):
+                    target.removeChild(target.childNodes[index])
+                registry.mark_consumed(self._ssr_ordinal)
+            return
+        expected_suffix = f":{quote(self._to, safe='')}"
+        children = target.childNodes
+        start_index: int | None = None
+        start_ordinal: int | None = None
+        for index in range(children.length):
+            node = children[index]
+            if getattr(node, "nodeType", 0) != 8:
+                continue
+            data = str(node.textContent or "")
+            if (
+                start_index is None
+                and data.startswith(_BLOCK_START_PREFIX)
+                and data.endswith(expected_suffix)
+                and not registry.is_consumed(_parse_marker_ordinal(data))
+            ):
+                start_index = index
+                start_ordinal = _parse_marker_ordinal(data)
+                continue
+            if start_index is not None and start_ordinal is not None and data == f"{_BLOCK_END_PREFIX}{start_ordinal}":
+                for remove_index in range(index, start_index - 1, -1):
+                    target.removeChild(children[remove_index])
+                registry.mark_consumed(start_ordinal)
+                return
 
 
 Teleport = TeleportElement
