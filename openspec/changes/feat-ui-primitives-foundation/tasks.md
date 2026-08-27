@@ -7,7 +7,7 @@
 
 ## 2. Headless Spinner
 
-- [ ] 2.1 Implement headless `Spinner` (`@define_component`, `SpinnerProps` TypedDict): `role="status"`, accessible label (label prop as visually-hidden text or `aria-label` fallback), `data-state="loading"`, root `class` pass-through with framework class first
+- [x] 2.1 Implement headless `Spinner` (`@define_component`, `SpinnerProps` TypedDict): `role="status"`, accessible label (label prop as visually-hidden text or `aria-label` fallback), `data-state="loading"`, root `class` pass-through with framework class first
 
 ## 3. Themed Spinner and stylesheet delivery
 

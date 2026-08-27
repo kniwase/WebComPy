@@ -1,3 +1,5 @@
 """Behavior-only UI primitives: state, ARIA, and keyboard logic without styling."""
 
-__all__: list[str] = []
+from webcompy.ui.headless._spinner import Spinner
+
+__all__ = ["Spinner"]
