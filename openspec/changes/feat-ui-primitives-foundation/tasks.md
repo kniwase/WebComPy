@@ -28,6 +28,6 @@
 
 ## 6. Validation
 
-- [ ] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 6.2 `uv run pyright` passes
-- [ ] 6.3 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 6.2 `uv run pyright` passes
+- [x] 6.3 `uv run python -m pytest tests/ --tb=short` passes
