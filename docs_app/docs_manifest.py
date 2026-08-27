@@ -63,6 +63,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "source": "documents/custom_elements.md",
             },
             {
+                "label": "UI Primitives",
+                "path": "/documents/ui-primitives",
+                "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
+            },
+            {
                 "label": "Loading Screen",
                 "path": "/documents/loading-screen",
                 "source": "documents/loading_screen.md",
@@ -96,11 +101,6 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "label": "RPC over WebSocket",
                 "path": "/documents/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
-            },
-            {
-                "label": "UI Primitives",
-                "path": "/documents/ui-primitives",
-                "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
             },
         ],
     },
