@@ -385,7 +385,7 @@ class TeleportElement(DynamicElement):
             registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
             if registry is not None:
                 registry.register(target, self)
-                if self._ssr_emit:
+                if self._ssr_emit and self._ssr_ordinal < 0:
                     self._ssr_ordinal = registry.reserve_ordinal()
 
     async def _render(self) -> None:
@@ -453,6 +453,7 @@ class TeleportElement(DynamicElement):
         if registry is None:
             return
         registry.register(target, self)
+        self._resolved = True
         if self._ssr_ordinal < 0:
             self._ssr_ordinal = registry.reserve_ordinal()
         slot = self._claim_ssr_block(target, registry)
