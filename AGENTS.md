@@ -165,7 +165,7 @@ the per-area reference.
 - **RPC Contract Binding** — `rpc-contracts/spec.md`, `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md`
 - **RPC WebSocket Rejoin & Cursor Integrity** — `rpc-websocket/spec.md`, `json-rpc/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
-- **Teleport Anchor Slot and SSR Anchor** — `teleport/spec.md`
+- **Teleport Anchor Slot, SSR Block Emission and Rejection** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
@@ -211,7 +211,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
-| `webcompy/elements/types/_teleport.py` | `teleport/spec.md`, `async-rendering/spec.md` |
+| `webcompy/elements/types/_teleport.py` | `teleport/spec.md`, `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/elements/types/_transition.py`, `webcompy/ports/_transition.py`, `webcompy/ports/_browser/_transition.py`, `webcompy/ports/_media_query.py`, `webcompy_server/ports/_transition.py` | `transition/spec.md`, `port-abstraction/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
@@ -230,7 +230,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
-| `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md` |
+| `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
 | `webcompy_server/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md` |
 | `webcompy_server/rpc/_dispatcher.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md` |
@@ -360,7 +360,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `port-abstraction` | Typed, injectable port ABCs replacing monolithic `browser` |
 | `fetch-middleware` | Stackable `FetchMiddleware` chains around `FetchPort.fetch/stream`: registries on DI, plugin hooks, `next(response=...)` interception with hydration/blocked-path delegation, header-commit-time streaming resolution |
 | `resource-port` | Async `ResourcePort` ABC + `ServerResourcePort`/`BrowserResourcePort` for app-package resource files (replaces legacy `load_asset`) |
-| `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
+| `virtual-dom` | Server-side virtual DOM tree for SSG and testing, with CSS selector resolution over the virtual tree |
 | `async` | Async operations, HTTP client integration |
 | `async-scheduler` | `AsyncSchedulerPort` task scheduling interface with render-task scoping (`schedule(coro, *, render=False)` / `await_pending(*, only_render=False)`); browser drain gates the hydration reveal while non-render tasks stay fire-and-forget |
 | `typed-api-client` | Schema-driven typed deserialization (`from_json`) and `response_type` typed requests on `HttpClient`, including validation strictness and container/scalar coercion |
@@ -399,7 +399,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 | `asgi-embed` | Embedding a WebComPy serving app into a host ASGI application, including fetch-port wiring (`root_app`), `base_url`/prefix alignment, and blocked-path behavior |
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
-| `teleport` | Teleport element relocating a subtree to a target container via a single stable anchor placeholder, with SSR anchor-only emission and hydration adoption |
+| `teleport` | Teleport element relocating a subtree via a single anchor placeholder, with default-on SSR block emission, marker-delimited hydration consumption and stable-target rejection |
 | `transition` | CSS-class-driven enter/leave animations for a single conditional child via the `Transition` element, with delayed removal, duration resolution, node accounting, and reduced-motion support |
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |

@@ -90,7 +90,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Browser Test Tier Importability** — `browser-test-harness/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`
-- **Hydration Adopt & Render** — `elements/spec.md`, `async-rendering/spec.md`
+- **Hydration Adopt & Render** — `elements/spec.md`, `async-rendering/spec.md`, `teleport/spec.md`
 - **Hydration Mismatch Diagnostics** — `elements/spec.md`, `async-rendering/spec.md`
 - **Scheduler Render-Task Scoping** — `async-scheduler/spec.md`
 - **Hydration Text-Node Normalization** — `elements/spec.md`
@@ -103,7 +103,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Payload Compression** — `payload-compression/spec.md`
 - **ResourcePort** — `resource-port/spec.md`
 - **RouterView** — `router/spec.md`
-- **Teleport Anchor & SSR Slot** — `teleport/spec.md`
+- **Teleport Anchor Slot, SSR Block Emission and Rejection** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`, `port-abstraction/spec.md`, `port-provisioning/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **FragmentElement** — `elements/spec.md`
