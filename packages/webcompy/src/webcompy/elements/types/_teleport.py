@@ -303,6 +303,7 @@ class TeleportElement(DynamicElement):
         self._to = to
         self._ssr_emit = props.get("ssr", True) is not False
         self._ssr_ordinal = -1
+        self._enqueued = False
         self._claimed_slot: int | None = None
         self._claimed_anchor: DOMNode | None = None
         self._target_node: DOMNode | None = None
@@ -391,9 +392,10 @@ class TeleportElement(DynamicElement):
     async def _render(self) -> None:
         if ENVIRONMENT != "pyscript":
             self._mount_node()
-            if self._ssr_emit:
+            if self._ssr_emit and not self._enqueued:
                 registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
                 if registry is not None:
+                    self._enqueued = True
                     registry.enqueue_pending(self._to, self)
             return
         if not self._resolved:

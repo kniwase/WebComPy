@@ -577,6 +577,40 @@ class TestTeleportMarkerEncoding:
         assert "<!--wc-teleport-block-end:0-->" in html_out
         assert 'id="modal"' in html_out
 
+    def test_double_render_enqueues_single_emission_entry(self, server_di_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.elements.types._teleport import _TeleportTargetRegistry
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_server._teleport_emission import emit_teleport_blocks
+
+        registry = _TeleportTargetRegistry()
+        server_di_scope.provide(_TELEPORT_REGISTRY_KEY, registry)
+        dom_port = inject(DOM_PORT_KEY)
+        doc = dom_port.create_element("html")
+        body = dom_port.create_element("body")
+        doc.appendChild(body)
+        dom_port._attach_document_root(doc)
+
+        teleport = Teleport(
+            {"to": "body"},
+            Element("div", {"id": "modal"}, {}, None, [TextElement("modal")]),
+        )
+        parent = Element("div")
+        parent._node_cache = body
+        parent._mounted = True
+        teleport._parent = parent
+        teleport._node_idx = 0
+        asyncio.run(teleport._render())
+        asyncio.run(teleport._render())
+
+        asyncio.run(emit_teleport_blocks(None))
+        html_out = dom_port.render_html(doc)
+        assert html_out.count("wc-teleport-block:0:") == 1
+        assert "wc-teleport-block:1:" not in html_out
+        assert html_out.count("wc-teleport-block-end:") == 1
+        assert html_out.count('id="modal"') == 1
+
 
 class TestTeleportSSR:
     def test_ssr_emits_content_under_body_by_default(self):
@@ -771,6 +805,66 @@ class TestTeleportSSR:
         )
         assert "<!--wc-teleport-block:0:body-->" in html_str
         assert "async-resolved" in html_str
+
+    def test_ssr_empty_teleport_still_emits_marker_pair(self):
+        from webcompy.elements.types._fragment import FragmentElement
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.P({}, "before-marker"),
+                Teleport({"to": "body"}, FragmentElement()),
+                html.P({}, "after-marker"),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body--><!--wc-teleport-block-end:0-->" in html_str
+        assert "before-marker" in html_str
+        assert "after-marker" in html_str
+
+    def test_ssr_deferred_content_lands_inside_emitted_block(self):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        items = ReactiveList([])
+
+        @define_component()
+        def LateItems(context):
+            async def seed_items():
+                await asyncio.sleep(0)
+                items.append("deferred-item")
+
+            inject(ASYNC_SCHEDULER_PORT_KEY).schedule(seed_items())
+            return repeat(items, lambda item: html.LI({}, item))
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, LateItems(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        block_start = html_str.index("<!--wc-teleport-block:0:")
+        block_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        block = html_str[block_start:block_end]
+        assert "<li" in block
+        assert "deferred-item" in block
 
     def test_ssr_teleported_component_signal_is_transferred(self):
         from webcompy.signal import use_state

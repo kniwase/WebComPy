@@ -76,17 +76,10 @@ async def _emit_entry(
     end = dom_port.create_comment(block_end_data(entry.ordinal))
     target.appendChild(start)
     index = target.childNodes.length
-    rendered_anything = False
     for child in entry.children:
-        before = target.childNodes.length
         child._node_idx = index
         await child._render()
-        if target.childNodes.length > before:
-            rendered_anything = True
         index += child._node_count
-    if not rendered_anything:
-        target.removeChild(start)
-        return
     target.appendChild(end)
 
 

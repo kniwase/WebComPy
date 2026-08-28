@@ -147,3 +147,19 @@ Alpha policy: land on `main`; CI regenerates static artifacts; downstream users 
   `class="Foo"`. Class and ID values are now compared case-sensitively on
   both sides (type selectors stay ASCII case-insensitive), matching HTML
   document semantics; pinned in `virtual-dom/spec.md` and unit tests.
+- **Marker pair survives empty emission** — `_emit_entry` used to drop the
+  start marker when children rendered no nodes, decided before the second
+  `await_pending()`. Content arriving via deferred tasks (e.g. an initially
+  empty teleported list that gains items during the post-drain settle) then
+  landed outside any delimitation and hydration could not claim it. The
+  marker pair is now always emitted when target resolution succeeds, so
+  deferred content stays inside the block; pinned in `teleport/spec.md`
+  and unit tests.
+- **Single emission per Teleport** — the server `_render` path enqueued a
+  pending entry on every render, and a Teleport whose element tree renders
+  more than once server-side (e.g. a router-driven render pass followed by
+  the main document render pass) reserved two ordinals: one content block
+  plus one phantom empty block. With markers always kept, the phantom block
+  became visible and unconsumed after hydration. A per-instance
+  `_enqueued` guard makes emission at-most-once per render context; pinned
+  in `teleport/spec.md` and unit tests.
