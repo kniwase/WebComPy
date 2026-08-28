@@ -105,6 +105,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **RouterView** — `router/spec.md`
 - **Teleport Anchor Slot, SSR Block Emission and Rejection** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`, `port-abstraction/spec.md`, `port-provisioning/spec.md`
+- **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **FragmentElement** — `elements/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
