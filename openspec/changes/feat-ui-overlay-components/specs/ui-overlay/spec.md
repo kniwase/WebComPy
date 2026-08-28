@@ -67,7 +67,7 @@ A document-level listener SHALL close the Dropdown when the user clicks outside 
 
 ### Requirement: Toast shall provide an imperative queue rendered in a live region
 
-`use_toast()` SHALL be a component-scoped composable returning a push function accepting a message, variant, and optional duration. Pushed toasts SHALL be appended to a queue rendered by a Toast host through Teleport, inside an ARIA live region (`aria-live="polite"`; error variants SHALL use alert semantics). Each toast SHALL expose a manual dismiss action and `data-state="visible"` while shown. The composable SHALL be torn down with its component.
+`use_toast()` SHALL be a component-scoped composable returning a tuple of a push function and the queue state (`push(message, variant, duration)` and `ToastState` containing `toasts` and `dismiss`). Duration SHALL be in seconds (`float | None`, default `3.0`, `None` disables auto-dismiss); `use_toast()` is provided from `webcompy.ui.composables` while the host is provided from `webcompy.ui.headless`/`components`. Pushed toasts SHALL be appended to a queue rendered by a Toast host through Teleport, inside an ARIA live region (`aria-live="polite"`; error variants SHALL use alert semantics). Each toast SHALL expose a manual dismiss action and `data-state="visible"` while shown; dismissal SHALL mark `hidden` before the leave handling (via `Transition.on_leave_end`) removes the record. The composable SHALL be torn down with its component. Dropdown items SHALL be supplied as children via the framework's named slots (`slots={"trigger": ..., "default": ...}`), not via an `items` prop.
 
 #### Scenario: Push and render
 
@@ -77,7 +77,7 @@ A document-level listener SHALL close the Dropdown when the user clicks outside 
 
 ### Requirement: Toast auto-dismiss timers shall be tracked and cleaned up
 
-Each toast SHALL auto-dismiss after its duration (a default duration applies unless overridden; disabling auto-dismiss SHALL be possible). Dismissal SHALL run the leave handling before removal. Timers SHALL be cancelled on manual dismiss, on auto-dismiss, and on component destruction; no timer SHALL fire after its toast was removed or its component destroyed.
+Each toast SHALL auto-dismiss after its duration in seconds (default `3.0` unless overridden; `None` disables auto-dismiss). Dismissal SHALL run the leave handling (marking `hidden` and running `Transition.on_leave_end`) before removal. Timers SHALL be cancelled on manual dismiss, on auto-dismiss, and on component destruction; no timer SHALL fire after its toast was removed or its component destroyed.
 
 #### Scenario: Auto-dismiss after duration
 

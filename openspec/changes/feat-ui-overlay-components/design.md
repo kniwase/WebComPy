@@ -27,7 +27,7 @@ Grounded facts (verified in codebase):
 
 ### D1: API model — declarative `open` prop for modal-like components, composable for toasts
 
-Modal, Drawer, and Dropdown are controlled by a reactive `open` value (Signal/Computed bool prop) plus an `on_close` callback prop that the component invokes on Escape/backdrop/outside-click dismissal; the parent owns the state. Rationale: declarative open state composes with application logic (guards, async confirmation) and matches the reactive prop model. Toast is inherently imperative (push at arbitrary moments from anywhere), so it ships as `use_toast()` (component-scoped composable returning a push function with message/variant/duration arguments) plus a host component rendering the queue; the queue state lives inside the composable. Alternative (everything composable) rejected for modal-like components: it splits rendering and state unnecessarily.
+Modal, Drawer, and Dropdown are controlled by a reactive `open` value (Signal/Computed bool prop) plus an `on_close` callback prop that the component invokes on Escape/backdrop/outside-click dismissal; the parent owns the state. Rationale: declarative open state composes with application logic (guards, async confirmation) and matches the reactive prop model. Toast is inherently imperative (push at arbitrary moments from anywhere), so it ships as `use_toast()` (component-scoped composable returning `tuple[ToastPush, ToastState]` — a push function `ToastPush(message, variant, duration)` plus `ToastState` containing `toasts: Signal[list[ToastRecord]]` and `dismiss: Callable[[str], None]`; the queue state lives inside the composable). The host (`ToastHost`) receives `toasts`/`on_dismiss` from `ToastState` and renders through Teleport + per-item Transition with `on_leave_end` removal. Duration is in **seconds** (`float | None`, default `3.0`, `None` disables auto-dismiss). Alternative (everything composable) rejected for modal-like components: it splits rendering and state unnecessarily.
 
 ### D2: Focus trap via Tab interception
 
@@ -47,18 +47,22 @@ Each overlay renders: `Teleport({"to": "body"}, Transition({"name": <component-d
 
 ### D6: Dropdown keyboard model
 
-The trigger is a real button with `aria-expanded`, `aria-haspopup="menu"`, `aria-controls`. The menu uses `role="menu"` with `role="menuitem"` items (or `role="listbox"`/links for navigation-style menus — the component supports a simple menuitem model in v1). Keyboard: ArrowDown/ArrowUp move focus among items (wrapping), Home/End jump, Escape closes and returns focus to the trigger, Enter/Space activates the focused item and closes. Type-ahead is not in v1 scope. This follows the WAI-ARIA menu button pattern.
+Dropdown uses the framework's **named slots** contract: `slots={"trigger": lambda: element}` supplies the trigger button and `slots={"default": lambda: items}` supplies the menu items as children (children-only API, no `items` prop; see spinner precedent and Radix/Headless UI pattern). The headless layer accepts a caller-created trigger element, merges `aria-expanded`/`aria-haspopup="menu"`/`aria-controls`/`data-state` onto it, and renders the menu items inside `<ul role="menu" data-state>` through Teleport + Transition (menu id is auto-generated for `aria-controls` — dangles while closed, accepted as v1 behavior). Items carry `role="menuitem"`; callers provide them as `create_element("li", {"role": "menuitem", "on_click": ...})` children — headless does not synthesize items. Keyboard: ArrowDown/ArrowUp move focus among items (wrapping, skipping `aria-disabled="true"`), Home/End jump, Escape closes and returns focus to the trigger, Enter/Space activates the focused item and closes. Type-ahead is not in v1 scope. This follows the WAI-ARIA menu button pattern.
 
 ### D7: Toast queue semantics
 
-`use_toast()` returns a push function; each call appends a toast (id, message, variant, duration). The host renders the queue (oldest first, newest appended) inside a Teleport'd container that is an ARIA live region (`aria-live="polite"`, with `role="alert"` semantics for error variants). Each toast auto-dismisses after its duration (default provided, per-toast override, `duration=None` disables auto-dismiss) and has a manual dismiss button. Timers are cancelled on dismiss and on component destruction (no orphaned timers). The queue is unbounded in v1; capping is documented as future work.
+`use_toast()` returns `tuple[ToastPush, ToastState]`; each `push(message, variant, duration)` appends a toast (id, message, variant, duration in **seconds**; default `3.0`, `duration=None` disables auto-dismiss). The host receives `toasts`/`on_dismiss` from `ToastState` and renders the queue (oldest first, newest appended) inside a Teleport'd container that is an ARIA live region (`aria-live="polite"`, with `role="alert"` semantics for error variants). Each toast item is wrapped in its own `Transition` (host wraps many items, so a single host-level Transition is invalid) with `on_leave_end` performing the actual queue removal — dismissal marks `leaving=True` (`data-state="hidden"`) and the Transition leave runs before `on_leave_end` removes the record. `use_toast()` is provided from `webcompy.ui.composables` (logic-only), while `ToastHost`/`ToastItem` are in `webcompy.ui.headless`/`components`. Timers are cancelled on dismiss and on component destruction (no orphaned timers). The queue is unbounded in v1; capping is documented as future work.
 
 ### D8: data-state vocabularies
 
-- Modal/Drawer root: `data-state="open" | "closed"` (closed state exists only transiently during leave animation).
-- Dropdown trigger: `data-state="open" | "closed"`; menu likewise.
-- Toast items: `data-state="visible" | "hidden"` (hidden transiently during leave).
-These follow the foundation contract and give user CSS stable state hooks.
+- Modal/Drawer panel: `data-state="open"` while mounted; closed overlays contribute no content (the generator-returning-None pattern means `data-state="closed"` does not appear in v1 — leave animation retains the last state). The `closed`/`hidden` values are reserved for user-managed markup.
+- Dropdown trigger and menu: `data-state="open" | "closed"` likewise (menu absent while closed; trigger exposes the logical state).
+- Toast items: `data-state="visible" | "hidden"` (`hidden` marks leaving before `on_leave_end` removes the record).
+These follow the foundation contract and give user CSS stable state hooks. The requirement "expose `data-state="open"` while open" is always satisfied; transient leave states retain the last visible state in v1.
+
+### D9: Transition `on_leave_end` extension
+
+`Transition` gains an optional `on_leave_end: Callable[[], None] | None` prop — additive only, validated as callable. The callback fires exactly once at the end of a completed leave (both the normal `_finalize_leave` path and the immediate `_finalize_leave_now` path for `prefers-reduced-motion`/`enabled=False`). Toast per-item leave relies on this for actual queue removal; other overlays do not use it. Error handling routes exceptions to the boundary.
 
 ## Risks / Trade-offs
 
