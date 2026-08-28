@@ -258,7 +258,7 @@ class TestRenderer:
             scope.provide(ASYNC_SCHEDULER_PORT_KEY, fake_scheduler)
             dom_port = FakeBrowserDOMPort()
             scope.provide(DOM_PORT_KEY, dom_port)
-            scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
+            scope.provide(HOST_PORT_KEY, FakeBrowserHostPort(dom_port))
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
             scope.provide(EVENT_SOURCE_PORT_KEY, FakeEventSourcePort())

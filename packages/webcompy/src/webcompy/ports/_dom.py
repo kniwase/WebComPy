@@ -345,6 +345,26 @@ class DOMPort(ABC):
         ...
 
     @abstractmethod
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: DOMNode | None = None,
+    ) -> list[DOMNode]:
+        """Query for all elements matching a CSS selector.
+
+        Args:
+            selector: CSS selector string.
+            root: Optional subtree root to scope the query to. When
+                ``None``, the document root is searched.
+
+        Returns:
+            Matching element nodes in document order.
+
+        """
+        ...
+
+    @abstractmethod
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         """Retrieve an element by its ``id`` attribute.
 

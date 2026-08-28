@@ -30,6 +30,15 @@ class BrowserDOMPort(DOMPort):
     def query_selector(self, selector: str) -> DOMNode | None:
         return self._browser.document.querySelector(selector) or None
 
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: DOMNode | None = None,
+    ) -> list[DOMNode]:
+        scope = root if root is not None else self._browser.document
+        return list(scope.querySelectorAll(selector))
+
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         return self._browser.document.getElementById(element_id) or None
 
