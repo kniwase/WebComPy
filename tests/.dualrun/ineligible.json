@@ -125,6 +125,7 @@
   "tests/test_typed_realtime.py": "top-level import of 'webcompy_testing.FakeWebSocketPort' at line 28",
   "tests/test_typed_response_integration.py": "top-level import of 'webcompy_testing.FakeFetchPort' at line 23",
   "tests/test_typed_transfer.py": "module-scope side-effecting call at line 28",
+  "tests/test_ui_primitives_foundation.py": "pragma 'browser-dualrun: skip'",
   "tests/test_ui_styles.py": "module-scope side-effecting call at line 6",
   "tests/test_unified_render_path.py": "top-level import of unmounted module 'tests.conftest' at line 5",
   "tests/test_websocket_composable.py": "top-level import of 'webcompy_testing.FakeWebSocketPort' at line 20",

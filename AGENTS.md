@@ -167,6 +167,7 @@ the per-area reference.
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Teleport Anchor Slot, SSR Block Emission and Rejection** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
+- **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
@@ -195,6 +196,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/events/` | `readonly-signal/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/ui/_styles/` | `css-architecture/spec.md` |
+| `webcompy/ui/headless/`, `webcompy/ui/components/` | `ui-primitives/spec.md` |
 | `webcompy/ui/code_block/` | `code-block/spec.md`, `syntax-highlight-lexers/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
@@ -420,6 +422,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 | `api-docstrings` | Docstring coverage and Google-style structure for public interfaces of all four packages; ban on OpenSpec artifact references in docstrings and comments; stdlib-only strict checker with migration baseline (`scripts/check-docstrings.py`); same-PR docstring-implementation sync with must-fix inconsistency blocking approval |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
+| `ui-primitives` | Two-layer first-party UI components: headless contract (behavior-only with structural CSS, `data-state` vocabularies, `class_name` pass-through), themed composition with token-based defaults, three import paths, stylesheet delivery through `/_webcompy-ui/`, and the Spinner pair |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
 ## Language Rules

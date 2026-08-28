@@ -15,6 +15,7 @@ _STYLES_FILES: tuple[str, ...] = (
     "tokens.css",
     "reset.css",
     "components.css",
+    "primitives.css",
     "code-block.css",
     "syntax-theme.css",
     "prose.css",
