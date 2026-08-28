@@ -154,3 +154,22 @@ def test_home_dropdown_stays_within_viewport_at_mid_width(docs_app_page, assert_
         arg=menu_id,
         timeout=5000,
     )
+
+
+@pytest.mark.e2e
+def test_navbar_dropdown_links_crawlable_in_initial_html(
+    page, docs_server_url, docs_console_messages, assert_no_console_errors
+):
+    page.goto(docs_server_url, wait_until="domcontentloaded")
+    content = page.content()
+    assert "wc-teleport-block:" in content
+    assert "/documents/" in content
+    assert "/sample/teleport/" in content
+    dropdown_links = page.locator("body > ul[role='menu'] a").count()
+    assert dropdown_links > 0
+    _wait_for_pyscript_init(page, docs_console_messages)
+    leftover = page.evaluate(
+        "() => [...document.body.childNodes].filter("
+        "n => n.nodeType === 8 && n.data.startsWith('wc-teleport-block')).length"
+    )
+    assert leftover == 0

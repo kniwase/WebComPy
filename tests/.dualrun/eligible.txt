@@ -97,3 +97,4 @@ tests/test_use_state.py
 tests/test_use_theme_imports.py
 tests/test_utils.py
 tests/test_virtual_dom.py
+tests/test_virtual_dom_selector.py

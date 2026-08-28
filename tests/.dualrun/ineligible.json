@@ -112,7 +112,7 @@
   "tests/test_standalone_config.py": "top-level import from 'webcompy_cli.config._build_config' at line 1",
   "tests/test_suspense_element.py": "top-level import of 'webcompy_testing.FakeBrowserDOMPort' at line 17",
   "tests/test_switch_patch.py": "top-level import of unmounted module 'tests.conftest' at line 5",
-  "tests/test_teleport.py": "top-level import of unmounted module 'tests.conftest' at line 7",
+  "tests/test_teleport.py": "top-level import of unmounted module 'tests.conftest' at line 8",
   "tests/test_template_binder.py": "top-level import of unmounted module 'tests.conftest' at line 5",
   "tests/test_template_markdown_integration.py": "module-scope side-effecting call at line 26",
   "tests/test_template_ssr.py": "module-scope side-effecting call at line 14",

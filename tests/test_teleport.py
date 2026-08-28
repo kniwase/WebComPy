@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from html.parser import HTMLParser
 
 import pytest
@@ -528,8 +529,91 @@ class TestTeleportHydration:
         assert spans[0].textContent == "teleported"
 
 
+class TestTeleportMarkerEncoding:
+    def test_encode_selector_escapes_dashes(self):
+        from webcompy.elements.types._teleport import _encode_selector
+
+        assert _encode_selector("#a--b") == "%23a%2D%2Db"
+        assert _encode_selector("#x-") == "%23x%2D"
+        assert _encode_selector("body") == "body"
+
+    def test_marker_start_data_uses_safe_encoding(self):
+        from webcompy.elements.types._teleport import block_start_data
+
+        assert block_start_data(3, "#a--b") == "wc-teleport-block:3:%23a%2D%2Db"
+
+    def test_emission_serializes_dash_selector_without_valueerror(self, server_di_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.elements.types._teleport import _TeleportTargetRegistry
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_server._teleport_emission import emit_teleport_blocks
+
+        server_di_scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
+        dom_port = inject(DOM_PORT_KEY)
+        doc = dom_port.create_element("html")
+        body = dom_port.create_element("body")
+        target = dom_port.create_element("div")
+        target.setAttribute("id", "dialog--root")
+        body.appendChild(target)
+        doc.appendChild(body)
+        dom_port._attach_document_root(doc)
+
+        teleport = Teleport(
+            {"to": "#dialog--root"},
+            Element("div", {"id": "modal"}, {}, None, [TextElement("modal")]),
+        )
+        parent = Element("div")
+        parent._node_cache = body
+        parent._mounted = True
+        teleport._parent = parent
+        teleport._node_idx = 0
+        asyncio.run(teleport._render())
+
+        asyncio.run(emit_teleport_blocks(None))
+        html_out = dom_port.render_html(doc)
+        assert "<!--wc-teleport-block:0:%23dialog%2D%2Droot-->" in html_out
+        assert "wc-teleport-block:0:#dialog--root" not in html_out
+        assert "<!--wc-teleport-block-end:0-->" in html_out
+        assert 'id="modal"' in html_out
+
+    def test_double_render_enqueues_single_emission_entry(self, server_di_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.elements.types._teleport import _TeleportTargetRegistry
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_server._teleport_emission import emit_teleport_blocks
+
+        registry = _TeleportTargetRegistry()
+        server_di_scope.provide(_TELEPORT_REGISTRY_KEY, registry)
+        dom_port = inject(DOM_PORT_KEY)
+        doc = dom_port.create_element("html")
+        body = dom_port.create_element("body")
+        doc.appendChild(body)
+        dom_port._attach_document_root(doc)
+
+        teleport = Teleport(
+            {"to": "body"},
+            Element("div", {"id": "modal"}, {}, None, [TextElement("modal")]),
+        )
+        parent = Element("div")
+        parent._node_cache = body
+        parent._mounted = True
+        teleport._parent = parent
+        teleport._node_idx = 0
+        asyncio.run(teleport._render())
+        asyncio.run(teleport._render())
+
+        asyncio.run(emit_teleport_blocks(None))
+        html_out = dom_port.render_html(doc)
+        assert html_out.count("wc-teleport-block:0:") == 1
+        assert "wc-teleport-block:1:" not in html_out
+        assert html_out.count("wc-teleport-block-end:") == 1
+        assert html_out.count('id="modal"') == 1
+
+
 class TestTeleportSSR:
-    def test_ssr_output_contains_no_teleported_content(self):
+    def test_ssr_emits_content_under_body_by_default(self):
         @define_component()
         def TeleportPage(context):
             return html.DIV(
@@ -547,12 +631,295 @@ class TestTeleportSSR:
             prerender=True,
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
-        assert "MODAL-SECRET" not in html_str
-        assert 'id="ssr-modal"' not in html_str
-        assert "before-marker" in html_str
-        assert "after-marker" in html_str
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert '<div id="ssr-modal"' in html_str
+        assert "MODAL-SECRET" in html_str
+        assert html_str.index("<!--wc-teleport-block:0:body-->") > html_str.index('id="webcompy-app"')
+        block_end_index = html_str.index("<!--wc-teleport-block-end:0-->")
+        assert block_end_index < html_str.index("</body>")
         assert "<!--webcompy-teleport-anchor-->" in html_str
         assert "\u200b" not in html_str
+
+    def test_non_prerender_emits_no_markers(self):
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, html.DIV({"id": "ssr-modal"}, "MODAL-SECRET")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=False,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "wc-teleport-block:" not in html_str
+        assert "MODAL-SECRET" not in html_str
+        assert 'id="webcompy-app"' in html_str
+        assert 'hidden=""' in html_str
+
+    def test_ssr_opt_out_emits_anchor_only(self):
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.P({}, "before-marker"),
+                Teleport({"to": "body", "ssr": False}, html.DIV({"id": "ssr-modal"}, "MODAL-SECRET")),
+                html.P({}, "after-marker"),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "MODAL-SECRET" not in html_str
+        assert 'id="ssr-modal"' not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+        assert "before-marker" in html_str
+        assert "after-marker" in html_str
+
+    def test_ssr_unresolvable_target_falls_back_to_anchor_only(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "#nowhere-container"}, html.DIV({}, "orphan-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("nowhere-container" in record.getMessage() for record in caplog.records)
+        assert "orphan-content" not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+
+    def test_ssr_app_subtree_target_is_rejected(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.DIV({"id": "inner-root"}),
+                Teleport({"to": "#inner-root"}, html.DIV({}, "inner-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("inner-root" in record.getMessage() for record in caplog.records)
+        assert "inner-content" not in html_str
+        assert "<!--wc-teleport-block:" not in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+
+    def test_ssr_rejects_selector_with_unsupported_syntax(self, caplog):
+        import logging as _logging
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "div[attr=x]"}, html.DIV({}, "attr-content")),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        with caplog.at_level(_logging.WARNING, logger="webcompy_server._teleport_emission"):
+            html_str = render_app_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+        assert any("unsupported selector syntax" in record.getMessage() for record in caplog.records)
+        assert "attr-content" not in html_str
+
+    def test_ssr_repeated_children_emit_n_items(self):
+        from webcompy.signal import ReactiveList
+
+        items = ReactiveList(["a", "b", "c"])
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, repeat(items, lambda item: html.LI({}, item))),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        block_start = html_str.index("<!--wc-teleport-block:0:")
+        block_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        block = html_str[block_start:block_end]
+        assert block.count("<li") == 3
+
+    def test_ssr_async_child_settles_before_serialization(self):
+        @define_component()
+        async def AsyncInner(context):
+            await asyncio.sleep(0)
+            return html.DIV({"id": "async-child"}, "async-resolved")
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, AsyncInner(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert "async-resolved" in html_str
+
+    def test_ssr_empty_teleport_still_emits_marker_pair(self):
+        from webcompy.elements.types._fragment import FragmentElement
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.P({}, "before-marker"),
+                Teleport({"to": "body"}, FragmentElement()),
+                html.P({}, "after-marker"),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body--><!--wc-teleport-block-end:0-->" in html_str
+        assert "before-marker" in html_str
+        assert "after-marker" in html_str
+
+    def test_ssr_deferred_content_lands_inside_emitted_block(self):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        items = ReactiveList([])
+
+        @define_component()
+        def LateItems(context):
+            async def seed_items():
+                await asyncio.sleep(0)
+                items.append("deferred-item")
+
+            inject(ASYNC_SCHEDULER_PORT_KEY).schedule(seed_items())
+            return repeat(items, lambda item: html.LI({}, item))
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, LateItems(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        block_start = html_str.index("<!--wc-teleport-block:0:")
+        block_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        block = html_str[block_start:block_end]
+        assert "<li" in block
+        assert "deferred-item" in block
+
+    def test_ssr_teleported_component_signal_is_transferred(self):
+        from webcompy.signal import use_state
+
+        @define_component()
+        def InnerComponent(context):
+            label = use_state(lambda: "transfer-secret")
+            return html.SPAN({}, label)
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, InnerComponent(None)),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        data_start = html_str.index("__webcompy_data__")
+        data_section = html_str[data_start : html_str.index("</script>", data_start)]
+        assert "transfer-secret" in data_section
+
+    def test_ssr_nested_teleport_gets_next_ordinal_and_anchor(self):
+        @define_component()
+        def InnerComp(context):
+            return html.DIV({}, Teleport({"to": "body"}, html.SPAN({}, "nested")))
+
+        @define_component()
+        def TeleportPage(context):
+            return html.DIV({}, Teleport({"to": "body"}, InnerComp(None)))
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--wc-teleport-block:0:body-->" in html_str
+        assert "<!--wc-teleport-block:1:body-->" in html_str
+        outer_anchor_in_subtree = html_str.index("<!--webcompy-teleport-anchor-->") < html_str.index(
+            "<!--wc-teleport-block:0:"
+        )
+        del outer_anchor_in_subtree
+        nested_start = html_str.index("<!--wc-teleport-block:1:body-->")
+        outer_end = html_str.index("<!--wc-teleport-block-end:0-->")
+        assert nested_start > outer_end
+        assert "nested" in html_str
 
     @pytest.mark.asyncio
     async def test_ssr_render_mounts_anchor_only(self, server_di_scope):
@@ -979,3 +1346,263 @@ class TestTeleportSSRHydrationRoundTrip:
         modals = [child for child in body_children if child.getAttribute("id") == "modal"]
         assert len(modals) == 1
         assert modals[0].textContent == "MODAL-SECRET"
+
+    def _install_manual_block(self, dom_port, ordinal: int, selector: str, child_id: str, text: str):
+        from webcompy.elements.types._teleport import block_end_data, block_start_data
+
+        start = dom_port.create_comment(block_start_data(ordinal, selector))
+        content = dom_port.create_element("div")
+        content.setAttribute("id", child_id)
+        content.appendChild(dom_port.create_text_node(text))
+        end = dom_port.create_comment(block_end_data(ordinal))
+        for node in (start, content, end):
+            node.__webcompy_prerendered_node__ = True
+            dom_port._body.appendChild(node)
+        return content
+
+    def _body_marker_datas(self, dom_port) -> list[str]:
+        return [
+            (dom_port._body.childNodes[i].textContent or "")
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].nodeName == "#comment"
+            and str(dom_port._body.childNodes[i].textContent or "").startswith("wc-teleport-block")
+        ]
+
+    def _make_prerendered_page(self, dom_port):
+        page_div = FakeDOMNode("div")
+        page_div.setAttribute("id", "webcompy-page-root")
+        anchor_comment = FakeDOMNode("#comment", text_content="webcompy-teleport-anchor")
+        page_div.appendChild(anchor_comment)
+        _mark_prerendered(page_div)
+        dom_port._body.appendChild(page_div)
+        return page_div
+
+    def _build_hydration_pair(self, monkeypatch, dom_port, page_div, props: dict, child_id: str, text: str):
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+        teleport = Teleport(props, Element("div", {"id": child_id}, {}, None, [TextElement(text)]))
+        wrapper = Element("div", {}, {}, None, None)
+        wrapper._node_cache = page_div
+        wrapper._mounted = True
+        teleport._parent = wrapper
+        teleport._node_idx = 0
+        return teleport
+
+    @pytest.mark.asyncio
+    async def test_hydration_claims_emitted_block_exactly_once(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        teleport._hydrate_node()
+        await teleport._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert len(modals) == 1
+        assert modals[0].textContent == "MODAL-SECRET"
+        assert getattr(teleport._node_cache, "__webcompy_prerendered_node__", False) is True
+
+    @pytest.mark.asyncio
+    async def test_shared_target_blocks_claimed_by_matching_ordinals(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        page_div = self._make_prerendered_page(dom_port)
+
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        page_root = Element("div", {}, {}, None, None)
+        page_root._node_cache = page_div
+        page_root._mounted = True
+
+        class _PageRoot:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        page_root._parent = _PageRoot()
+
+        teleport_a = Teleport({"to": "body"}, Element("div", {"id": "modal-a"}, {}, None, [TextElement("CONTENT-A")]))
+        teleport_a._parent = page_root
+        teleport_a._node_idx = 0
+        teleport_b = Teleport({"to": "body"}, Element("div", {"id": "modal-b"}, {}, None, [TextElement("CONTENT-B")]))
+        teleport_b._parent = page_root
+        teleport_b._node_idx = 1
+
+        teleport_a._hydrate_node()
+        teleport_b._hydrate_node()
+        await teleport_a._render()
+        await teleport_b._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        modal_ids = [dom_port._body.childNodes[i].getAttribute("id") for i in range(dom_port._body.childNodes.length)]
+        modal_ids = [k for k in modal_ids if k in ("modal-a", "modal-b")]
+        assert sorted(modal_ids) == ["modal-a", "modal-b"]
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+
+        registry = inject(_TELEPORT_REGISTRY_KEY)
+        assert registry._next_ordinal == 2
+
+    @pytest.mark.asyncio
+    async def test_shared_target_hydration_preserves_mount_order_before_payload(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        payload = dom_port.create_element("script")
+        payload.setAttribute("id", "__webcompy_data__")
+        dom_port._body.appendChild(payload)
+        page_div = self._make_prerendered_page(dom_port)
+
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        page_root = Element("div", {}, {}, None, None)
+        page_root._node_cache = page_div
+        page_root._mounted = True
+
+        class _PageRoot:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        page_root._parent = _PageRoot()
+
+        teleport_a = Teleport({"to": "body"}, Element("div", {"id": "modal-a"}, {}, None, [TextElement("CONTENT-A")]))
+        teleport_a._parent = page_root
+        teleport_a._node_idx = 0
+        teleport_b = Teleport({"to": "body"}, Element("div", {"id": "modal-b"}, {}, None, [TextElement("CONTENT-B")]))
+        teleport_b._parent = page_root
+        teleport_b._node_idx = 1
+
+        teleport_a._hydrate_node()
+        teleport_b._hydrate_node()
+        await teleport_a._render()
+        await teleport_b._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        body = dom_port._body
+        ids = [body.childNodes[i].getAttribute("id") for i in range(body.childNodes.length)]
+        content_ids = [k for k in ids if k in ("modal-a", "modal-b", "__webcompy_data__")]
+        assert content_ids == ["modal-a", "modal-b", "__webcompy_data__"]
+        registry = inject(_TELEPORT_REGISTRY_KEY)
+        assert registry._next_ordinal == 2
+
+    @pytest.mark.asyncio
+    async def test_stale_html_falls_back_with_warning_and_single_copy(self, monkeypatch, fake_browser_full, caplog):
+        import logging as _logging
+
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        with caplog.at_level(_logging.WARNING, logger="webcompy"):
+            teleport._hydrate_node()
+            await teleport._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert any(
+            "not found" in record.getMessage() and "mounting via client render" in record.getMessage()
+            for record in caplog.records
+        )
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert len(modals) == 1
+
+    @pytest.mark.asyncio
+    async def test_destroyed_before_claim_sweeps_unconsumed_block(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "modal", "MODAL-SECRET")
+        teleport._hydrate_node()
+        teleport._remove_element(True, True)
+
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert modals == []
+
+    @pytest.mark.asyncio
+    async def test_sweep_ambiguous_same_selector_blocks_left_inert(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport_a = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport_b = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "y", "y")
+        # No _hydrate_node: teleports stay unreserved, exercising the suffix sweep path.
+        teleport_a._remove_element(True, True)
+        assert len(self._body_marker_datas(dom_port)) == 4
+        teleport_b._remove_element(True, True)
+        assert len(self._body_marker_datas(dom_port)) == 4
+        modals = [dom_port._body.childNodes[i].getAttribute("id") for i in range(dom_port._body.childNodes.length)]
+        assert sorted(k for k in modals if k in ("modal-a", "modal-b")) == ["modal-a", "modal-b"]
+
+    @pytest.mark.asyncio
+    async def test_sweep_unreserved_removes_unique_matching_block(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal", "MODAL-SECRET")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport._remove_element(True, True)
+        assert self._body_marker_datas(dom_port) == []
+        modals = [
+            dom_port._body.childNodes[i]
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].getAttribute("id") == "modal"
+        ]
+        assert modals == []
+
+    @pytest.mark.asyncio
+    async def test_sweep_suffix_does_not_touch_other_selectors(self, monkeypatch, fake_browser_full):
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-body", "CONTENT-BODY")
+        self._install_manual_block(dom_port, 1, "#footer-root", "modal-footer", "CONTENT-FOOTER")
+        page_div = self._make_prerendered_page(dom_port)
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        teleport = self._build_hydration_pair(monkeypatch, dom_port, page_div, {"to": "body"}, "x", "x")
+        teleport._remove_element(True, True)
+        remaining = [
+            (dom_port._body.childNodes[i].textContent or "")
+            for i in range(dom_port._body.childNodes.length)
+            if dom_port._body.childNodes[i].nodeName == "#comment"
+            and str(dom_port._body.childNodes[i].textContent or "").startswith("wc-teleport-block")
+        ]
+        assert remaining == ["wc-teleport-block:1:%23footer%2Droot", "wc-teleport-block-end:1"]

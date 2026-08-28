@@ -47,3 +47,48 @@ def test_ssr_static_teleport_mounts_under_body_without_duplication(page_on):
     expect(page.locator("[data-testid='before-marker']")).to_have_count(1)
     expect(page.locator("[data-testid='after-marker']")).to_have_count(1)
     expect(page.locator("[data-testid='after-marker']")).to_have_text("after-marker")
+
+
+def test_ssr_initial_html_contains_emitted_blocks_before_boot(page, server_url, console_messages):
+    page.goto(f"{server_url}teleport", wait_until="domcontentloaded")
+    raw = page.content()
+    assert "<!--wc-teleport-block:0:body-->" in raw
+    assert "<!--wc-teleport-block-end:0-->" in raw
+
+
+def test_ssr_emitted_block_consumed_without_duplication_after_boot(page_on):
+    page = page_on("/teleport")
+    counts = page.evaluate(
+        "() => ({"
+        "  markers: [...document.body.childNodes].filter("
+        "    n => n.nodeType === 8 && n.data.startsWith('wc-teleport-block')).length,"
+        "  static_count: document.querySelectorAll('[data-testid=\"static-teleport\"]').length,"
+        "})"
+    )
+    assert counts["markers"] == 0
+    assert counts["static_count"] == 1
+
+
+def test_ssr_multiple_static_teleports_preserve_mount_order_under_body(page_on):
+    page = page_on("/teleport")
+    page.wait_for_function(
+        "() => {"
+        "  const kids = [...document.body.childNodes];"
+        "  const direct = (testid) => kids.some("
+        "    n => n.nodeType === 1 && n.dataset && n.dataset.testid === testid);"
+        "  return direct('static-teleport') && direct('static-teleport-2');"
+        "}",
+        timeout=30_000,
+    )
+    order = page.evaluate(
+        "() => {"
+        "  const kids = [...document.body.childNodes];"
+        "  const indexOf = (testid) => kids.findIndex("
+        "    n => n.nodeType === 1 && n.dataset && n.dataset.testid === testid);"
+        "  return {"
+        "    first: indexOf('static-teleport'),"
+        "    second: indexOf('static-teleport-2'),"
+        "  };"
+        "}"
+    )
+    assert 0 <= order["first"] < order["second"]

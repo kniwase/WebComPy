@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any
 
 from webcompy.ports._dom import DOMEvent, DOMNode, DOMPort
+from webcompy_server.ports._selector import parse_selector, resolve_parsed
 from webcompy_server.ports._virtual_dom import VirtualDOMEvent, VirtualDOMNode
 
 _VOID_ELEMENTS = frozenset(
@@ -34,6 +35,22 @@ _RAW_CONTENT_ELEMENTS = frozenset({"script", "style"})
 
 class ServerDOMPort(DOMPort):
     """Server-side DOM port that creates virtual nodes and serializes HTML."""
+
+    def __init__(self) -> None:
+        self._document_root: DOMNode | None = None
+
+    def _attach_document_root(self, root: DOMNode) -> None:
+        """Attach the completed document tree node for selector resolution.
+
+        Args:
+            root: Rendered document root node (typically the ``<html>``
+                element produced by HTML assembly).
+
+        Returns:
+            ``None``.
+
+        """
+        self._document_root = root
 
     def create_element(self, tag: str) -> DOMNode:
         """Create an element node for ``tag``.
@@ -92,16 +109,31 @@ class ServerDOMPort(DOMPort):
         return VirtualDOMEvent(event_type, bubbles=bubbles, cancelable=cancelable)
 
     def query_selector(self, selector: str) -> DOMNode | None:
-        """Query the document for ``selector``.
+        """Query the attached document tree for ``selector``.
+
+        Resolution supports a documented CSS subset (type/class/id
+        selectors, compounds, descendant and child combinators, comma
+        groups) and returns the first depth-first match. Unsupported
+        syntax raises ``ValueError``.
 
         Args:
-            selector: CSS selector.
+            selector: CSS selector from the supported subset.
 
         Returns:
-            ``None`` on the server.
+            First matching node, or ``None`` when nothing matches or no
+            document tree has been attached yet.
+
+        Raises:
+            ValueError: When the selector uses unsupported syntax.
 
         """
-        return None
+        try:
+            parsed = parse_selector(selector)
+        except ValueError:
+            raise
+        if self._document_root is None:
+            return None
+        return resolve_parsed(self._document_root, parsed)
 
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         """Return the element with ``element_id``.

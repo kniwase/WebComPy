@@ -237,3 +237,61 @@ class TestVirtualDOMNodeDomProperties:
         node_b.value = "bar"
         assert node_a.value == "foo"
         assert node_b.value == "bar"
+
+
+class TestServerDOMPortQuerySelector:
+    def _build_document(self, port: ServerDOMPort) -> VirtualDOMNode:
+        html_node = port.create_element("html")
+        body = port.create_element("body")
+        container = port.create_element("div")
+        container.setAttribute("id", "footer-root")
+        link = port.create_element("a")
+        link.setAttribute("class", "footer-link")
+        container.appendChild(link)
+        body.appendChild(container)
+        html_node.appendChild(body)
+        return html_node
+
+    def test_returns_none_before_attachment(self):
+        port = ServerDOMPort()
+        assert port.query_selector("body") is None
+
+    def test_resolves_after_attachment(self):
+        port = ServerDOMPort()
+        document = self._build_document(port)
+        port._attach_document_root(document)
+        found = port.query_selector("#footer-root")
+        assert found is not None
+        assert found.nodeName.lower() == "div"
+
+    def test_body_selector_returns_attached_document_body(self):
+        port = ServerDOMPort()
+        document = self._build_document(port)
+        port._attach_document_root(document)
+        body = document.childNodes[0]
+        assert port.query_selector("body") is body
+
+    def test_unmatched_selector_returns_none_after_attachment(self):
+        port = ServerDOMPort()
+        document = self._build_document(port)
+        port._attach_document_root(document)
+        assert port.query_selector(".missing") is None
+
+    def test_unsupported_syntax_raises_even_unattached(self):
+        port = ServerDOMPort()
+        with pytest.raises(ValueError):
+            port.query_selector("input[type=text]")
+
+    def test_get_element_by_id_stays_none(self):
+        port = ServerDOMPort()
+        document = self._build_document(port)
+        port._attach_document_root(document)
+        assert port.get_element_by_id("footer-root") is None
+
+    def test_query_does_not_mutate_tree(self):
+        port = ServerDOMPort()
+        document = self._build_document(port)
+        port._attach_document_root(document)
+        before = port.render_html(document)
+        port.query_selector("body .footer-link")
+        assert port.render_html(document) == before
