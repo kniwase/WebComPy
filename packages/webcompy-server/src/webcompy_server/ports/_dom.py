@@ -127,7 +127,10 @@ class ServerDOMPort(DOMPort):
             ValueError: When the selector uses unsupported syntax.
 
         """
-        parsed = parse_selector(selector)
+        try:
+            parsed = parse_selector(selector)
+        except ValueError:
+            raise
         if self._document_root is None:
             return None
         return resolve_parsed(self._document_root, parsed)

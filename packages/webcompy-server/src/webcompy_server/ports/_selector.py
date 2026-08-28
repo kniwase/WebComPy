@@ -86,7 +86,11 @@ def resolve_first(root: DOMNode, selector: str) -> DOMNode | None:
         ValueError: When the selector uses unsupported syntax.
 
     """
-    return resolve_parsed(root, parse_selector(selector))
+    try:
+        parsed = parse_selector(selector)
+    except ValueError:
+        raise
+    return resolve_parsed(root, parsed)
 
 
 def resolve_parsed(root: DOMNode, chains: list[_SelectorChain]) -> DOMNode | None:
