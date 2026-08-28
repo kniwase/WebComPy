@@ -174,5 +174,10 @@ class ElementAbstract(SignalReceivable):
         parent_node = self._parent._get_node()
         if parent_node.childNodes.length > self._node_idx:
             existing_node: DOMNode = parent_node.childNodes[self._node_idx]
+            if getattr(existing_node, "__webcompy_teleport_slot_boundary__", False):
+                # A claimed Teleport block's stable insertion anchor is a
+                # boundary sibling: never an adoption or mismatch-removal
+                # candidate for elements rebuilding at the reclaimed slot.
+                return None
             return existing_node
         return None

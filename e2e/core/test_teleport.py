@@ -67,3 +67,28 @@ def test_ssr_emitted_block_consumed_without_duplication_after_boot(page_on):
     )
     assert counts["markers"] == 0
     assert counts["static_count"] == 1
+
+
+def test_ssr_multiple_static_teleports_preserve_mount_order_under_body(page_on):
+    page = page_on("/teleport")
+    page.wait_for_function(
+        "() => {"
+        "  const kids = [...document.body.childNodes];"
+        "  const direct = (testid) => kids.some("
+        "    n => n.nodeType === 1 && n.dataset && n.dataset.testid === testid);"
+        "  return direct('static-teleport') && direct('static-teleport-2');"
+        "}",
+        timeout=30_000,
+    )
+    order = page.evaluate(
+        "() => {"
+        "  const kids = [...document.body.childNodes];"
+        "  const indexOf = (testid) => kids.findIndex("
+        "    n => n.nodeType === 1 && n.dataset && n.dataset.testid === testid);"
+        "  return {"
+        "    first: indexOf('static-teleport'),"
+        "    second: indexOf('static-teleport-2'),"
+        "  };"
+        "}"
+    )
+    assert 0 <= order["first"] < order["second"]

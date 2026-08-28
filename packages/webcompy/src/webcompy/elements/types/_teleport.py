@@ -466,11 +466,31 @@ class TeleportElement(DynamicElement):
             return
         registry.mark_consumed(self._ssr_ordinal)
         self._claimed_slot = slot
-        remaining = target.childNodes
-        self._claimed_anchor = remaining[slot] if slot < remaining.length else None
+        anchor = self._find_stable_following_anchor(target, slot)
+        if anchor is not None:
+            anchor.__webcompy_teleport_slot_boundary__ = True
+        self._claimed_anchor = anchor
         slots = registry.ensure_slots(target)
         slots.append(_BlockSlot(self._ssr_ordinal, slot, self))
         slots.sort(key=lambda entry: entry.base)
+
+    def _find_stable_following_anchor(self, target: DOMNode, slot: int) -> DOMNode | None:
+        children = target.childNodes
+        depth = 0
+        for index in range(slot, children.length):
+            node = children[index]
+            if getattr(node, "nodeType", 0) == 8:
+                data = str(node.textContent or "")
+                if data.startswith(_BLOCK_START_PREFIX):
+                    depth += 1
+                    continue
+                if data.startswith(_BLOCK_END_PREFIX):
+                    depth -= 1
+                    continue
+            if depth > 0:
+                continue
+            return node
+        return None
 
     def _block_start_marker_data(self) -> str:
         return f"{_BLOCK_START_PREFIX}{self._ssr_ordinal}:{_encode_selector(self._to)}"

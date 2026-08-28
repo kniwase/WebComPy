@@ -163,3 +163,14 @@ Alpha policy: land on `main`; CI regenerates static artifacts; downstream users 
   became visible and unconsumed after hydration. A per-instance
   `_enqueued` guard makes emission at-most-once per render context; pinned
   in `teleport/spec.md` and unit tests.
+- **Stable hydration anchor for shared targets** — the claimed block's
+  insertion anchor used to be whatever node followed the removed block,
+  which could be the next unclaimed block's start marker (detached by the
+  following claim, falling back to tail insertion and reversing the
+  observable mount order under a shared target) or a stable node that the
+  rebuilding children could adopt or mismatch-remove. Claims now record the
+  first stable node after any remaining unclaimed block regions and flag it
+  as `__webcompy_teleport_slot_boundary__`, and the node probe
+  (`_get_existing_node`) skips flagged nodes so rebuilds insert before the
+  anchor without touching it; pinned in `teleport` unit tests and a
+  two-static-teleport E2E order assertion.

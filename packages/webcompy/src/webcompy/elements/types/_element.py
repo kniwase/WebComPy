@@ -135,6 +135,11 @@ class ElementBase(ElementWithChildren):
                 return existing_node
             # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
+                # An unclaimed Teleport block marker is a boundary sibling,
+                # not a hydration mismatch: leave it attached (its owner
+                # removes it later by marker-value scan) and let the fresh
+                # node insert before it, so a block's start/end markers are
+                # never separated from the content they delimit.
                 if _is_teleport_block_marker(existing_node):
                     pass
                 else:

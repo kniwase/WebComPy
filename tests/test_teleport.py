@@ -1459,6 +1459,56 @@ class TestTeleportSSRHydrationRoundTrip:
         assert registry._next_ordinal == 2
 
     @pytest.mark.asyncio
+    async def test_shared_target_hydration_preserves_mount_order_before_payload(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        self._install_manual_block(dom_port, 0, "body", "modal-a", "CONTENT-A")
+        self._install_manual_block(dom_port, 1, "body", "modal-b", "CONTENT-B")
+        payload = dom_port.create_element("script")
+        payload.setAttribute("id", "__webcompy_data__")
+        dom_port._body.appendChild(payload)
+        page_div = self._make_prerendered_page(dom_port)
+
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        page_root = Element("div", {}, {}, None, None)
+        page_root._node_cache = page_div
+        page_root._mounted = True
+
+        class _PageRoot:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        page_root._parent = _PageRoot()
+
+        teleport_a = Teleport({"to": "body"}, Element("div", {"id": "modal-a"}, {}, None, [TextElement("CONTENT-A")]))
+        teleport_a._parent = page_root
+        teleport_a._node_idx = 0
+        teleport_b = Teleport({"to": "body"}, Element("div", {"id": "modal-b"}, {}, None, [TextElement("CONTENT-B")]))
+        teleport_b._parent = page_root
+        teleport_b._node_idx = 1
+
+        teleport_a._hydrate_node()
+        teleport_b._hydrate_node()
+        await teleport_a._render()
+        await teleport_b._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        assert self._body_marker_datas(dom_port) == []
+        body = dom_port._body
+        ids = [body.childNodes[i].getAttribute("id") for i in range(body.childNodes.length)]
+        content_ids = [k for k in ids if k in ("modal-a", "modal-b", "__webcompy_data__")]
+        assert content_ids == ["modal-a", "modal-b", "__webcompy_data__"]
+        registry = inject(_TELEPORT_REGISTRY_KEY)
+        assert registry._next_ordinal == 2
+
+    @pytest.mark.asyncio
     async def test_stale_html_falls_back_with_warning_and_single_copy(self, monkeypatch, fake_browser_full, caplog):
         import logging as _logging
 
