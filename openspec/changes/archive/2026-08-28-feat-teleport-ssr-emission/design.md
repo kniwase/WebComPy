@@ -142,3 +142,8 @@ Alpha policy: land on `main`; CI regenerates static artifacts; downstream users 
   sweep removes a block only when exactly one unclaimed candidate matches;
   ambiguous cases leave inert served markup per the elements contract. Emission
   and document-root attachment run only under `prerender`.
+- **Case-sensitive class matching** — the selector engine lower-cased class
+  values on the selector side only, so `.Foo` failed to match
+  `class="Foo"`. Class and ID values are now compared case-sensitively on
+  both sides (type selectors stay ASCII case-insensitive), matching HTML
+  document semantics; pinned in `virtual-dom/spec.md` and unit tests.

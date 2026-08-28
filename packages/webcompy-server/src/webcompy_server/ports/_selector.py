@@ -5,6 +5,10 @@ type selectors, class selectors (``.name``), ID selectors (``#id``), their
 compounds (``div.a#b``), descendant combinators (whitespace), child
 combinators (``>``), and comma-separated groups. Any other syntax — attribute
 selectors, pseudo-classes, wildcards, quotes — raises :class:`ValueError`.
+
+Matching follows HTML document semantics: type selectors are matched ASCII
+case-insensitively, while class and ID values are matched case-sensitively on
+both the selector and the attribute side.
 """
 
 from __future__ import annotations
@@ -44,6 +48,10 @@ class _SelectorChain:
 def parse_selector(selector: str) -> list[_SelectorChain]:
     """Parse ``selector`` into its comma-separated chains.
 
+    Type selectors are normalized to lower case; class and ID values are
+    kept verbatim so matching stays case-sensitive, mirroring HTML document
+    semantics.
+
     Args:
         selector: Selector text from the supported subset.
 
@@ -74,6 +82,9 @@ def parse_selector(selector: str) -> list[_SelectorChain]:
 
 def resolve_first(root: DOMNode, selector: str) -> DOMNode | None:
     """Return the first matching node in depth-first document order.
+
+    Type selectors match ASCII case-insensitively; class and ID values
+    match case-sensitively.
 
     Args:
         root: Node whose subtree (including itself) is searched.
@@ -148,7 +159,7 @@ def _parse_compound(text: str, start: int) -> tuple[_SimpleSelector, int]:
             break
         if char == ".":
             name, position = _read_identifier(text, position + 1)
-            classes.add(name.lower())
+            classes.add(name)
         elif char == "#":
             name, position = _read_identifier(text, position + 1)
             ids.add(name)

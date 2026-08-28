@@ -167,3 +167,57 @@ class TestResolveFirst:
             },
         )
         assert resolve_first(root, "main     nav      a") is not None
+
+
+class TestCaseSensitivity:
+    def test_class_selector_matches_case_sensitively(self, port):
+        root = build(
+            port,
+            {
+                "tag": "div",
+                "children": [{"tag": "span", "attrs": {"class": "Foo"}}],
+            },
+        )
+        found = resolve_first(root, ".Foo")
+        assert found is not None
+        assert found.getAttribute("class") == "Foo"
+        assert resolve_first(root, ".foo") is None
+
+    def test_class_selector_case_insensitive_match_does_not_leak(self, port):
+        root = build(
+            port,
+            {
+                "tag": "div",
+                "children": [
+                    {"tag": "span", "attrs": {"class": "menu-Host"}},
+                    {"tag": "em", "attrs": {"class": "menu-host"}},
+                ],
+            },
+        )
+        found = resolve_first(root, ".menu-host")
+        assert found is not None
+        assert found.nodeName.lower() == "em"
+
+    def test_compound_class_and_id_match_case_sensitively(self, port):
+        root = build(
+            port,
+            {
+                "tag": "div",
+                "children": [{"tag": "span", "attrs": {"id": "Bar", "class": "Foo"}}],
+            },
+        )
+        assert resolve_first(root, "span.Foo#Bar") is not None
+        assert resolve_first(root, "span.foo#Bar") is None
+        assert resolve_first(root, "span.Foo#bar") is None
+
+    def test_tag_selector_matches_case_insensitively(self, port):
+        root = build(
+            port,
+            {
+                "tag": "div",
+                "children": [{"tag": "section", "attrs": {"class": "Panel"}}],
+            },
+        )
+        found = resolve_first(root, "SECTION.Panel")
+        assert found is not None
+        assert found.nodeName.lower() == "section"
