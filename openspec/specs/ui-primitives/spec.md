@@ -1,7 +1,8 @@
-# UI Primitives Foundation Specification (delta)
+# ui-primitives Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change feat-ui-primitives-foundation. Update Purpose after archive.
+## Requirements
 ### Requirement: Headless components shall provide behavior without visual styling
 
 The `webcompy.ui.headless` package SHALL provide first-party components that own state management, ARIA roles and attributes, keyboard interaction, and focus management. Headless components SHALL NOT emit visual styles (colors, spacing, typography, borders, shadows, decorative animation). Structural CSS required for behavior (positioning, display toggling, visibility) is permitted. Every headless component SHALL expose its interaction state on the DOM through `data-state` attributes with documented per-component vocabularies.
