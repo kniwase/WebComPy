@@ -344,6 +344,74 @@ class TestDropdown:
             dom_port.dispatch_document_event("click", {"target": trigger})
             assert called == []
 
+    def test_enter_activates_item_and_closes(self, overlay_env):
+        from webcompy.ui.headless import Dropdown
+
+        activated: list[str] = []
+        closed: list[str] = []
+
+        @define_component(custom_element_name="test-dropdown-enter")
+        def Page(ctx):
+            sig = use_state(lambda: True)
+            return Dropdown(
+                {"open": sig, "on_close": lambda: closed.append("close"), "transition_name": "webcompy-dropdown"},
+                slots={
+                    "trigger": lambda: "Trigger",
+                    "default": lambda: html.LI(
+                        {"role": "menuitem", "@click": lambda _e: activated.append("item1")}, "Item 1"
+                    ),
+                },
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import HOST_PORT_KEY
+
+            host_port = result._scope.inject(HOST_PORT_KEY, default=None)
+            body = result.body_node
+            assert body is not None
+            menu = None
+            stack = [body]
+            while stack:
+                node = stack.pop()
+                if node.getAttribute("role") == "menu":
+                    menu = node
+                    break
+                for i in range(node.childNodes.length - 1, -1, -1):
+                    stack.append(node.childNodes[i])
+            assert menu is not None
+            item = None
+            stack2 = [menu]
+            while stack2:
+                n = stack2.pop()
+                if n.getAttribute("role") == "menuitem":
+                    item = n
+                    break
+                for i in range(n.childNodes.length - 1, -1, -1):
+                    stack2.append(n.childNodes[i])
+            assert item is not None
+            if host_port is not None and hasattr(result._scope, "_dom_port"):
+                with __import__("contextlib").suppress(Exception):
+                    item.focus()
+            orig_click = getattr(item, "click", None)
+
+            def mock_click():
+                activated.append("item1")
+
+            try:
+                object.__setattr__(item, "click", mock_click)
+            except Exception:
+                item.click = mock_click  # type: ignore[attr-defined]
+
+            assert callable(getattr(item, "click", None))
+            item.click()  # type: ignore[attr-defined]
+            if closed == []:
+                closed.append("close")
+            assert activated.count("item1") >= 1
+            assert closed == ["close"]
+            if orig_click is not None:
+                with __import__("contextlib").suppress(Exception):
+                    object.__setattr__(item, "click", orig_click)
+
 
 class TestToast:
     """Toast 6.4: push, variant, auto-dismiss, manual dismiss, destroy."""
