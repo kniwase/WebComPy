@@ -7,9 +7,10 @@
 #   scripts/run-e2e-tests.sh components interaction   # multiple groups
 #   scripts/run-e2e-tests.sh --serving-mode=static    # all groups, static mode only
 #   scripts/run-e2e-tests.sh docs-home --serving-mode=static
+#   scripts/run-e2e-tests.sh --file e2e/core/test_overlay.py --serving-mode=static  # single file via canonical path
 #   scripts/run-e2e-tests.sh --console-level=error   # only show console errors in output
 #   scripts/run-e2e-tests.sh --console-file-level=info # save error+warning+info to file
-#   scripts/run-e2e-tests.sh --parallel               # run groups in parallel (bounded)
+#   scripts/run-e2e-tests.sh --parallel               # run groups in parallel (bounded, safe to always enable)
 #
 # In --parallel mode at most half of the available CPUs (minimum 1) run
 # concurrently, so the machine is not overwhelmed by the full matrix. Set
@@ -68,8 +69,12 @@ SERVING_MODE_FILTER=""
 CONSOLE_LEVEL=""
 CONSOLE_FILE_LEVEL=""
 PARALLEL=0
+FILE_FILTER=""
 
-for arg in "$@"; do
+_args=("$@")
+_i=0
+while [ $_i -lt ${#_args[@]} ]; do
+  arg="${_args[$_i]}"
   if [[ "$arg" == --serving-mode=* ]]; then
     SERVING_MODE_FILTER="${arg#--serving-mode=}"
   elif [[ "$arg" == --console-level=* ]]; then
@@ -78,16 +83,34 @@ for arg in "$@"; do
     CONSOLE_FILE_LEVEL="${arg#--console-file-level=}"
   elif [[ "$arg" == "--parallel" ]]; then
     PARALLEL=1
+  elif [[ "$arg" == --file ]]; then
+    if [ $((_i + 1)) -ge ${#_args[@]} ]; then
+      echo "error: --file requires a value. Use --file <path> (e.g., --file e2e/core/test_overlay.py)" >&2
+      exit 1
+    fi
+    _i=$((_i + 1))
+    FILE_FILTER="${_args[$_i]}"
+    if [ -z "$FILE_FILTER" ]; then
+      echo "error: --file requires a non-empty value" >&2
+      exit 1
+    fi
+  elif [[ "$arg" == --file=* ]]; then
+    FILE_FILTER="${arg#--file=}"
+    if [ -z "$FILE_FILTER" ]; then
+      echo "error: --file requires a non-empty value" >&2
+      exit 1
+    fi
   elif [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]]; then
     echo "Usage: scripts/run-e2e-tests.sh [group...] [options]"
     echo ""
     echo "Options:"
     echo "  --serving-mode=prod|static    Run only the specified serving mode"
+    echo "  --file <path>                 Run a single test file via the canonical path (e.g., --file e2e/core/test_overlay.py --serving-mode=static)"
     echo "  --console-level=off|error|warning|info|log|debug"
     echo "      Minimum console level to display in output (default: warning)"
     echo "  --console-file-level=off|error|warning|info|log|debug"
     echo "      Minimum console level to save to log files (default: debug)"
-    echo "  --parallel                     Run groups in parallel (at most half the available CPUs, min 1)"
+    echo "  --parallel                     Run groups in parallel (at most half the available CPUs, min 1; safe to always enable)"
     echo "                                 Override the concurrency limit with WEBCOMPY_E2E_MAX_PARALLEL"
     echo ""
     echo "Core E2E groups:"
@@ -105,9 +128,19 @@ for arg in "$@"; do
   else
     SELECTED_GROUPS+=("$arg")
   fi
+  _i=$((_i + 1))
 done
 
-if [ ${#SELECTED_GROUPS[@]} -eq 0 ]; then
+if [ -n "$FILE_FILTER" ] && [ ${#SELECTED_GROUPS[@]} -ne 0 ]; then
+  echo "error: --file cannot be combined with group names" >&2
+  exit 1
+fi
+if [ -n "$FILE_FILTER" ] && [ ! -f "$FILE_FILTER" ]; then
+  echo "error: file not found: $FILE_FILTER" >&2
+  exit 1
+fi
+
+if [ ${#SELECTED_GROUPS[@]} -eq 0 ] && [ -z "$FILE_FILTER" ]; then
   SELECTED_GROUPS=("${!E2E_GROUPS[@]}" "${!DOCS_GROUPS[@]}")
 fi
 
@@ -143,6 +176,21 @@ _find_free_port() {
 
 _build_run_tasks() {
   local tasks=()
+  if [ -n "$FILE_FILTER" ]; then
+    local modes=("${SERVING_MODES[@]}")
+    if [ -n "$SERVING_MODE_FILTER" ]; then
+      if [[ ! " ${modes[*]} " =~ " ${SERVING_MODE_FILTER} " ]]; then
+        printf '%s\n' "${tasks[@]}"
+        return
+      fi
+      modes=("$SERVING_MODE_FILTER")
+    fi
+    for mode in "${modes[@]}"; do
+      tasks+=("file|$mode|$FILE_FILTER")
+    done
+    printf '%s\n' "${tasks[@]}"
+    return
+  fi
   for group_name in "${SELECTED_GROUPS[@]}"; do
     local files=""
     if [[ "$group_name" == docs-* ]]; then

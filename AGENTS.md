@@ -64,6 +64,8 @@ uv run python -m pytest tests/ --tb=short  # Unit tests only (E2E tests live in 
 uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missing  # With coverage
 scripts/run-e2e-tests.sh                   # All E2E tests (core + docs, prod + static)
 scripts/run-e2e-tests.sh <group-name>      # Single E2E group (e.g., components, docs-home)
+scripts/run-e2e-tests.sh --file <path> --serving-mode=static|prod  # Single file via canonical path (e.g., --file e2e/core/test_overlay.py)
+scripts/run-e2e-tests.sh --parallel        # All groups in parallel (bounded to half CPUs, safe to always enable)
 scripts/run-browser-tests.sh               # Browser unit tier inside a real PyScript runtime
 scripts/run-browser-tests.sh --probes      # Environment probe battery only (hard gate)
 scripts/run-browser-tests.sh --dual        # + CPython-vs-PyScript dual-run sweep (informational)
