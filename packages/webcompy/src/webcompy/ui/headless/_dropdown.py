@@ -102,7 +102,20 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
                 target = event.get("target")
             if target is None:
                 return
-            # Exclude trigger and menu
+            # Direct id check for Fake DOM compatibility
+            try:
+                tid = getattr(target, "getAttribute", lambda _: None)("id")
+                if tid == trigger_id:
+                    return
+                if tid == menu_id:
+                    return
+                # Also check class-based trigger identification
+                tcls = getattr(target, "getAttribute", lambda _: None)("class") or ""
+                if trigger_id in tcls or menu_id in tcls:
+                    return
+            except Exception:
+                pass
+            # Exclude trigger and menu via DOM lookup
             trigger_el = None
             menu_el = None
             try:
