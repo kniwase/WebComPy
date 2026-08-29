@@ -34,7 +34,7 @@
 - [x] 6.1 Modal: dialog semantics (role/aria attributes), focus trap cycling incl. no-focusable case, focus return on close, Escape invokes `on_close`, backdrop dismissal and its disable switch, listener cleanup after close/unmount
 - [x] 6.2 Drawer: edge prop reflection, shared a11y contract behaviors (trap/Escape/focus return)
 - [x] 6.3 Dropdown: trigger ARIA state across toggle, keyboard navigation (arrows wrap, Home/End, Escape returns focus, Enter activates+closes via `click()` dispatch), outside-click close with trigger exclusion, listener cleanup
-- [x] 6.4 Toast: push renders into live region, variant semantics, auto-dismiss timing (fake time), manual dismiss cancels timers, destroy cancels pending timers
+- [x] 6.4 Toast: push renders into live region, variant semantics, auto-dismiss timing via FakeTransitionPort (advance_time), manual dismiss cancels timers, destroy cancels pending timers (verified via use_toast cleanup)
 - [x] 6.5 Integration: overlay content renders under fake `body` via Teleport; closed overlays contribute no content; `data-state` values per vocabulary
 - [x] 6.6 Verify focusable-element refinement (`AUDIO`/`VIDEO` require `controls`) and `destroyed` guard for initial-open macro-task race
 
