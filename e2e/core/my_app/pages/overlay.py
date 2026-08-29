@@ -44,7 +44,13 @@ def OverlayPage(context: ComponentContext[None]):
         html.BUTTON({"data-testid": "open-modal", "@click": _open_modal}, "Open Modal"),
         Modal(
             {"open": modal_open, "on_close": _close_modal, "aria_label": "Test modal"},
-            slots={"default": lambda: html.DIV({"data-testid": "modal-content"}, html.BUTTON({"data-testid": "modal-inner-btn"}, "Inner"), html.BUTTON({}, "Second"))},
+            slots={
+                "default": lambda: html.DIV(
+                    {"data-testid": "modal-content"},
+                    html.BUTTON({"data-testid": "modal-inner-btn"}, "Inner"),
+                    html.BUTTON({}, "Second"),
+                )
+            },
         ),
         html.BUTTON({"data-testid": "open-drawer", "@click": _open_drawer}, "Open Drawer"),
         Drawer(

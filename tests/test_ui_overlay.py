@@ -301,7 +301,6 @@ class TestDropdown:
 
             dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
             # Click outside (target not trigger nor menu)
-            outsider = html.DIV({"id": "outside"}, "outside")
             # Create a fake outsider node not in dropdown
             from webcompy_testing._dom import FakeDOMNode
 
@@ -368,12 +367,6 @@ class TestToast:
             )
 
         with TestRenderer.render(Page) as result:
-            page_instance = result._instance
-            push = getattr(page_instance._render_state.context, "_push", None)  # fallback
-            # Alternative: get via component's effect - use the rendered ToastHost's props
-            # Push via the composable directly: we need to access push from Page's context
-            # Simpler: push via the state stored on the component instance's context
-            # But we stored on ctx, not instance. Let's just verify initial empty, then push via use_toast's state
             body = result.body_node
             assert body is not None
             # Initially no toasts
@@ -422,18 +415,6 @@ class TestToast:
         with TestRenderer.render(Page) as result:
             body = result.body_node
             assert body is not None
-            # Toast is teleported to body, not root
-            found = None
-            stack = [body]
-            while stack:
-                node = stack.pop()
-                if node.textContent == "Hello" or (node.textContent and "Hello" in node.textContent):
-                    # Check leaf
-                    found = node
-                    break
-                for i in range(node.childNodes.length - 1, -1, -1):
-                    stack.append(node.childNodes[i])
-            # Also check via body search
             has_hello = False
             stack2 = [body]
             while stack2:
@@ -501,7 +482,6 @@ class TestIntegration:
 
         @define_component(custom_element_name="test-data-state")
         def Page(ctx):
-            sig_m = Signal(True)
             sig_t: Signal[list[ToastRecord]] = Signal(
                 [ToastRecord(id="1", message="Hi", variant="info", duration=None, leaving=False)]
             )

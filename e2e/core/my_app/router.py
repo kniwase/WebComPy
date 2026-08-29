@@ -27,6 +27,7 @@ from .pages.nested_docs import (
 )
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
+from .pages.overlay import OverlayPage
 from .pages.repeat import RepeatPage
 from .pages.route_guards import GuardAdminPage, GuardLoginPage, auth_guard
 from .pages.rpc_mock import RpcMockPage
@@ -44,7 +45,6 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
-from .pages.overlay import OverlayPage
 from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
 from .pages.websocket import WebSocketPage
