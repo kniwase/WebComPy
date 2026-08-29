@@ -44,6 +44,7 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
+from .pages.overlay import OverlayPage
 from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
 from .pages.websocket import WebSocketPage
@@ -98,6 +99,7 @@ router = Router(
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/teleport", "component": TeleportPage},
     {"path": "/transition", "component": TransitionPage},
+    {"path": "/overlay", "component": OverlayPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},

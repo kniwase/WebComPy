@@ -2,11 +2,11 @@ from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.di import InjectionError, inject
-from webcompy.elements import Teleport, html
-from webcompy.events import use_document_event, use_window_event
+from webcompy.elements import html
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
-from webcompy.signal import Signal, use_computed, use_readonly_signal, use_state
+from webcompy.signal import Signal, use_computed, use_state
+from webcompy.ui import Dropdown
 
 from .theme_toggle import ThemeToggle
 
@@ -28,7 +28,6 @@ class Page(_PageRequired, total=False):
 @define_component()
 def DocsNavbar(context: ComponentContext[list[Page]]):
     _open_states: dict[int, Signal[bool]] = {}
-    positions, update_positions = use_readonly_signal({})
     _mobile_open = use_state(lambda: False)
 
     def _get_state(idx: int) -> Signal[bool]:
@@ -36,34 +35,20 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
             _open_states[idx] = Signal(False)
         return _open_states[idx]
 
-    def _toggle(idx: int, ev: Any):
-        if hasattr(ev, "stopPropagation"):
+    def _close_one(idx: int) -> None:
+        _get_state(idx).value = False
+
+    def _toggle(idx: int, ev: Any = None):
+        if ev is not None and hasattr(ev, "stopPropagation"):
             ev.stopPropagation()
         for other_idx, state in _open_states.items():
             if other_idx != idx:
                 state.value = False
         state = _get_state(idx)
         state.value = not state.value
-        if state.value and dom:
-            update_positions(_measure_open_menus())
 
     def _measure_open_menus() -> dict[int, tuple[float, float]]:
-        if not dom:
-            return {}
-        snap: dict[int, tuple[float, float]] = {}
-        for idx, state in _open_states.items():
-            if not state.value:
-                continue
-            toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
-            if toggle_el is not None:
-                rect = toggle_el.getBoundingClientRect()
-                snap[idx] = (float(rect.bottom), float(rect.right))
-        return snap
-
-    def _measure(_ev: Any) -> dict[int, tuple[float, float]]:
-        snap = _measure_open_menus()
-        update_positions(snap)
-        return snap
+        return {}
 
     def _close_all():
         for state in _open_states.values():
@@ -93,13 +78,8 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
         def _cleanup():
             _remove_click()
 
-    _, _ = use_document_event("scroll", {}, transform=_measure)
-    _, _ = use_window_event("resize", {}, transform=_measure)
-
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
-            menu_id = f"navbar-dropdown-{idx}"
-
             main = (
                 [
                     html.LI(
@@ -127,35 +107,17 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
             )
             return html.LI(
                 {"class": "navbar-item-dropdown"},
-                html.A(
+                Dropdown(
                     {
-                        "id": f"{menu_id}-toggle",
-                        "class": "navbar-dropdown-toggle",
-                        "aria-expanded": use_computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
-                        "aria-haspopup": "true",
-                        "aria-controls": menu_id,
-                        "@click": lambda ev: _toggle(idx, ev),
+                        "open": _get_state(idx),
+                        "on_close": lambda idx=idx: _close_one(idx),
+                        "class_trigger": "navbar-dropdown-toggle",
+                        "class_menu": "navbar-dropdown",
                     },
-                    page["title"],
-                ),
-                Teleport(
-                    {"to": "body"},
-                    html.UL(
-                        {
-                            "id": menu_id,
-                            "class": "navbar-dropdown",
-                            "role": "menu",
-                            "style": use_computed(
-                                lambda idx=idx: (
-                                    f"display: {'block' if _is_open(idx) else 'none'}; "
-                                    f"--nav-dropdown-top: {positions.value.get(idx, (0.0, 0.0))[0]}px; "
-                                    f"--nav-dropdown-right: {positions.value.get(idx, (0.0, 0.0))[1]}px;"
-                                )
-                            ),
-                        },
-                        *main,
-                        *items,
-                    ),
+                    slots={
+                        "trigger": lambda idx=idx: html.SPAN({}, page["title"]),
+                        "default": lambda: [*main, *items],
+                    },
                 ),
             )
         if "to" in page:

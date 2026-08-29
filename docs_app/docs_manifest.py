@@ -68,6 +68,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
             },
             {
+                "label": "Overlay Components",
+                "path": "/documents/overlay",
+                "component": "docs_app.pages.document.overlay:OverlayPage",
+            },
+            {
                 "label": "Loading Screen",
                 "path": "/documents/loading-screen",
                 "source": "documents/loading_screen.md",
