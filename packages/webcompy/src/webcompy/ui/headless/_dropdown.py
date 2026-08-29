@@ -76,6 +76,7 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     cleanups: list[Callable[[], None]] = []
     trigger_ref: list[Any] = [None]
     menu_ref: list[Any] = [None]
+    destroyed: list[bool] = [False]
 
     def _clear() -> None:
         while cleanups:
@@ -189,6 +190,8 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
                 pass
 
     def _focus_first() -> None:
+        if destroyed[0] or not is_open():
+            return
         try:
             dom = inject(DOM_PORT_KEY, default=None)
             if dom is None:
@@ -218,13 +221,23 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
             try:
                 host = inject(HOST_PORT_KEY, default=None)
                 if host is not None:
-                    host.schedule_macro_task(_setup_outside)
+
+                    def _deferred() -> None:
+                        if destroyed[0] or not is_open():
+                            return
+                        _setup_outside()
+
+                    host.schedule_macro_task(_deferred)
             except Exception:
                 pass
 
     from webcompy.components._hooks import _register_before_destroy_chained
 
-    _register_before_destroy_chained(_clear)
+    def _on_destroy_dropdown() -> None:
+        destroyed[0] = True
+        _clear()
+
+    _register_before_destroy_chained(_on_destroy_dropdown)
 
     # Toggle handler for trigger
     def _on_trigger_click(event: Any) -> None:
@@ -335,13 +348,14 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
                     event.preventDefault()
             elif key in ("Enter", " "):
                 if active is not None and active in enabled:
-                    # Dispatch click on active
                     import contextlib
 
                     with contextlib.suppress(Exception):
-                        active.dispatchEvent(active)  # type: ignore[attr-defined]
-                    # Also try on_click via getAttribute? For virtual, dispatch may not work
-                    # Call on_close to close menu
+                        click_fn = getattr(active, "click", None)
+                        if callable(click_fn):
+                            click_fn()
+                        else:
+                            active.dispatchEvent(active)  # type: ignore[attr-defined]
                     if on_close is not None:
                         on_close()
                 if hasattr(event, "preventDefault"):

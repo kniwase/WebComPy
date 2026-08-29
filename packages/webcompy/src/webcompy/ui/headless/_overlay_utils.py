@@ -79,23 +79,24 @@ def _node_is_focusable(node: DOMNode) -> bool:
         return False
     if tag in ("INPUT", "SELECT", "TEXTAREA") and node.getAttribute("disabled") is not None:
         return False
-    tab_index = node.getAttribute("tabindex")
-    if tab_index is not None and tab_index.strip() == "-1":
+    tab_index_raw = node.getAttribute("tabindex")
+    if tab_index_raw is not None and tab_index_raw.strip() == "-1":
         return False
-    if node.getAttribute("contenteditable") == "true":
-        return True
     if tag == "A" and node.getAttribute("href") is not None:
         return True
-    if tag in ("BUTTON", "SELECT", "TEXTAREA", "INPUT", "AUDIO", "VIDEO"):
+    if tag in ("BUTTON", "SELECT", "TEXTAREA", "INPUT"):
         return True
-    if node.getAttribute("tabindex") is not None:
+    if tag in ("AUDIO", "VIDEO") and node.getAttribute("controls") is not None:
         return True
-    if tab_index is not None:
+    if node.getAttribute("contenteditable") == "true":
+        return True
+    if tab_index_raw is not None:
+        stripped = tab_index_raw.strip()
         try:
-            if int(tab_index.strip()) >= 0:
+            if int(stripped) >= 0:
                 return True
         except ValueError:
-            pass
+            return True
     return False
 
 

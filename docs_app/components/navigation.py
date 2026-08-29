@@ -47,9 +47,6 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
         state = _get_state(idx)
         state.value = not state.value
 
-    def _measure_open_menus() -> dict[int, tuple[float, float]]:
-        return {}
-
     def _close_all():
         for state in _open_states.values():
             state.value = False

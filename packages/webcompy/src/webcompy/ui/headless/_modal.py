@@ -13,7 +13,12 @@ from webcompy.elements import Teleport, Transition, create_element
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import use_computed
 from webcompy.signal._base import SignalBase
-from webcompy.ui.headless._overlay_utils import capture_active_element, restore_focus
+from webcompy.ui.headless._overlay_utils import (
+    capture_active_element,
+    focus_initial,
+    get_focusable_elements,
+    restore_focus,
+)
 
 
 class ModalProps(TypedDict, total=False):
@@ -84,6 +89,7 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
 
     captured: list[Any] = [None]
     cleanups: list[Callable[[], None]] = []
+    destroyed: list[bool] = [False]
 
     def _clear() -> None:
         while cleanups:
@@ -164,9 +170,6 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
             if key != "Tab":
                 return
             try:
-                import webcompy.ports._keys as _keys  # noqa: F401
-                from webcompy.ui.headless._overlay_utils import get_focusable_elements
-
                 # Find panel via id
                 panel = None
                 try:
@@ -232,6 +235,8 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
                 if host is not None:
 
                     def _do_focus() -> None:
+                        if destroyed[0] or not is_open():
+                            return
                         try:
                             dom = inject(DOM_PORT_KEY, default=None)
                             panel = dom.get_element_by_id(panel_id) if dom else None
@@ -241,8 +246,6 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
                                 except Exception:
                                     panel = None
                             if panel is not None:
-                                from webcompy.ui.headless._overlay_utils import focus_initial
-
                                 focus_initial(panel)
                         except Exception:
                             pass
@@ -254,8 +257,6 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
                         dom2 = inject(DOM_PORT_KEY, default=None)
                         panel2 = dom2.get_element_by_id(panel_id) if dom2 else None
                         if panel2 is not None:
-                            from webcompy.ui.headless._overlay_utils import focus_initial
-
                             focus_initial(panel2)
                     except Exception:
                         pass
@@ -274,7 +275,15 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
             try:
                 host = inject(HOST_PORT_KEY, default=None)
                 if host is not None:
-                    host.schedule_macro_task(lambda: (_setup_escape(), _setup_backdrop(), _setup_trap()))
+
+                    def _deferred_setup() -> None:
+                        if destroyed[0] or not is_open():
+                            return
+                        _setup_escape()
+                        _setup_backdrop()
+                        _setup_trap()
+
+                    host.schedule_macro_task(_deferred_setup)
             except Exception:
                 pass
     elif is_open():
@@ -283,13 +292,22 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
         try:
             host = inject(HOST_PORT_KEY, default=None)
             if host is not None:
-                host.schedule_macro_task(lambda: (_setup_escape(), _setup_backdrop(), _setup_trap()))
+
+                def _deferred_setup_nr() -> None:
+                    if destroyed[0] or not is_open():
+                        return
+                    _setup_escape()
+                    _setup_backdrop()
+                    _setup_trap()
+
+                host.schedule_macro_task(_deferred_setup_nr)
         except Exception:
             pass
 
     from webcompy.components._hooks import _register_before_destroy_chained
 
     def _on_destroy() -> None:
+        destroyed[0] = True
         _clear()
         restore_focus(captured[0])
 

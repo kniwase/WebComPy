@@ -149,10 +149,7 @@ def ToastHost(context: ComponentContext[ToastHostProps]) -> Any:
         )
         return Teleport({"to": "body"}, host_inner)
 
-    # Reactive: host re-renders when toasts change, but per-item Transitions are keyed via closure
-    # We make the host's children reactive via a computed-backed Teleport
-    # Simplify: return Teleport with a container whose children are from _build_items (reactive via toasts_computed)
-    def _host_gen() -> Any:
+    def _teleport_child() -> Any:
         _ = toasts_computed.value
         its = _build_items()
         return create_element(
@@ -166,33 +163,6 @@ def ToastHost(context: ComponentContext[ToastHostProps]) -> Any:
             *its,
         )
 
-    # Use Transition for host? No, host itself not transitioned. Wrap host gen in a simple element via Teleport
-    # Teleport content is host_gen result (which itself is reactive via closure reading computed)
-    # But Teleport's children are not automatically reactive. We need to make host_gen reactive via use_computed.
-    # Instead, build items directly as Teleport children that are Transitions (each reactive).
-    # The Teleport will be re-rendered when toasts_computed changes if we make it depend on computed.
-    # Use a wrapper that reads computed
-    host_computed = use_computed(lambda: _build_items())
-
-    def _teleport_child() -> Any:
-        _ = host_computed.value
-        its = _build_items()
-        return create_element(
-            "div",
-            {
-                "class": _compose_class(_FRAMEWORK_CLASS, class_name),
-                "aria-live": "polite",
-                "aria-atomic": "false",
-                "role": "region",
-            },
-            *its,
-        )
-
-    # Use a dummy Transition to make it reactive, or just return Teleport with host
-    # For now, return Teleport with host that will be re-created on each render via component re-render
-    # The component itself will re-render when toasts_computed changes? Not necessarily.
-    # But host_computed's on_after_updating will trigger a re-render via signal graph?
-    # Simpler: just return Teleport with _teleport_child as Transition child
     content: Any = Transition({"name": transition_name, "duration": 0}, _teleport_child)
     return Teleport({"to": "body"}, content)
 

@@ -13,7 +13,12 @@ from webcompy.elements import Teleport, Transition, create_element
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import use_computed
 from webcompy.signal._base import SignalBase
-from webcompy.ui.headless._overlay_utils import capture_active_element, restore_focus
+from webcompy.ui.headless._overlay_utils import (
+    capture_active_element,
+    focus_initial,
+    get_focusable_elements,
+    restore_focus,
+)
 
 
 class DrawerProps(TypedDict, total=False):
@@ -81,6 +86,7 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
     slot_content = context.slots("default", fallback=lambda: None)
     captured: list[Any] = [None]
     cleanups: list[Callable[[], None]] = []
+    destroyed: list[bool] = [False]
 
     def _clear() -> None:
         while cleanups:
@@ -144,8 +150,6 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
             if key != "Tab":
                 return
             try:
-                from webcompy.ui.headless._overlay_utils import get_focusable_elements
-
                 panel = None
                 try:
                     panel = dom.get_element_by_id(panel_id) if dom else None
@@ -207,12 +211,12 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
                 if host is not None:
 
                     def _do_focus() -> None:
+                        if destroyed[0] or not is_open():
+                            return
                         try:
                             dom = inject(DOM_PORT_KEY, default=None)
                             panel = dom.get_element_by_id(panel_id) if dom else None
                             if panel is not None:
-                                from webcompy.ui.headless._overlay_utils import focus_initial
-
                                 focus_initial(panel)
                         except Exception:
                             pass
@@ -232,13 +236,20 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
             try:
                 host = inject(HOST_PORT_KEY, default=None)
                 if host is not None:
-                    host.schedule_macro_task(_setup_listeners)
+
+                    def _deferred() -> None:
+                        if destroyed[0] or not is_open():
+                            return
+                        _setup_listeners()
+
+                    host.schedule_macro_task(_deferred)
             except Exception:
                 pass
 
     from webcompy.components._hooks import _register_before_destroy_chained
 
     def _on_destroy() -> None:
+        destroyed[0] = True
         _clear()
         restore_focus(captured[0])
 
