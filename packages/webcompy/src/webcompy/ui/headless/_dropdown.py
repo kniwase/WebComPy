@@ -71,7 +71,6 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
         is_open = lambda: bool(open_raw)
 
     trigger_content = context.slots("trigger", fallback=lambda: "Menu")  # type: ignore[assignment]
-    menu_children = context.slots("default", fallback=lambda: None)  # type: ignore[assignment]
 
     cleanups: list[Callable[[], None]] = []
     trigger_ref: list[Any] = [None]
@@ -373,13 +372,7 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     if is_signal:
         menu_attrs["data-state"] = use_computed(lambda: "open" if bool(is_open_computed.value) else "closed")  # type: ignore[union-attr]
 
-    menu_children: list[Any] = []
-    mc = menu_children_raw = menu_children  # noqa: F841
-    # menu_children from slot
-    # Actually menu_children is from default slot
-    # Re-evaluate: menu slot content
     m_content = context.slots("default", fallback=lambda: None)
-    # But we already have menu_children via earlier? Let's use m_content
     menu_inner: list[Any] = []
     if m_content is not None:
         if isinstance(m_content, list):

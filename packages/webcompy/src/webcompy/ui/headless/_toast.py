@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import Any, TypedDict
 
@@ -114,8 +115,12 @@ def ToastHost(context: ComponentContext[ToastHostProps]) -> Any:
                 if on_remove is not None:
                     on_remove(rid)
                 elif on_dismiss is not None:
-                    # Fallback: try _remove via state
-                    pass
+                    with contextlib.suppress(Exception):
+                        if isinstance(toasts_raw, SignalBase):
+                            cur = list(toasts_raw.value)  # type: ignore[union-attr]
+                            filtered = [t for t in cur if getattr(t, "id", None) != rid]
+                            if len(filtered) != len(cur):
+                                toasts_raw.value = filtered  # type: ignore[union-attr]
 
             # Each item gets its own Transition with on_leave_end
             trans = Transition({"name": transition_name, "on_leave_end": _on_leave}, _make_gen(rec, item))
