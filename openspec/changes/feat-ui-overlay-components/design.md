@@ -51,7 +51,7 @@ Dropdown uses the framework's **named slots** contract: `slots={"trigger": lambd
 
 ### D7: Toast queue semantics
 
-`use_toast()` returns `tuple[ToastPush, ToastState]`; each `push(message, variant, duration)` appends a toast (id, message, variant, duration in **seconds**; default `3.0`, `duration=None` disables auto-dismiss). The host receives `toasts`/`on_dismiss` from `ToastState` and renders the queue (oldest first, newest appended) inside a Teleport'd container that is an ARIA live region (`aria-live="polite"`, with `role="alert"` semantics for error variants). Each toast item is wrapped in its own `Transition` (host wraps many items, so a single host-level Transition is invalid) with `on_leave_end` performing the actual queue removal — dismissal marks `leaving=True` (`data-state="hidden"`) and the Transition leave runs before `on_leave_end` removes the record. `use_toast()` is provided from `webcompy.ui.composables` (logic-only), while `ToastHost`/`ToastItem` are in `webcompy.ui.headless`/`components`. Timers are cancelled on dismiss and on component destruction (no orphaned timers). The queue is unbounded in v1; capping is documented as future work.
+`use_toast()` returns `tuple[ToastPush, ToastState]`; each `push(message, variant, duration)` appends a toast (id, message, variant, duration in **seconds**; default `3.0`, `duration=None` disables auto-dismiss). The host receives `toasts`/`on_dismiss` from `ToastState` and renders the queue (oldest first, newest appended) inside a Teleport'd container that is an ARIA live region (`aria-live="polite"`, with `role="alert"` semantics for error variants). Each toast item is wrapped in its own `Transition` (host wraps many items, so a single host-level Transition is invalid) with `on_leave_end` performing the actual queue removal — dismissal marks `leaving=True` (`data-state="hidden"`) and the Transition leave runs before `on_leave_end` removes the record. `use_toast()` is provided from `webcompy.ui.composables` (logic-only), while `ToastHost`/`ToastItem` are in `webcompy.ui.headless`/`components`. Timers are scheduled via `TransitionPort.schedule_timeout` (available in browser; SSR/test environments degrade gracefully with no auto-dismiss — documented as a v1 limitation) and are cancelled on dismiss and on component destruction (no orphaned timers). The queue is unbounded in v1; capping is documented as future work.
 
 ### D8: data-state vocabularies
 
@@ -64,10 +64,15 @@ These follow the foundation contract and give user CSS stable state hooks. The r
 
 `Transition` gains an optional `on_leave_end: Callable[[], None] | None` prop — additive only, validated as callable. The callback fires exactly once at the end of a completed leave (both the normal `_finalize_leave` path and the immediate `_finalize_leave_now` path for `prefers-reduced-motion`/`enabled=False`). Toast per-item leave relies on this for actual queue removal; other overlays do not use it. Error handling routes exceptions to the boundary.
 
+### D10: Component lifecycle hook ordering for overlay cleanup
+
+`Context.__on_before_destroy` is changed from a single callable to a `list[Callable]` with LIFO insertion for composable helpers (`_register_before_destroy_chained` inserts at index 0). This guarantees overlay document listeners and toast timers are removed before user-registered `on_before_destroy` hooks, and multiple helpers (focus trap, escape, outside-click, timers) each register independently without overwriting. The public `on_before_destroy` API remains additive; `__get_lifecyclehooks__` exposes a combined wrapper that iterates the list.
+
 ## Risks / Trade-offs
 
-- **Focus trap edge cases**: elements becoming focusable/unfocusable while open are handled by query-at-trap-time; if the overlay contains no focusable element, the panel itself receives focus (`tabindex="-1"`). Specified as required behavior.
+- **Focus trap edge cases**: elements becoming focusable/unfocusable while open are handled by query-at-trap-time; if the overlay contains no focusable element, the panel itself receives focus (`tabindex="-1"`). Specified as required behavior. `AUDIO`/`VIDEO` are considered focusable only when `controls` is present; otherwise they are skipped.
 - **Outside-click vs trigger toggle race**: click events bubble — the trigger exclusion (D4) prevents the toggle-then-immediately-close bug; ordering is specified.
 - **Transition interruption**: rapid open/close toggling relies on the Transition element's interruption semantics (leaving node finalized immediately when re-entering); overlay components add no extra state beyond `open`.
 - **Nested overlays**: LIFO focus return works for typical nesting; pathological interleaving is out of scope (documented).
 - **Toast timer leaks**: timers tracked per toast and cleared on dismiss/destroy; specified as a requirement, tested.
+- **Initial-open macro-task guard**: when `open=True` on mount, listener setup is deferred via `HostPort.schedule_macro_task`; a `destroyed` guard prevents registration after unmount racing the task.
