@@ -62,11 +62,11 @@ def OverlayPage(context: ComponentContext[None]):
             Dropdown(
                 {"open": dropdown_open, "on_close": _close_dropdown},
                 slots={
-                    "trigger": lambda: html.SPAN({}, "Dropdown Trigger"),
+                    "trigger": lambda: "Dropdown Trigger",
                     "default": lambda: [
-                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-1", "tabindex": "0"}, "Item 1"),
-                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-2", "tabindex": "0"}, "Item 2"),
-                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-3", "tabindex": "0"}, "Item 3"),
+                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-1"}, "Item 1"),
+                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-2"}, "Item 2"),
+                        html.LI({"role": "menuitem", "data-testid": "dropdown-item-3"}, "Item 3"),
                     ],
                 },
             ),
