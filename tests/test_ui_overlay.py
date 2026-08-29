@@ -344,8 +344,9 @@ class TestDropdown:
             dom_port.dispatch_document_event("click", {"target": trigger})
             assert called == []
 
-    def test_enter_activates_item_and_closes(self, overlay_env):
+    def test_enter_space_activates_via_keydown(self, overlay_env):
         from webcompy.ui.headless import Dropdown
+        from webcompy_server.ports._virtual_dom import VirtualDOMEvent
 
         activated: list[str] = []
         closed: list[str] = []
@@ -364,9 +365,6 @@ class TestDropdown:
             )
 
         with TestRenderer.render(Page) as result:
-            from webcompy.ports._keys import HOST_PORT_KEY
-
-            host_port = result._scope.inject(HOST_PORT_KEY, default=None)
             body = result.body_node
             assert body is not None
             menu = None
@@ -389,9 +387,8 @@ class TestDropdown:
                 for i in range(n.childNodes.length - 1, -1, -1):
                     stack2.append(n.childNodes[i])
             assert item is not None
-            if host_port is not None and hasattr(result._scope, "_dom_port"):
-                with __import__("contextlib").suppress(Exception):
-                    item.focus()
+            with __import__("contextlib").suppress(Exception):
+                item.focus()
             orig_click = getattr(item, "click", None)
 
             def mock_click():
@@ -402,15 +399,99 @@ class TestDropdown:
             except Exception:
                 item.click = mock_click  # type: ignore[attr-defined]
 
-            assert callable(getattr(item, "click", None))
-            item.click()  # type: ignore[attr-defined]
-            if closed == []:
-                closed.append("close")
-            assert activated.count("item1") >= 1
-            assert closed == ["close"]
+            for key in ("Enter", " "):
+                event = VirtualDOMEvent("keydown", bubbles=True, cancelable=True)
+                event.key = key  # type: ignore[attr-defined]
+                menu.dispatchEvent(event)
+
+            assert activated.count("item1") >= 2
+            assert closed.count("close") >= 2
             if orig_click is not None:
                 with __import__("contextlib").suppress(Exception):
                     object.__setattr__(item, "click", orig_click)
+
+    def test_arrow_wrap_and_home_end(self, overlay_env):
+        from webcompy.ui.headless import Dropdown
+        from webcompy_server.ports._virtual_dom import VirtualDOMEvent
+
+        @define_component(custom_element_name="test-dropdown-arrows")
+        def Page(ctx):
+            sig = use_state(lambda: True)
+            return Dropdown(
+                {"open": sig, "transition_name": "webcompy-dropdown"},
+                slots={
+                    "trigger": lambda: "Trigger",
+                    "default": lambda: [
+                        html.LI({"role": "menuitem"}, "A"),
+                        html.LI({"role": "menuitem"}, "B"),
+                        html.LI({"role": "menuitem"}, "C"),
+                    ],
+                },
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import HOST_PORT_KEY
+
+            body = result.body_node
+            assert body is not None
+            menu = None
+            stack = [body]
+            while stack:
+                node = stack.pop()
+                if node.getAttribute("role") == "menu":
+                    menu = node
+                    break
+                for i in range(node.childNodes.length - 1, -1, -1):
+                    stack.append(node.childNodes[i])
+            assert menu is not None
+            # Collect items in document order (stack pop yields document order)
+            items: list = []
+            s = [menu]
+            while s:
+                n = s.pop()
+                if n.getAttribute("role") == "menuitem":
+                    items.append(n)
+                for i in range(n.childNodes.length - 1, -1, -1):
+                    s.append(n.childNodes[i])
+            # Ensure we have 3
+            assert len(items) == 3
+            host_port = result._scope.inject(HOST_PORT_KEY, default=None)
+
+            def active():
+                if host_port is not None:
+                    getter = host_port.create_js_global_getter(
+                        "document",
+                        wrapper=lambda doc: getattr(doc, "activeElement", None) if doc is not None else None,
+                    )
+                    return getter()
+                return None
+
+            # Focus first item then ArrowDown should wrap through all
+            with __import__("contextlib").suppress(Exception):
+                items[0].focus()
+            assert active() is items[0]
+            event_down = VirtualDOMEvent("keydown", bubbles=True, cancelable=True)
+            event_down.key = "ArrowDown"  # type: ignore[attr-defined]
+            menu.dispatchEvent(event_down)
+            assert active() is items[1]
+            menu.dispatchEvent(event_down)
+            assert active() is items[2]
+            menu.dispatchEvent(event_down)
+            assert active() is items[0]
+            # ArrowUp wrap
+            event_up = VirtualDOMEvent("keydown", bubbles=True, cancelable=True)
+            event_up.key = "ArrowUp"  # type: ignore[attr-defined]
+            menu.dispatchEvent(event_up)
+            assert active() is items[2]
+            # Home / End
+            event_home = VirtualDOMEvent("keydown", bubbles=True, cancelable=True)
+            event_home.key = "Home"  # type: ignore[attr-defined]
+            menu.dispatchEvent(event_home)
+            assert active() is items[0]
+            event_end = VirtualDOMEvent("keydown", bubbles=True, cancelable=True)
+            event_end.key = "End"  # type: ignore[attr-defined]
+            menu.dispatchEvent(event_end)
+            assert active() is items[2]
 
 
 class TestToast:
