@@ -145,8 +145,12 @@ class TransitionElement(DynamicElement):
                 raise WebComPyException("Transition 'duration' prop must be a non-negative number of milliseconds.")
             if duration < 0 or not math.isfinite(duration):
                 raise WebComPyException("Transition 'duration' prop must be a non-negative number of milliseconds.")
+        on_leave_end = props.get("on_leave_end") if isinstance(props, dict) else None
+        if on_leave_end is not None and not callable(on_leave_end):
+            raise WebComPyException("Transition 'on_leave_end' prop must be callable when provided.")
         self._name = name
         self._duration: float | None = float(duration) if duration is not None else None
+        self._on_leave_end: Callable[[], None] | None = on_leave_end  # type: ignore[assignment]
         self._child_generator = child_generator
         self._initial_rendered = False
         self._signal_activated = False
@@ -490,6 +494,13 @@ class TransitionElement(DynamicElement):
             child._remove_element(True, True)
         self._children = []
         self._sequence = None
+        if self._on_leave_end is not None:
+            try:
+                self._on_leave_end()
+            except Exception as err:
+                from webcompy.elements.types._error_boundary import route_error_deferred
+
+                route_error_deferred(self, err)
         if not self._disposed:
             self._finish_leave_completion()
 
@@ -510,6 +521,13 @@ class TransitionElement(DynamicElement):
             child._remove_element(True, True)
         self._children = []
         self._sequence = None
+        if self._on_leave_end is not None:
+            try:
+                self._on_leave_end()
+            except Exception as err:
+                from webcompy.elements.types._error_boundary import route_error_deferred
+
+                route_error_deferred(self, err)
         self._reindex_pending = True
 
     def _reindex_parent(self) -> None:
