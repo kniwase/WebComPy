@@ -33,6 +33,7 @@ tests/test_frontmatter.py
 tests/test_graph.py
 tests/test_hooks.py
 tests/test_hydration_payload_lifecycle.py
+tests/test_i18n.py
 tests/test_list_mutation.py
 tests/test_markdown_adversarial.py
 tests/test_markdown_blocks.py
