@@ -39,10 +39,12 @@ Regressions found while verifying the reworked docs_app navbar (kept inside this
 - **Navbar dropdowns never open**: the headless trigger click handler does not stop event propagation, so the navbar's own document-level click listener immediately re-closed the menu. Fixed by stopping propagation on trigger activation.
 - **Duplicate instance DOM ids**: overlay components derived DOM ids from a name-only hash, so every instance on a page shared ids (`webcompy-dropdown-trigger-…`), breaking outside-click detection, keyboard focus return, and `aria-controls` for the second and later instances. Fixed by deriving ids from the hydration-stable per-instance transfer id.
 - **Navbar dropdown positioning lost**: the reworked navbar referenced `--nav-dropdown-top`/`--nav-dropdown-right` custom properties that were no longer computed. Fixed by re-anchoring the teleported menu under the navbar (fixed, right-aligned on desktop; static accordion inside the mobile panel).
+- **Mobile navbar hidden by the teleported menu**: the fixed CSS anchor from the previous fix placed the menu exactly over the expanded mobile strip (opaque background, higher z-index), visually replacing the open hamburger menu — the nested-expansion behavior regressed. Root cause: the framework Dropdown teleports its menu to `body` and delegates all positioning to consumer CSS, so every consumer reinvents trigger measurement (the docs app had to, twice). Fixed at the framework level: the headless Dropdown measures the trigger rect and supplies anchor offsets (open time plus scroll/resize re-measurement), the themed Dropdown anchors the menu to its trigger by default with a `positioning` escape hatch, and the docs navbar drops its fixed-anchor CSS in favor of the default.
 
 ## Non-goals
 
 - Tooltip and Popover (positioning-engine components — planned follow-up change).
+- Inline (non-teleported) dropdown rendering mode with viewport detection for in-flow mobile expansion (accordion-style nested navigation). Requires a viewport media-query story (e.g. `MediaQueryPort` extension or app-side detection) and its SSR semantics — deferred to a separate change; trigger-anchored positioning covers the mobile navbar use case.
 - Nested modal focus-scope stacking beyond single-level correctness (nested modals work but focus return follows a simple LIFO; advanced multi-scope management is out of scope).
 - Toast persistence across navigations or page reloads.
 - Portal target customization beyond Teleport's `to` (components default to `body`).

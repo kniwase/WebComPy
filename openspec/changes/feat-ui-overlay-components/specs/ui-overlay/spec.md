@@ -119,6 +119,25 @@ The Dropdown SHALL accept a `render_closed` prop (default `False`). When enabled
 - **THEN** the menu's item links SHALL be present in the SSR HTML (inside the Teleport block, hidden)
 - **AND** after hydration the menu element SHALL remain in the DOM and hidden
 
+### Requirement: Dropdown menus shall be anchored to their trigger by default
+
+The headless Dropdown SHALL measure the trigger element's bounding rect (through the DOM port) while the menu is open and supply anchor offsets to the teleported menu as inline styles: vertically at the trigger's bottom edge, horizontally at the trigger's start edge or end edge per an `align` prop (`"start"` default, `"end"` right-aligns to the trigger). Measurement SHALL be re-run while open on document scroll and window resize, via listeners registered only while open and removed on close or unmount. The themed Dropdown SHALL anchor the menu to its trigger by default (`positioning="anchor"`) and SHALL accept `positioning="none"` to restore consumer-controlled positioning. Server-side rendering and closed menus SHALL fall back to consumer-CSS positioning without visible effect (the menu is hidden while closed).
+
+#### Scenario: Menu opens below the trigger
+
+- **WHEN** a Dropdown menu opens
+- **THEN** the menu's top edge SHALL align with the trigger's bottom edge and its horizontal anchor SHALL match the configured alignment
+
+#### Scenario: Anchoring follows scroll and resize
+
+- **WHEN** a Dropdown is open and the page is scrolled or the window is resized
+- **THEN** the menu SHALL re-anchor to the trigger's current position
+
+#### Scenario: Consumer-controlled positioning
+
+- **WHEN** a themed Dropdown is created with `positioning="none"`
+- **THEN** the framework SHALL NOT emit anchor inline styles and the menu position SHALL be fully controlled by consumer CSS
+
 ### Requirement: Overlay components shall ship as headless/themed pairs per the foundation contract
 
 Each overlay component (Modal, Drawer, Dropdown, Toast host and items) SHALL exist as a headless component honoring the headless contract (behavior-only, `data-state`, class pass-through) and a themed component composing it with token-based defaults in the primitives stylesheet, re-exported at the `webcompy.ui` top level. Default open/close transition classes SHALL be provided by the themed layer; users SHALL be able to override them.
