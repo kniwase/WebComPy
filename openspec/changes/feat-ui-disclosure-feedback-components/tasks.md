@@ -7,24 +7,24 @@
 
 ## 1. Tabs
 
-- [ ] 1.0 Extract shared private id helper `component_dom_id(kind, context)` into `webcompy/ui/headless/_dom_id.py`; `_overlay_utils.overlay_dom_id` delegates to it (overlay output ids unchanged; existing overlay/primitives unit tests stay green)
-- [ ] 1.1 Implement headless Tabs: `role="tablist"`/`tab`/`tabpanel` wiring (`aria-selected`, `aria-controls`), reactive active state prop + change callback (uncontrolled default per design D10), all panels mounted with inactive panels hidden via the reactive boolean `hidden` attribute (state-preserving switching, no Transition in Tabs), `data-state="active" | "inactive"` on tab and panel elements, hydration-stable ids per design D12, class pass-through (tablist/tab/panel parts)
-- [ ] 1.2 Implement tab keyboard model: Left/Right arrows with wrapping + automatic activation, Home/End jump, roving tabindex (`tabindex="0"` active, `"-1"` inactive)
-- [ ] 1.3 Verify SSR/hydration behavior of hidden panels: inactive panels present in server-rendered output (hidden), `aria-controls` references resolve in-DOM at all times
-- [ ] 1.4 Implement themed Tabs: token-based tablist/tab/panel rules in `primitives.css` (no animation classes; document the data-state hook for user-side effects)
+- [x] 1.0 Extract shared private id helper `component_dom_id(kind, context)` into `webcompy/ui/headless/_dom_id.py`; `_overlay_utils.overlay_dom_id` delegates to it (overlay output ids unchanged; existing overlay/primitives unit tests stay green)
+- [x] 1.1 Implement headless Tabs: `role="tablist"`/`tab`/`tabpanel` wiring (`aria-selected`, `aria-controls`), reactive active state prop + change callback (uncontrolled default per design D10), all panels mounted with inactive panels hidden via the reactive boolean `hidden` attribute (state-preserving switching, no Transition in Tabs), `data-state="active" | "inactive"` on tab and panel elements, hydration-stable ids per design D12, class pass-through (tablist/tab/panel parts)
+- [x] 1.2 Implement tab keyboard model: Left/Right arrows with wrapping + automatic activation, Home/End jump, roving tabindex (`tabindex="0"` active, `"-1"` inactive)
+- [x] 1.3 Verify SSR/hydration behavior of hidden panels: inactive panels present in server-rendered output (hidden), `aria-controls` references resolve in-DOM at all times
+- [x] 1.4 Implement themed Tabs: token-based tablist/tab/panel rules in `primitives.css` (no animation classes; document the data-state hook for user-side effects)
 
 ## 2. Collapse / Accordion
 
-- [ ] 2.1 Implement headless Collapse: trigger (`aria-expanded`, `aria-controls`, `data-state="open" | "closed"`, uncontrolled default per D10), content region animated through the Transition element (content carries `data-state="open"` while mounted, removed when closed), hydration-stable ids, class pass-through (trigger/content parts)
-- [ ] 2.2 Implement themed Collapse with the grid-template-rows natural-height technique (inner overflow-hidden wrapper, enter/leave rules ordered after the steady rule) and document the technique for headless users; disable-animation prop supported
-- [ ] 2.3 Implement Accordion composing Collapse items with key-based identity and open policy (multi-open default, single-open prop closing siblings), items via `items` prop per design D11, shared open state owned by the Accordion driving controlled Collapse instances
+- [x] 2.1 Implement headless Collapse: trigger (`aria-expanded`, `aria-controls`, `data-state="open" | "closed"`, uncontrolled default per D10), content region animated through the Transition element (content carries `data-state="open"` while mounted, removed when closed), hydration-stable ids, class pass-through (trigger/content parts)
+- [x] 2.2 Implement themed Collapse with the grid-template-rows natural-height technique (inner overflow-hidden wrapper, enter/leave rules ordered after the steady rule) and document the technique for headless users; disable-animation prop supported
+- [x] 2.3 Implement Accordion composing Collapse items with key-based identity and open policy (multi-open default, single-open prop closing siblings), items via `items` prop per design D11, shared open state owned by the Accordion driving controlled Collapse instances
 
 ## 3. Feedback components
 
-- [ ] 3.1 Implement headless Alert: variant prop with role mapping (error/warning → `role="alert"`, info/success → `role="status"`), optional dismiss action with accessible button (dismiss hides the root via the boolean `hidden` attribute and calls the dismiss callback), class pass-through
-- [ ] 3.2 Implement headless Progress: `role="progressbar"` with accessible label, determinate (`aria-valuenow/min/max` from props) and indeterminate (omit valuenow, `data-state="indeterminate"`) modes, reactive fill-width style binding, class pass-through
-- [ ] 3.3 Implement headless Badge (variant attribute, class pass-through), Skeleton (`aria-hidden="true"` placeholders with rectangle/line/circle shape props), and Card (header/body/footer regions via slots, class pass-through)
-- [ ] 3.4 Implement themed Alert/Progress/Badge/Skeleton/Card rules in `primitives.css` consuming tokens (variant colors from semantic tokens, progress track/fill, skeleton shimmer honoring reduced motion); export all themed pairs from `webcompy.ui.headless`, `webcompy.ui.components`, and `webcompy.ui`
+- [x] 3.1 Implement headless Alert: variant prop with role mapping (error/warning → `role="alert"`, info/success → `role="status"`), optional dismiss action with accessible button (dismiss hides the root via the boolean `hidden` attribute and calls the dismiss callback), class pass-through
+- [x] 3.2 Implement headless Progress: `role="progressbar"` with accessible label, determinate (`aria-valuenow/min/max` from props) and indeterminate (omit valuenow, `data-state="indeterminate"`) modes, reactive fill-width style binding, class pass-through
+- [x] 3.3 Implement headless Badge (variant attribute, class pass-through), Skeleton (`aria-hidden="true"` placeholders with rectangle/line/circle shape props), and Card (header/body/footer regions via slots, class pass-through)
+- [x] 3.4 Implement themed Alert/Progress/Badge/Skeleton/Card rules in `primitives.css` consuming tokens (variant colors from semantic tokens, progress track/fill, skeleton shimmer honoring reduced motion); export all themed pairs from `webcompy.ui.headless`, `webcompy.ui.components`, and `webcompy.ui`
 
 ## 4. Unit tests (`tests/test_ui_disclosure.py`, browserless via TestRenderer)
 
