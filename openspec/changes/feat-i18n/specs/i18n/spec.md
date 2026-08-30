@@ -72,16 +72,21 @@ Key resolution SHALL try the exact locale (e.g. `de-AT`), then its language (`de
 - **WHEN** a key exists in no catalog along the chain
 - **THEN** `t` SHALL return the key string itself
 
-### Requirement: Locale shall persist via cookie and resolve on SSR from request headers
+### Requirement: Locale shall persist via cookie and resolve on SSR from the request cookie
 
-In the browser, the initial locale SHALL be read from a locale cookie via the cookie port, and switching locales SHALL write the cookie. During SSR, the locale SHALL resolve from the request cookie header first, then the Accept-Language header (highest priority supported locale), then the configured default; the SSR-resolved locale SHALL seed the manager so first render and hydration agree.
+In the browser, the initial locale SHALL be read from a locale cookie via the cookie port, falling back to the configured default when the cookie is absent, and switching locales SHALL write the cookie. During SSR, the manager's initial locale SHALL resolve from the request's Cookie header (surfaced through the cookie port), falling back to the configured default. Both sides SHALL apply the same normalization so first render and hydration agree, and neither side SHALL consult `Accept-Language` or `navigator.language`.
 
-#### Scenario: Cookie wins over Accept-Language on SSR
+#### Scenario: Repeat visit honors the cookie on both sides
 
-- **WHEN** an SSR request carries a locale cookie `ja` and an Accept-Language preferring `en`
-- **THEN** the rendered page SHALL use `ja`
+- **WHEN** a request carries a locale cookie `ja` and SSR renders the page, then the browser hydrates it
+- **THEN** both the server-rendered page and the hydrated page SHALL use `ja`
 
-#### Scenario: First visit uses Accept-Language
+#### Scenario: Cookie-less first visit uses the default
 
-- **WHEN** an SSR request has no locale cookie and Accept-Language prefers `de` (supported)
-- **THEN** the rendered page SHALL use `de`
+- **WHEN** an SSR request carries no locale cookie and the browser has none either
+- **THEN** the rendered page and the hydrated page SHALL both use the configured default locale
+
+#### Scenario: Unsupported cookie value normalizes to the default
+
+- **WHEN** the locale cookie holds a value not among the supported locales and no language match exists
+- **THEN** resolution SHALL fall back to the configured default locale identically on both sides

@@ -44,3 +44,12 @@
 - [x] 7.1 `uv run ruff check .` and `uv run ruff format --check .` pass
 - [x] 7.2 `uv run pyright` passes
 - [x] 7.3 `uv run python -m pytest tests/ --tb=short` passes (includes the full `test_template_*` / `test_markdown_*` regression suites for task 0)
+
+## 8. Cookie-only locale resolution revision (hydration-safe, per D6)
+
+- [ ] 8.1 `i18n/_server.py`: drop Accept-Language parsing; `resolve_locale` becomes cookie → supported match → default (keep `read_locale_from_cookie` and Mapping/Sequence header handling)
+- [ ] 8.2 `i18n/_manager.py`: remove `navigator.language` detection (`_browser_language`, `HOST_PORT_KEY` use); `_resolve_initial` = initial_locale → cookie → default; update docstrings
+- [ ] 8.3 `tests/test_i18n.py`: replace Accept-Language tests with cookie-only contract tests (cookie wins, no cookie → default, unsupported cookie → default, Accept-Language ignored); add parity test using `ServerCookiePort`
+- [ ] 8.4 `docs_app/documents/i18n.md`: update the resolution/persistence and SSR sections to the cookie-only model and note the deferred negotiation
+- [ ] 8.5 Add `e2e/docs/test_i18n.py` (guide renders; demo switch en→ja updates text) and register it in the `docs-documents` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`; update `test_readonly_signal.py` pager expectation for the inserted guide
+- [ ] 8.6 Re-run validation: static checks, full `pytest tests/`, SSG generate, E2E `docs-documents` (both modes) then the full suite

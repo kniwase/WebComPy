@@ -12,7 +12,7 @@ Internationalization is a baseline expectation for production web applications: 
   - Reactive translation: `t()` reads `locale.value` internally, so template interpolations using `t(...)` automatically re-render on locale switch through normal signal tracking — no special mechanism.
 - Message catalogs: nested dicts per locale with dot-path keys (`"nav.home"`), `{name}`-style interpolation, and CLDR-category plural dicts (`{"one": ..., "other": ...}`) with a pipe shorthand for two-category languages. Missing keys resolve through a fallback chain (`de-AT → de → fallback_locale`) and finally return the key itself.
 - Pluralization: built-in minimal CLDR plural-rule table covering common locales; an opt-in Babel adapter provides full CLDR coverage for projects that add the Babel dependency (same opt-in pattern as the CodeBlock Pygments adapter).
-- Locale resolution and persistence: browser reads/writes a locale cookie via the existing cookie port; SSR resolves from cookie header, then Accept-Language, then the default locale (theme's header-parsing pattern).
+- Locale resolution and persistence: browser reads/writes a locale cookie via the existing cookie port; SSR resolves from the request cookie (provided to the manager automatically through `ServerCookiePort`), then the default locale. First-visit language negotiation is intentionally excluded so SSR/SSG output and browser hydration always agree (see D6).
 - docs_app gains a multilingual demo as dogfooding.
 
 ## Capabilities
@@ -27,7 +27,7 @@ Internationalization is a baseline expectation for production web applications: 
 
 ## Impact
 
-- **Code**: new `packages/webcompy/src/webcompy/i18n/` package; DI key and app-level wiring following the theme pattern; server-side header resolution helper in webcompy-server (theme `_server.py` pattern); unit tests.
+- **Code**: new `packages/webcompy/src/webcompy/i18n/` package; DI key and app-level wiring following the theme pattern; request-cookie resolution helper in the core package (theme `_server.py` pattern); unit tests.
 - **APIs**: additive only (`webcompy.i18n`, `use_i18n`). No breaking changes.
 - **Dependencies**: none required (built-in plural table); Babel optional for the adapter.
 - **Docs**: docs_app multilingual demo page (EN/JA) exercising switching, interpolation, and pluralization.
@@ -38,6 +38,7 @@ Internationalization is a baseline expectation for production web applications: 
 
 ## Non-goals
 
+- First-visit language negotiation (`navigator.language` in the browser, `Accept-Language` on the server). These signals are mutually invisible across the SSR/client boundary, so without a hydration transfer of the resolved value they break first-render/hydration agreement (e.g. SSG + a non-default browser locale). Deferred to a follow-up change that pairs them with an app-scoped locale transfer.
 - Number/date/time formatting in v1 (deferred to the Babel adapter path in a later change).
 - Lazy loading of per-locale catalogs (v1 catalogs are provided statically at setup).
 - RTL layout support.
