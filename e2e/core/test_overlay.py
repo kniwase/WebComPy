@@ -70,6 +70,30 @@ def test_dropdown_outside_click_closes(page_on):
     expect(page.locator("[role='menu']")).to_have_count(0)
 
 
+def test_multi_dropdowns_have_distinct_ids_and_open_independently(page_on):
+    page = page_on("/overlay")
+    trigger_a = page.locator("[data-testid='dropdown-a'] button")
+    trigger_b = page.locator("[data-testid='dropdown-b'] button")
+    trigger_a.click()
+    expect(trigger_a).to_have_attribute("aria-expanded", "true")
+    expect(page.locator("[data-testid='dropdown-a-item']")).to_be_visible()
+    # Activating the sibling dropdown closes the open one (capture-phase outside close)
+    trigger_b.click()
+    expect(trigger_b).to_have_attribute("aria-expanded", "true")
+    expect(trigger_a).to_have_attribute("aria-expanded", "false")
+    expect(page.locator("[data-testid='dropdown-b-item']")).to_be_visible()
+    expect(page.locator("[data-testid='dropdown-a-item']")).to_have_count(0)
+    # Instance DOM ids are unique and aria-controls pairs with its own menu
+    ids = page.evaluate(
+        "() => {"
+        "  const buttons = [...document.querySelectorAll('[data-testid=\\'dropdown-multi-wrapper\\'] button')];"
+        "  return buttons.map((b) => ({id: b.id, controls: b.getAttribute('aria-controls')}));"
+        "}"
+    )
+    assert ids[0]["id"] != ids[1]["id"]
+    assert ids[0]["controls"] != ids[1]["controls"]
+
+
 def test_toast_push_and_visible(page_on):
     page = page_on("/overlay")
     page.locator("[data-testid='push-toast']").click()

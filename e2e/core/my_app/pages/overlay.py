@@ -15,6 +15,8 @@ def OverlayPage(context: ComponentContext[None]):
     modal_open = use_state(lambda: False)
     drawer_open = use_state(lambda: False)
     dropdown_open = use_state(lambda: False)
+    dropdown_a_open = use_state(lambda: False)
+    dropdown_b_open = use_state(lambda: False)
     push, toast_state = use_toast()
 
     def _open_modal(_ev):
@@ -31,6 +33,12 @@ def OverlayPage(context: ComponentContext[None]):
 
     def _close_dropdown():
         dropdown_open.value = False
+
+    def _close_dropdown_a():
+        dropdown_a_open.value = False
+
+    def _close_dropdown_b():
+        dropdown_b_open.value = False
 
     def _push_toast(_ev):
         push("Toast message", "info", 5.0)
@@ -69,6 +77,33 @@ def OverlayPage(context: ComponentContext[None]):
                         html.LI({"role": "menuitem", "data-testid": "dropdown-item-3"}, "Item 3"),
                     ],
                 },
+            ),
+        ),
+        html.DIV(
+            {"data-testid": "dropdown-multi-wrapper"},
+            html.DIV(
+                {"data-testid": "dropdown-a"},
+                Dropdown(
+                    {"open": dropdown_a_open, "on_close": _close_dropdown_a},
+                    slots={
+                        "trigger": lambda: "Dropdown A",
+                        "default": lambda: [
+                            html.LI({"role": "menuitem", "data-testid": "dropdown-a-item"}, "A Item"),
+                        ],
+                    },
+                ),
+            ),
+            html.DIV(
+                {"data-testid": "dropdown-b"},
+                Dropdown(
+                    {"open": dropdown_b_open, "on_close": _close_dropdown_b},
+                    slots={
+                        "trigger": lambda: "Dropdown B",
+                        "default": lambda: [
+                            html.LI({"role": "menuitem", "data-testid": "dropdown-b-item"}, "B Item"),
+                        ],
+                    },
+                ),
             ),
         ),
         html.BUTTON({"data-testid": "push-toast", "@click": _push_toast}, "Push Toast"),

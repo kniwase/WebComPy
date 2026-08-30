@@ -16,8 +16,8 @@ def test_navbar_dropdown_items_have_no_layout_shift_before_hydration(
         "  return {"
         "    home: home ? home.offsetHeight : null,"
         "    dropdowns: dropdowns.map(li => {"
-        "      const a = li.querySelector('a');"
-        "      return {li: li.offsetHeight, a: a ? a.offsetHeight : null};"
+        "      const trigger = li.querySelector('button');"
+        "      return {li: li.offsetHeight, trigger: trigger ? trigger.offsetHeight : null};"
         "    }),"
         "    commentAnchors: dropdowns.filter(li =>"
         "      [...li.childNodes].some(n => n.nodeType === 8 && n.data === 'webcompy-teleport-anchor')"
@@ -30,8 +30,30 @@ def test_navbar_dropdown_items_have_no_layout_shift_before_hydration(
     assert heights["commentAnchors"] == len(heights["dropdowns"])
     for d in heights["dropdowns"]:
         assert d["li"] == heights["home"]
-        assert d["a"] is not None and d["li"] == d["a"]
+        assert d["trigger"] is not None and d["li"] == d["trigger"]
     _wait_for_pyscript_init(page, docs_console_messages)
+
+
+@pytest.mark.e2e
+def test_navbar_dropdown_opens_and_switches_exclusively(docs_app_page, assert_no_console_errors):
+    page = docs_app_page
+    triggers = page.locator("li.navbar-item-dropdown button")
+    first = triggers.nth(0)
+    second = triggers.nth(1)
+    first.click()
+    expect(first).to_have_attribute("aria-expanded", "true")
+    expect(page.locator("ul.navbar-dropdown")).to_be_visible()
+    # Activating the sibling dropdown closes the open menu (mutual exclusivity)
+    second.click()
+    expect(second).to_have_attribute("aria-expanded", "true")
+    expect(first).to_have_attribute("aria-expanded", "false")
+    expect(page.locator("ul.navbar-dropdown")).to_have_count(1)
+    # Instance DOM ids are unique
+    ids = page.evaluate("() => [...document.querySelectorAll('li.navbar-item-dropdown button')].map((b) => b.id)")
+    assert ids[0] != ids[1]
+    # Outside click closes the menu
+    page.locator("h1").first.click()
+    expect(page.locator("ul.navbar-dropdown")).to_have_count(0)
 
 
 @pytest.mark.e2e
