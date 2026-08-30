@@ -33,7 +33,7 @@
 
 ## 7. Docs
 
-- [ ] 7.1 docs_app PWA guide: configuration reference (`precache` auto/none, runtime opt-in per serving mode), precache trade-offs, strategy selection guidance, same-origin limitation, offline fallback customization, max-age/eviction best-effort note, dev-mode note
+- [x] 7.1 docs_app PWA guide: configuration reference (`precache` auto/none, runtime opt-in per serving mode), precache trade-offs, strategy selection guidance, same-origin limitation, offline fallback customization, max-age/eviction best-effort note, dev-mode note
 
 ## 8. Validation
 
