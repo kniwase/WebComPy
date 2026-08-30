@@ -244,6 +244,62 @@
     padding: var(--space-4) 0;
   }
 
+  .webcompy-collapse-trigger {
+    appearance: none;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    padding: var(--space-3) var(--space-2);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .webcompy-collapse-trigger:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .webcompy-collapse-content {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-auto-rows: 1fr;
+  }
+
+  .webcompy-collapse-content > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .webcompy-collapse-enter-active,
+  .webcompy-collapse-leave-active {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-auto-rows: 1fr;
+    transition: grid-template-rows 240ms ease;
+  }
+
+  .webcompy-collapse-enter-from,
+  .webcompy-collapse-leave-to {
+    grid-template-rows: 0fr;
+    grid-auto-rows: 0fr;
+  }
+
+  .webcompy-accordion {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .webcompy-accordion > * + * {
+    border-top: 1px solid var(--color-border-muted);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .webcompy-modal-enter-active,
     .webcompy-modal-leave-active,
@@ -251,6 +307,8 @@
     .webcompy-drawer-leave-active,
     .webcompy-dropdown-enter-active,
     .webcompy-dropdown-leave-active,
+    .webcompy-collapse-enter-active,
+    .webcompy-collapse-leave-active,
     .webcompy-toast-enter-active,
     .webcompy-toast-leave-active {
       transition: none;
