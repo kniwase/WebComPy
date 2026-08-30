@@ -101,17 +101,28 @@ def test_home_reload_no_error(docs_app_page, docs_console_messages, assert_no_co
 
 
 @pytest.mark.e2e
-def test_home_dropdown_anchored_below_navbar_on_scroll(docs_app_page, assert_no_console_errors):
+def test_home_dropdown_anchored_to_trigger_on_scroll(docs_app_page, assert_no_console_errors):
     dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
     dropdown_toggle.click()
     dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
     expect(dropdown).to_be_visible()
-    navbar_bottom = docs_app_page.evaluate("() => document.querySelector('nav.navbar').getBoundingClientRect().bottom")
-    top_before = dropdown.bounding_box()["y"]
-    assert abs(top_before - navbar_bottom) < 4
+
+    def anchored():
+        return docs_app_page.wait_for_function(
+            "() => {"
+            "  const menu = document.querySelector('ul.navbar-dropdown:not([hidden])');"
+            "  const toggle = [...document.querySelectorAll('.navbar-dropdown-toggle')]"
+            "    .find(t => t.getAttribute('aria-expanded') === 'true');"
+            "  if (!menu || !toggle) return false;"
+            "  return Math.abs(menu.getBoundingClientRect().y - toggle.getBoundingClientRect().bottom) < 2;"
+            "}",
+            timeout=5000,
+        )
+
+    anchored()
     docs_app_page.evaluate("window.scrollTo(0, 200)")
     expect(dropdown).to_be_visible()
-    assert dropdown.bounding_box()["y"] == top_before
+    anchored()
     docs_app_page.evaluate("window.scrollTo(0, 0)")
 
 
@@ -134,7 +145,7 @@ def test_home_dropdown_stays_within_viewport_after_resize(docs_app_page, assert_
 
 
 @pytest.mark.e2e
-def test_home_mobile_dropdown_spans_navbar_width(docs_app_page, assert_no_console_errors):
+def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_console_errors):
     docs_app_page.set_viewport_size({"width": 600, "height": 800})
     docs_app_page.locator("button.navbar-mobile-toggle").click()
     dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
@@ -147,10 +158,33 @@ def test_home_mobile_dropdown_spans_navbar_width(docs_app_page, assert_no_consol
         docs_app_page.evaluate("menuId => getComputedStyle(document.getElementById(menuId)).position", menu_id)
         == "fixed"
     )
+    # The menu is anchored below the trigger (nested-expansion look)
+    docs_app_page.wait_for_function(
+        "() => {"
+        "  const menu = document.querySelector('ul.navbar-dropdown:not([hidden])');"
+        "  const toggle = [...document.querySelectorAll('.navbar-dropdown-toggle')]"
+        "    .find(t => t.getAttribute('aria-expanded') === 'true');"
+        "  if (!menu || !toggle) return false;"
+        "  return Math.abs(menu.getBoundingClientRect().y - toggle.getBoundingClientRect().bottom) < 2;"
+        "}",
+        timeout=5000,
+    )
+    trigger_box = dropdown_toggle.bounding_box()
     box = dropdown.bounding_box()
-    assert box is not None
-    assert box["x"] == 0
-    assert box["width"] == 600
+    assert box is not None and trigger_box is not None
+    assert box["x"] + box["width"] <= 600
+    # The expanded strip stays visible and interactive above the menu
+    home_link = docs_app_page.locator("li.navbar-item a").filter(has_text="Home")
+    expect(home_link).to_be_visible()
+    hit = docs_app_page.evaluate(
+        "() => {"
+        "  const el = document.querySelector('li.navbar-item a');"
+        "  const r = el.getBoundingClientRect();"
+        "  const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);"
+        "  return hit ? (hit.closest('.navbar-list') ? 'strip' : hit.tagName) : null;"
+        "}"
+    )
+    assert hit == "strip"
 
 
 @pytest.mark.e2e

@@ -112,6 +112,18 @@
     border-radius: 0;
   }
 
+  .navbar-list .webcompy-dropdown {
+    display: block;
+    width: 100%;
+  }
+
+  .navbar-list .navbar-dropdown-toggle,
+  .navbar-list .webcompy-dropdown-trigger {
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
   .navbar-dropdown {
     border: none;
     border-radius: 0;
