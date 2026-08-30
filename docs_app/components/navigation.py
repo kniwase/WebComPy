@@ -84,6 +84,7 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
                         RouterLink(
                             to=page["to"],
                             text=[page["title"]],
+                            attrs={"role": "menuitem"},
                         ),
                     ),
                     html.LI({}, html.HR({})),
@@ -97,7 +98,7 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
                     RouterLink(
                         to=sub["to"],
                         text=[sub["title"]],
-                        attrs={"@click": lambda ev: _close_all()},
+                        attrs={"role": "menuitem", "@click": lambda ev: _close_all()},
                     ),
                 )
                 for sub in page["children"]
@@ -226,7 +227,7 @@ DocsNavbar.scoped_style = {
     " .navbar-item-dropdown": {
         "position": "relative",
     },
-    " .navbar-list a": {
+    " .navbar-list a,  .navbar-list button": {
         "display": "block",
         "padding": "var(--space-2)",
         "text-decoration": "none",
@@ -236,19 +237,22 @@ DocsNavbar.scoped_style = {
         "cursor": "pointer",
         "border-radius": "var(--radius-sm)",
         "transition": "background-color 0.15s ease, color 0.15s ease",
+        "background": "none",
+        "border": "0",
+        "text-align": "left",
     },
-    " .navbar-list a:hover": {
+    " .navbar-list a:hover,  .navbar-list button:hover": {
         "background-color": "var(--color-bg-elevated)",
         "color": "var(--color-fg)",
     },
-    " .navbar-list a[aria-expanded='true']": {
+    " .navbar-list a[aria-expanded='true'],  .navbar-list button[aria-expanded='true']": {
         "background-color": "var(--color-bg-elevated)",
     },
     " .navbar-dropdown": {
         "position": "fixed",
-        "top": "var(--nav-dropdown-top)",
+        "top": "calc(var(--space-3) * 2 + 2.5rem + 1px)",
         "left": "auto",
-        "right": "calc(100vw - var(--nav-dropdown-right))",
+        "right": "max(var(--space-5), calc((100vw - 1200px) / 2 + var(--space-5)))",
         "background-color": "var(--color-bg)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-md)",
@@ -308,7 +312,7 @@ DocsNavbar.scoped_style = {
         " .navbar-item,  .navbar-item-dropdown": {
             "width": "100%",
         },
-        " .navbar-list a": {
+        " .navbar-list a,  .navbar-list button": {
             "padding": "var(--space-3) 0",
             "border-radius": "0",
         },

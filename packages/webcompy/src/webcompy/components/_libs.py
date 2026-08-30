@@ -100,6 +100,20 @@ class Context(Generic[PropsType]):
     def props(self) -> PropsType:
         return self.__props
 
+    @property
+    def transfer_id(self) -> str:
+        """Return the hydration-stable per-instance transfer id.
+
+        The id is ``{name-hash}#{ordinal}`` when an app render context is
+        available (identical between the server-rendered output and the
+        hydrated client tree) and degrades to the name hash otherwise.
+
+        Returns:
+            The per-instance stable id string.
+
+        """
+        return self._transfer_id
+
     def slots(
         self,
         name: str,
@@ -269,6 +283,7 @@ class ComponentContext(Protocol[PropsType]):
 
     Attributes:
         props: The props object passed to the component.
+        transfer_id: The hydration-stable per-instance id of the component.
 
     """
 
@@ -278,6 +293,16 @@ class ComponentContext(Protocol[PropsType]):
 
         Returns:
             The component props.
+
+        """
+        ...
+
+    @property
+    def transfer_id(self) -> str:
+        """Return the hydration-stable per-instance transfer id.
+
+        Returns:
+            The per-instance stable id string.
 
         """
         ...

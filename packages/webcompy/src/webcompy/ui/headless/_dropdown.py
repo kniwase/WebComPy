@@ -7,12 +7,12 @@ from collections.abc import Callable
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.components._libs import generate_id
 from webcompy.di import inject
 from webcompy.elements import Teleport, Transition, create_element
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import use_computed
 from webcompy.signal._base import SignalBase
+from webcompy.ui.headless._overlay_utils import overlay_dom_id
 
 
 class DropdownProps(TypedDict, total=False):
@@ -59,8 +59,8 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     class_trigger = props.get("class_trigger", "")
     class_menu = props.get("class_menu", "")
 
-    trigger_id = f"webcompy-dropdown-trigger-{generate_id('dropdown')[:8]}"
-    menu_id = f"webcompy-dropdown-menu-{generate_id('menu')[:8]}"
+    trigger_id = overlay_dom_id("dropdown-trigger", context)
+    menu_id = overlay_dom_id("dropdown-menu", context)
 
     is_signal = isinstance(open_raw, SignalBase)
     if is_signal:
@@ -240,6 +240,11 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
 
     # Toggle handler for trigger
     def _on_trigger_click(event: Any) -> None:
+        # The Dropdown owns its toggle semantics: stop the click from
+        # reaching document-level listeners (e.g. a host "close all"
+        # handler) that would immediately re-close the menu.
+        if hasattr(event, "stopPropagation"):
+            event.stopPropagation()
         if is_signal:
             # Toggle via signal mutation if possible
             try:

@@ -7,7 +7,6 @@ from collections.abc import Callable
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.components._libs import generate_id
 from webcompy.di import inject
 from webcompy.elements import Teleport, Transition, create_element
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
@@ -17,6 +16,7 @@ from webcompy.ui.headless._overlay_utils import (
     capture_active_element,
     focus_initial,
     get_focusable_elements,
+    overlay_dom_id,
     restore_focus,
 )
 
@@ -74,8 +74,8 @@ def Modal(context: ComponentContext[ModalProps]) -> Any:
     class_backdrop = props.get("class_backdrop", "")
     class_panel = props.get("class_panel", "")
 
-    panel_id = f"webcompy-modal-panel-{generate_id('modal')[:8]}"
-    backdrop_id = f"webcompy-modal-backdrop-{generate_id('backdrop')[:8]}"
+    panel_id = overlay_dom_id("modal-panel", context)
+    backdrop_id = overlay_dom_id("modal-backdrop", context)
 
     is_signal = isinstance(open_raw, SignalBase)
     if is_signal:

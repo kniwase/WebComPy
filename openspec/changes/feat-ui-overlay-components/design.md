@@ -81,8 +81,8 @@ The headless Dropdown's trigger click handler (`_on_trigger_click`) SHALL stop p
 The reworked navbar drops the hand-rolled positioning workaround (toggle-rect measurement into `--nav-dropdown-top`/`--nav-dropdown-right`), which left the scoped styles referencing undefined custom properties. The navbar integration is fixed by design instead of by measurement:
 
 - Trigger styling: navbar scoped styles target both `.navbar-list a` and `.navbar-list button` (the Dropdown trigger is a `<button>`), with a button reset (background, border, text alignment, full-width in the mobile list) so no browser-default button styling leaks.
-- Menu positioning (desktop): the teleported menu is `position: fixed`, anchored to the top of the viewport just below the navbar and right-aligned to the page gutter. Per-toggle measurement is intentionally not reinstated: the two menus are mutually exclusive (opening one closes the other via each Dropdown's outside-click close), so a single shared anchor is visually equivalent without measurement code.
-- Menu positioning (mobile): the menu is `position: static` inside the expanded mobile panel — an in-flow accordion section rather than an overlay.
+- Menu positioning (desktop): the teleported menu is `position: fixed`, anchored to the top of the viewport just below the navbar and right-aligned to the navbar inner container. Per-toggle measurement is intentionally not reinstated: the two menus are mutually exclusive (opening one closes the other via each Dropdown's outside-click close), so a single shared anchor is visually equivalent without measurement code. Because the menu is Teleported to `body`, custom properties defined on the navbar subtree do not reach it — the anchor offsets are self-contained values in the scoped rule.
+- Menu positioning (mobile): the menu remains a fixed full-width strip directly below the navbar (flat borders, no shadow), overlaying the expanded mobile panel; the teleported menu can never sit in flow inside the panel.
 - Menu semantics: menu links carry `role="menuitem"` so the headless keyboard navigation (`[role="menuitem"]` lookup) operates on them.
 
 ## Risks / Trade-offs

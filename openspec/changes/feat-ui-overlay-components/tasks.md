@@ -52,9 +52,9 @@
 ## 9. Regression fixes from post-change verification
 
 - [x] 9.1 Reopen the change: revert the spec sync and archive commits so this change can absorb the verification findings
-- [ ] 9.2 D11: stop event propagation in the headless Dropdown trigger click handler (guarded for fake events)
-- [ ] 9.3 D12: expose the per-instance transfer id on the component context and derive Dropdown trigger/menu and Modal/Drawer panel/backdrop DOM ids from it (sanitized)
-- [ ] 9.4 D13: fix docs_app navbar — scoped styles cover the `<button>` trigger with a button reset, menu items carry `role="menuitem"`, desktop menu re-anchored (fixed, below navbar, right-aligned), mobile menu rendered as a static accordion section (drop `--nav-dropdown-*` dependency)
+- [x] 9.2 D11: stop event propagation in the headless Dropdown trigger click handler (guarded for fake events)
+- [x] 9.3 D12: expose the per-instance transfer id on the component context and derive Dropdown trigger/menu and Modal/Drawer panel/backdrop DOM ids from it (sanitized)
+- [x] 9.4 D13: fix docs_app navbar — scoped styles cover the `<button>` trigger with a button reset, menu items carry `role="menuitem"`, desktop menu re-anchored (fixed, below navbar, right-aligned), mobile menu a fixed full-width strip below the navbar (drop `--nav-dropdown-*` dependency)
 - [ ] 9.5 Unit tests: trigger click does not reach a document-level listener; two Dropdown instances produce distinct trigger/menu ids and correct `aria-controls` pairing; Modal/Drawer instance ids differ across instances
 - [ ] 9.6 E2E: multi-instance Dropdown page — both dropdowns open/close independently, outside click closes, no cross-instance interference; docs navbar dropdown opens and closes on desktop and mobile viewports
 
