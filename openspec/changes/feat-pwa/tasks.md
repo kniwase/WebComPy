@@ -40,3 +40,9 @@
 - [x] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
 - [x] 8.2 `uv run pyright` passes
 - [x] 8.3 `uv run python -m pytest tests/ --tb=short` passes
+
+## 9. Review follow-ups
+
+- [x] 9.1 Match runtime cache rule entries by full URL: drop query-insensitive matching from the three rule strategies (keep it for navigation matching) and cover the worker template with a generator assertion
+- [x] 9.2 Normalize runtime rule patterns to a leading slash at worker generation time (scope-relative pathnames keep the leading slash), with generator tests and config docstring updates
+- [x] 9.3 Document the CDN runtime precache serving limitation, the rule pattern and full-URL matching semantics, and the purpose of the prefixed static-file routes (docs guide and design notes)

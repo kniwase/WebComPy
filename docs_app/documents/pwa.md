@@ -77,7 +77,7 @@ By default the Python runtime (Pyodide/PyScript bundle) is excluded from the pre
 pwa=PWAConfig(enabled=True, manifest=..., precache_runtime=True)
 ```
 
-Enabling it logs a build-time warning. With **local** runtime serving the warning states the summed size and the worker precaches the local runtime files. With a **CDN** runtime only the known runtime entry files (PyScript core and the Pyodide lock file) are precached — the warning notes that offline startup is therefore not guaranteed. For a dependable offline cold start, serve the runtime locally (for example `standalone=True`) and set `precache_runtime=True`. Combining `precache="none"` with `precache_runtime` is rejected at validation.
+Enabling it logs a build-time warning. With **local** runtime serving the warning states the summed size and the worker precaches the local runtime files. With a **CDN** runtime only the known runtime entry files (PyScript core and the Pyodide lock file) are precached. The worker serves same-origin requests only, so these cross-origin entries are stored but never returned — the warning notes that offline startup is therefore not guaranteed, and the option has an offline effect only with local runtime serving. For a dependable offline cold start, serve the runtime locally (for example `standalone=True`) and set `precache_runtime=True`. Combining `precache="none"` with `precache_runtime` is rejected at validation.
 
 ## Runtime caching
 
