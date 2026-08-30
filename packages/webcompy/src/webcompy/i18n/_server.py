@@ -1,4 +1,4 @@
-"""Server-side locale resolution from request headers."""
+"""Server-side locale resolution from the request Cookie header."""
 
 from __future__ import annotations
 
@@ -64,32 +64,6 @@ def _match_supported(locale: str, supported: set[str]) -> str | None:
     return matches[0] if matches else None
 
 
-def _accept_language_pref(headers: Mapping[str, str] | Sequence[tuple[str, str]] | None) -> str | None:
-    accept_value = _header_value(headers, "accept-language")
-    if accept_value is None:
-        return None
-    entries: list[tuple[str, float]] = []
-    for item in accept_value.split(","):
-        item = item.strip()
-        if not item:
-            continue
-        lang, sep, q_part = item.partition(";")
-        language = lang.strip()
-        if not language:
-            continue
-        quality = 1.0
-        if sep:
-            quality_text = q_part.strip()
-            if quality_text.startswith("q="):
-                try:
-                    quality = float(quality_text[2:])
-                except ValueError:
-                    continue
-        entries.append((language, quality))
-    entries.sort(key=lambda entry: entry[1], reverse=True)
-    return entries[0][0] if entries else None
-
-
 def resolve_locale(
     headers: Mapping[str, str] | Sequence[tuple[str, str]] | None,
     supported_locales: Iterable[str],
@@ -97,16 +71,17 @@ def resolve_locale(
 ) -> str:
     """Resolve the locale for a request from its headers.
 
-    Resolution order: the locale cookie first, then the Accept-Language
-    header's highest-priority locale, then ``default_locale``. A matched
-    header entry is mapped back to a supported locale by exact tag or by
-    its language part.
+    Resolution order: the locale cookie if it matches a supported locale
+    (exact tag or language part), otherwise ``default_locale``. The
+    ``Accept-Language`` header is deliberately not consulted: server-side
+    negotiation without an app-scoped transfer of the resolved value
+    breaks first-render/hydration agreement with the browser.
 
     Args:
         headers: Request headers as a mapping or a sequence of
             ``(name, value)`` pairs.
         supported_locales: Locales the application can render.
-        default_locale: Fallback locale when neither header matches.
+        default_locale: Fallback locale when no supported cookie exists.
 
     Returns:
         The resolved locale, always one of ``supported_locales`` or
@@ -116,10 +91,6 @@ def resolve_locale(
     supported = {loc.strip().lower() for loc in supported_locales if loc and loc.strip()}
     cookie_locale = read_locale_from_cookie(headers)
     matched = _match_supported(cookie_locale, supported) if cookie_locale is not None else None
-    if matched is not None:
-        return matched
-    accept_locale = _accept_language_pref(headers)
-    matched = _match_supported(accept_locale, supported) if accept_locale is not None else None
     if matched is not None:
         return matched
     return default_locale

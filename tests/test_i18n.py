@@ -230,25 +230,33 @@ class TestResolutionAndPersistence:
         headers = [("Cookie", f"{I18N_COOKIE_NAME}=ja")]
         assert read_locale_from_cookie(headers) == "ja"
 
-    def test_cookie_wins_over_accept_language(self) -> None:
-        headers = {"cookie": f"{I18N_COOKIE_NAME}=ja", "accept-language": "en-US,en;q=0.9"}
+    def test_cookie_resolves_when_supported(self) -> None:
+        headers = {"cookie": f"other=1; {I18N_COOKIE_NAME}=ja; x=y"}
         assert resolve_locale(headers, ["en", "ja"], "en") == "ja"
 
-    def test_first_visit_uses_accept_language(self) -> None:
-        headers = {"accept-language": "de-DE,de;q=0.9,en;q=0.8"}
-        assert resolve_locale(headers, ["en", "de"], "en") == "de"
+    def test_cookie_language_part_matches_supported(self) -> None:
+        headers = {"cookie": f"{I18N_COOKIE_NAME}=ja-JP"}
+        assert resolve_locale(headers, ["en", "ja"], "en") == "ja"
 
-    def test_accept_language_q_value_sorting(self) -> None:
-        headers = {"accept-language": "fr;q=0.5,en;q=0.9,de;q=0.8"}
-        assert resolve_locale(headers, ["de", "en"], "en") == "en"
+    def test_unsupported_cookie_falls_back_to_default(self) -> None:
+        headers = {"cookie": f"{I18N_COOKIE_NAME}=fr"}
+        assert resolve_locale(headers, ["en", "ja"], "en") == "en"
 
-    def test_accept_language_matches_language_part(self) -> None:
-        headers = {"accept-language": "en-US;q=0.9"}
-        assert resolve_locale(headers, ["en", "ja"], "ja") == "en"
-
-    def test_malformed_accept_language_falls_back_to_default(self) -> None:
-        assert resolve_locale({"accept-language": ";;;~!"}, ["en", "ja"], "en") == "en"
+    def test_accept_language_is_ignored(self) -> None:
+        headers = {"accept-language": "de-DE,de;q=0.9,fr;q=0.8"}
+        assert resolve_locale(headers, ["en", "de"], "en") == "en"
 
     def test_default_fallback(self) -> None:
         assert resolve_locale({}, ["en", "ja"], "en") == "en"
-        assert resolve_locale({"accept-language": "de"}, ["en", "ja"], "en") == "en"
+        assert resolve_locale(None, ["en", "ja"], "en") == "en"
+
+    def test_ssr_sees_the_same_cookie_as_the_browser(self) -> None:
+        from webcompy_server.ports._cookie import ServerCookiePort
+
+        headers = {"cookie": f"{I18N_COOKIE_NAME}=ja"}
+        port = ServerCookiePort(f"{I18N_COOKIE_NAME}=ja")
+        scope = DIScope()
+        scope.provide(COOKIE_PORT_KEY, port)
+        with scope:
+            manager = _manager()
+        assert resolve_locale(headers, ["en", "ja"], "en") == manager.value == "ja"

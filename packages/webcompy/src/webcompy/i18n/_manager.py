@@ -5,10 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from webcompy.di import inject
 from webcompy.i18n._catalog import translate_message
 from webcompy.i18n._cookie import read_locale_cookie_value, write_locale_cookie_value
-from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal import Signal
 
 
@@ -28,11 +26,10 @@ class I18nManager:
     """Reactive locale state holding a ``Signal[str]`` and message catalogs.
 
     The manager resolves the active locale at construction (an explicit
-    ``initial_locale``, then the locale cookie in the browser, then the
-    browser language, then ``default_locale``) and exposes the translation
-    function ``t``, whose reads of the locale signal make template
-    interpolations reactive. ``set_locale`` updates the signal and persists
-    the choice to the locale cookie.
+    ``initial_locale``, then the locale cookie, then ``default_locale``)
+    and exposes the translation function ``t``, whose reads of the locale
+    signal make template interpolations reactive. ``set_locale`` updates
+    the signal and persists the choice to the locale cookie.
 
     Args:
         catalogs: Locale-to-catalog mapping; keys resolve by dot path
@@ -42,9 +39,9 @@ class I18nManager:
         fallback_locale: Locale consulted after the exact locale and its
             language during message lookup; defaults to ``default_locale``.
         supported_locales: Locales the application can render; defaults to
-            the catalog keys. Governs normalization and SSR resolution.
-        initial_locale: Externally resolved locale (e.g. from SSR request
-            headers) that takes priority over cookie/browser defaults.
+            the catalog keys. Governs normalization and resolution.
+        initial_locale: Externally seeded locale that takes priority over
+            the cookie/default resolution.
         persist: Whether ``set_locale`` writes the locale cookie.
 
     Attributes:
@@ -75,9 +72,6 @@ class I18nManager:
         cookie_value = read_locale_cookie_value()
         if cookie_value is not None:
             return self._normalize(cookie_value)
-        browser_language = self._browser_language()
-        if browser_language is not None:
-            return self._normalize(browser_language)
         return self._default_locale
 
     def _normalize(self, locale: str) -> str:
@@ -90,20 +84,6 @@ class I18nManager:
             if candidate.lower().split("-", 1)[0] == language:
                 return candidate
         return self._default_locale
-
-    def _browser_language(self) -> str | None:
-        host = inject(HOST_PORT_KEY, default=None)
-        if host is None:
-            return None
-        getter = host.create_js_global_getter("navigator")
-        try:
-            navigator = getter()
-        except Exception:
-            return None
-        if navigator is None:
-            return None
-        language = getattr(navigator, "language", None)
-        return language or None
 
     @property
     def locale(self) -> Signal[str]:
