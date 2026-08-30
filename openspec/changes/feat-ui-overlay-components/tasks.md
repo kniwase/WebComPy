@@ -69,8 +69,8 @@
 
 ## 11. Spec sync, governance and archive
 
-- [ ] 11.1 Sync delta specs to `openspec/specs/ui-overlay/spec.md`
-- [ ] 11.2 Add `ui-overlay` rows to AGENTS.md (File → Spec Mapping, Current Specs) and the review skill invariant list
+- [x] 11.1 Sync delta specs to `openspec/specs/ui-overlay/spec.md`
+- [x] 11.2 Add `ui-overlay` rows to AGENTS.md (File → Spec Mapping, Current Specs) and the review skill invariant list
 - [ ] 11.3 `python3 scripts/check-doc-spec-refs.py` passes; re-archive the change and push
 
 ## 12. Anchor positioning (mobile navbar regression, round 2)
@@ -81,4 +81,4 @@
 - [x] 12.4 Unit tests: anchor offsets on open, scroll/resize re-measurement, `positioning="none"` opt-out, SSR/no-measurement fallback
 - [x] 12.5 E2E: mobile menu opens below the trigger with the strip visible (nested look), desktop menus stay right-aligned below the navbar
 - [x] 12.6 Lint, type check, unit tests, browser tests, full E2E suite, and visual verification pass
-- [ ] 12.7 Re-sync specs, governance references, re-archive, push
+- [x] 12.7 Re-sync specs, governance references, re-archive, push
