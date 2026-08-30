@@ -635,6 +635,252 @@ class TestDropdown:
             menu.dispatchEvent(event_end)
             assert active() is items[2]
 
+    @staticmethod
+    def _find_trigger(root):
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            if node.nodeName == "BUTTON" and node.getAttribute("aria-haspopup") == "menu":
+                return node
+            for i in range(node.childNodes.length - 1, -1, -1):
+                stack.append(node.childNodes[i])
+        return None
+
+    @staticmethod
+    def _find_menu(body):
+        stack = [body]
+        while stack:
+            node = stack.pop()
+            if node.getAttribute("role") == "menu":
+                return node
+            for i in range(node.childNodes.length - 1, -1, -1):
+                stack.append(node.childNodes[i])
+        return None
+
+    def test_menu_anchored_below_trigger_start(self, overlay_env):
+        from webcompy.signal import Signal
+        from webcompy.ui.headless import Dropdown
+
+        class _Rect:
+            bottom = 120.0
+            left = 24.0
+            right = 96.0
+
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-start")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            trigger = self._find_trigger(result._root_node)
+            assert trigger is not None
+            trigger.getBoundingClientRect = lambda: _Rect()
+            original_lookup = dom_port.get_element_by_id
+            dom_port.get_element_by_id = lambda element_id: (
+                trigger if element_id == trigger.getAttribute("id") else original_lookup(element_id)
+            )
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            assert menu.getAttribute("style") == "top: 120.0px; left: 24.0px; right: auto;"
+
+    def test_menu_anchor_align_end(self, overlay_env):
+        from webcompy.signal import Signal
+        from webcompy.ui.headless import Dropdown
+
+        class _Rect:
+            bottom = 120.0
+            left = 24.0
+            right = 96.0
+
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-end")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "align": "end", "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            trigger = self._find_trigger(result._root_node)
+            assert trigger is not None
+            trigger.getBoundingClientRect = lambda: _Rect()
+            original_lookup = dom_port.get_element_by_id
+            dom_port.get_element_by_id = lambda element_id: (
+                trigger if element_id == trigger.getAttribute("id") else original_lookup(element_id)
+            )
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            assert menu.getAttribute("style") == "top: 120.0px; right: calc(100vw - 96.0px); left: auto;"
+
+    def test_anchor_remeasures_on_scroll_and_resize(self, overlay_env):
+        from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
+        from webcompy.ui.headless import Dropdown
+
+        rect = {"bottom": 120.0, "left": 24.0, "right": 96.0}
+
+        class _Rect:
+            @property
+            def bottom(self):
+                return rect["bottom"]
+
+            @property
+            def left(self):
+                return rect["left"]
+
+            @property
+            def right(self):
+                return rect["right"]
+
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-remeasure")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            host_port = result._scope.inject(HOST_PORT_KEY, default=None)
+            trigger = self._find_trigger(result._root_node)
+            assert trigger is not None
+            trigger.getBoundingClientRect = lambda: _Rect()
+            original_lookup = dom_port.get_element_by_id
+            dom_port.get_element_by_id = lambda element_id: (
+                trigger if element_id == trigger.getAttribute("id") else original_lookup(element_id)
+            )
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            assert "top: 120.0px" in menu.getAttribute("style")
+            rect["bottom"] = 200.0
+            rect["left"] = 40.0
+            dom_port.dispatch_document_event("scroll", None)
+            assert menu.getAttribute("style") == "top: 200.0px; left: 40.0px; right: auto;"
+            rect["bottom"] = 260.0
+            host_port.dispatch_window_event("resize", None)
+            assert menu.getAttribute("style") == "top: 260.0px; left: 40.0px; right: auto;"
+
+    def test_anchor_listeners_removed_on_close(self, overlay_env):
+        from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
+        from webcompy.ui.headless import Dropdown
+
+        rect = {"bottom": 120.0, "left": 24.0, "right": 96.0}
+
+        class _Rect:
+            @property
+            def bottom(self):
+                return rect["bottom"]
+
+            @property
+            def left(self):
+                return rect["left"]
+
+            @property
+            def right(self):
+                return rect["right"]
+
+        called: list[str] = []
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-cleanup")
+        def Page(ctx):
+            return Dropdown(
+                {
+                    "open": sig,
+                    "on_close": lambda: called.append("close"),
+                    "transition_name": "webcompy-dropdown",
+                },
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            host_port = result._scope.inject(HOST_PORT_KEY, default=None)
+            trigger = self._find_trigger(result._root_node)
+            assert trigger is not None
+            trigger.getBoundingClientRect = lambda: _Rect()
+            original_lookup = dom_port.get_element_by_id
+            dom_port.get_element_by_id = lambda element_id: (
+                trigger if element_id == trigger.getAttribute("id") else original_lookup(element_id)
+            )
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            sig.value = False
+            rect["bottom"] = 999.0
+            dom_port.dispatch_document_event("scroll", None)
+            host_port.dispatch_window_event("resize", None)
+            assert menu.getAttribute("style") == "top: 120.0px; left: 24.0px; right: auto;"
+
+    def test_positioning_none_skips_anchor(self, overlay_env):
+        from webcompy.signal import Signal
+        from webcompy.ui.headless import Dropdown
+
+        class _Rect:
+            bottom = 120.0
+            left = 24.0
+            right = 96.0
+
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-none")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "positioning": "none", "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            trigger = self._find_trigger(result._root_node)
+            assert trigger is not None
+            trigger.getBoundingClientRect = lambda: _Rect()
+            original_lookup = dom_port.get_element_by_id
+            dom_port.get_element_by_id = lambda element_id: (
+                trigger if element_id == trigger.getAttribute("id") else original_lookup(element_id)
+            )
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            assert menu.getAttribute("style") is None
+
+    def test_anchor_without_measurement_falls_back(self, overlay_env):
+        from webcompy.signal import Signal
+        from webcompy.ui.headless import Dropdown
+
+        sig = Signal(False)
+
+        @define_component(custom_element_name="test-dropdown-anchor-fallback")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Trigger", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            sig.value = True
+            menu = self._find_menu(result.body_node)
+            assert menu is not None
+            # No getBoundingClientRect available: no offsets are emitted
+            assert menu.getAttribute("style") is None
+
 
 class TestToast:
     """Toast 6.4: push, variant, auto-dismiss, manual dismiss, destroy."""

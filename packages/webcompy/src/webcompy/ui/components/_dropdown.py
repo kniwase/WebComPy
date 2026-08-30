@@ -20,6 +20,8 @@ class DropdownProps(TypedDict, total=False):
     class_trigger: str
     class_menu: str
     render_closed: bool
+    align: str
+    positioning: str
 
 
 def _compose_class(*parts: str) -> str:
@@ -29,6 +31,12 @@ def _compose_class(*parts: str) -> str:
 @define_component(custom_element_name="webcompy-dropdown")
 def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     """Render a themed dropdown.
+
+    The menu is anchored to the trigger by default: the framework
+    measures the trigger position while open and keeps the menu pinned
+    below it across scroll and resize. Pass ``positioning="none"`` to
+    control the menu position entirely through consumer CSS, and
+    ``align="end"`` to right-align the menu to the trigger's end edge.
 
     Args:
         context: Component context with dropdown props and slots.
@@ -54,5 +62,7 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
         "class_trigger": _compose_class("webcompy-dropdown-trigger", props.get("class_trigger", "")),
         "class_menu": _compose_class("webcompy-dropdown-menu", props.get("class_menu", "")),
         "render_closed": bool(props.get("render_closed", False)),
+        "align": props.get("align", "start"),
+        "positioning": props.get("positioning", "anchor"),
     }
     return HeadlessDropdown(headless_props, slots=slots)  # type: ignore[call-arg, arg-type]

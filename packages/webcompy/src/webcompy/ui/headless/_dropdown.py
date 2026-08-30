@@ -25,6 +25,8 @@ class DropdownProps(TypedDict, total=False):
     class_trigger: str
     class_menu: str
     render_closed: bool
+    align: str
+    positioning: str
 
 
 _FRAMEWORK_CLASS = "webcompy-headless-dropdown"
@@ -42,11 +44,18 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
 
     The trigger is a button and the menu is a ``role="menu"`` list
     whose items carry ``role="menuitem"``. The menu renders through
-    ``Teleport`` to ``body`` wrapped in a ``Transition``.
+    ``Teleport`` to ``body`` wrapped in a ``Transition``. While open,
+    the menu is anchored to the trigger: the trigger rect is measured
+    through the DOM port and supplied as inline ``top``/``left`` or
+    ``top``/``right`` offsets, re-measured on document scroll and
+    window resize.
 
     Args:
         context: Component context with dropdown props and named slots
-            ``trigger`` and ``default``.
+            ``trigger`` and ``default``. ``align`` (``"start"`` or
+            ``"end"``) picks the horizontal anchor edge; ``positioning``
+            (``"anchor"`` or ``"none"``) disables the built-in
+            anchoring when set to ``"none"``.
 
     Returns:
         The rendered dropdown element.
@@ -60,6 +69,8 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     class_trigger = props.get("class_trigger", "")
     class_menu = props.get("class_menu", "")
     render_closed = bool(props.get("render_closed", False))
+    align = props.get("align", "start")
+    positioning = props.get("positioning", "anchor")
 
     trigger_id = overlay_dom_id("dropdown-trigger", context)
     menu_id = overlay_dom_id("dropdown-menu", context)
@@ -84,6 +95,34 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
             fn = cleanups.pop()
             with contextlib.suppress(Exception):
                 fn()
+
+    def _measure_anchor() -> None:
+        if destroyed[0] or positioning != "anchor" or not is_open():
+            return
+        try:
+            dom = inject(DOM_PORT_KEY, default=None)
+            if dom is None:
+                return
+            trigger_el = dom.get_element_by_id(trigger_id)
+            if trigger_el is None:
+                trigger_el = trigger_ref[0]
+            if trigger_el is None or not hasattr(trigger_el, "getBoundingClientRect"):
+                return
+            rect = trigger_el.getBoundingClientRect()
+            bottom = float(rect.bottom)
+            if align == "end":
+                right = float(rect.right)
+                style = f"top: {bottom}px; right: calc(100vw - {right}px); left: auto;"
+            else:
+                left = float(rect.left)
+                style = f"top: {bottom}px; left: {left}px; right: auto;"
+            menu_el = dom.get_element_by_id(menu_id)
+            if menu_el is None:
+                menu_el = menu_ref[0]
+            if menu_el is not None and hasattr(menu_el, "setAttribute"):
+                menu_el.setAttribute("style", style)
+        except Exception:
+            pass
 
     def _setup_outside() -> None:
         _clear()
@@ -168,6 +207,20 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
                     pass
 
         cleanups.append(dom.add_document_event_listener("keydown", _esc))
+
+        # Anchor the open menu to the trigger and keep it anchored.
+        # The scroll listener uses the capture phase so scrolling inside
+        # inner scrollable containers is observed as well. The macro
+        # task re-measures after the menu node has mounted.
+        _measure_anchor()
+        try:
+            host = inject(HOST_PORT_KEY, default=None)
+            if host is not None:
+                host.schedule_macro_task(_measure_anchor)
+                cleanups.append(host.add_window_event_listener("resize", lambda _ev: _measure_anchor()))
+        except Exception:
+            pass
+        cleanups.append(dom.add_document_event_listener("scroll", lambda _ev: _measure_anchor(), capture=True))
 
     def _on_open_change(new_val: bool) -> None:
         if new_val:

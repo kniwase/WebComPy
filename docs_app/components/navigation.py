@@ -112,6 +112,7 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
                         "class_trigger": "navbar-dropdown-toggle",
                         "class_menu": "navbar-dropdown",
                         "render_closed": True,
+                        "align": "end",
                     },
                     slots={
                         "trigger": lambda idx=idx: html.SPAN({}, page["title"]),

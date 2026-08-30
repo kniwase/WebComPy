@@ -76,10 +76,6 @@
 }
 
 .navbar-dropdown {
-  position: fixed;
-  top: calc(var(--space-3) * 2 + 2.5rem + 1px);
-  left: auto;
-  right: max(var(--space-5), calc((100vw - 1200px) / 2 + var(--space-5)));
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -117,9 +113,6 @@
   }
 
   .navbar-dropdown {
-    left: 0;
-    right: 0;
-    width: auto;
     border: none;
     border-radius: 0;
     box-shadow: none;
