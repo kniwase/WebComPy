@@ -8,7 +8,7 @@ Grounded facts (verified in codebase):
 
 - DI provide/inject with app-scoped managers and composable accessors is the established state-sharing pattern (theme).
 - Cookie read/write ports exist for both browser (`COOKIE_PORT_KEY`) and SSR (header parsing helper).
-- Template interpolations track signal dependencies automatically; a function reading a Signal inside an interpolation registers the dependency.
+- Template interpolations track signal dependencies only when a Signal appears as an expression value; a plain function that reads a Signal internally (returning a non-Signal) is NOT tracked at bind time. `t()` falls in this second category, so D2 requires a small interpolation-binder enhancement (D8) to become reactive.
 - `webcompy.i18n` does not exist; `ui/` holds visual toolkit concerns, so i18n ships as its own top-level package (core infrastructure, not UI).
 
 ## Goals / Non-Goals
@@ -31,9 +31,13 @@ Grounded facts (verified in codebase):
 
 `I18nManager` is provided in the app DI scope under an i18n key; `use_i18n()` injects it (raising `LookupError` when absent, matching `use_theme`) and returns `(locale, t, controller)`. The manager holds catalogs, fallback locale, and the `locale: Signal[str]`. Rationale: identical lifecycle/scope semantics to the theme system — per-app state, SSR-safe, testable with the testing scope helpers. Alternative (module-global registry) rejected: violates the no-new-globals invariant.
 
-### D2: Reactivity for free — t() reads locale.value
+### D2: Reactive translation via t() reading locale.value
 
-`t(key, **params)` resolves the catalog for `locale.value` at call time. Because template interpolations (`{{ t("nav.home") }}`) track any Signal read during evaluation, every translation automatically depends on the locale signal; switching locale re-renders all translations through the existing reactive graph. No subscription registry, no special template support. This is the central simplicity argument: the signal system already solves "re-render when locale changes" once `t` touches the signal.
+`t(key, **params)` resolves the catalog for `locale.value` at call time, so every translation reads the locale signal. Because the interpolation binder tracks *any* signal read during expression evaluation once D8 lands — not just signals appearing as expression values — template interpolations (`{{ t("nav.home") }}`) register a dependency on the locale signal through the existing reactive graph; switching locale re-renders all translations. No subscription registry and no per-key reactive wrapper are needed.
+
+### D8: Interpolation tracks signal reads inside called functions
+
+The interpolation binder's eager evaluation pass installs a transient probe consumer (a bare `SignalNode`) while evaluating the expression, then tears it down. If any producer edge was created during evaluation — including reads inside called functions like `t()` — the binder marks the interpolation reactive and wraps it in a `Computed`, exactly as it already does for signals that appear as expression values. Expressions that read no signal are unchanged. Rationale: `Computed` re-evaluation already runs with the computed node as the active consumer, so internal reads are tracked correctly there; this change only fixes the initial "is this expression reactive?" decision.
 
 ### D3: Catalog format — nested dicts, dot-path keys, CLDR plural dicts
 
@@ -61,3 +65,4 @@ i18n is core application infrastructure (like router, forms), not a visual toolk
 - **Accept-Language parsing edge cases**: malformed headers fall back to default; q-value sorting implemented conservatively with tests.
 - **SSR/browser locale mismatch**: if the cookie changes between SSR and hydration (rare), the client locale wins post-hydration; the manager is seeded from SSR resolution to keep first paint consistent.
 - **Plural category correctness**: the minimal table must be right for the locales it claims; each entry is data-tested against known CLDR examples (e.g. ru few/many boundaries, ar categories).
+- **Template engine regression surface**: the D8 probe touches every interpolation bind path (text, attributes, markdown `for`). The full `test_template_*` and `test_markdown_*` suites must pass unchanged.

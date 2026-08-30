@@ -1,5 +1,10 @@
 # Tasks: feat-i18n
 
+## 0. Template interpolation reactive tracking
+
+- [ ] 0.1 Extend `webcompy/template/_expression.py` `evaluate()` so that when a `_EvalState` is supplied, expression evaluation runs under a transient probe consumer; set `state.saw_signal = True` when any producer edge was created, and tear the probe down (no leaks) afterward
+- [ ] 0.2 Add unit tests: an interpolation `{{ f() }}` where `f` reads a Signal re-renders on change; an interpolation where the function reads no Signal stays static
+
 ## 1. Core manager and composable
 
 - [ ] 1.1 Create `packages/webcompy/src/webcompy/i18n/` package: `I18nManager` (locale `Signal[str]`, catalogs, fallback locale, `t` implementation, `set_locale`), DI key, and app-level wiring following the ThemeManager pattern
@@ -26,7 +31,7 @@
 - [ ] 5.1 Manager/composable: provided manager returns (locale, t, controller); missing manager raises lookup error
 - [ ] 5.2 Catalog resolution: dot-path nesting, interpolation incl. missing-param literal rendering, fallback chain (region→language→fallback→key)
 - [ ] 5.3 Pluralization: en one/other via dict and pipe shorthand; ru/ar boundary cases from the built-in table; unknown-locale fallback warning
-- [ ] 5.4 Reactivity: locale switch updates `t` results through signal tracking (TestRenderer render assertion)
+- [ ] 5.4 Reactivity: locale switch updates `t` results through signal tracking (TestRenderer render assertion; relies on task 0.1)
 - [ ] 5.5 Resolution/persistence: cookie read/write via fake cookie port; SSR header resolution order (cookie beats Accept-Language; q-value sorting; default fallback)
 
 ## 6. Docs and dogfooding
@@ -38,4 +43,4 @@
 
 - [ ] 7.1 `uv run ruff check .` and `uv run ruff format --check .` pass
 - [ ] 7.2 `uv run pyright` passes
-- [ ] 7.3 `uv run python -m pytest tests/ --tb=short` passes
+- [ ] 7.3 `uv run python -m pytest tests/ --tb=short` passes (includes the full `test_template_*` / `test_markdown_*` regression suites for task 0)
