@@ -23,7 +23,7 @@
 
 ## 5. Offline fallback
 
-- [ ] 5.1 Embed the default minimal offline page in the worker template; support override by user path (override file added to the precache manifest); worker navigation-fallback wiring covered by generator tests
+- [x] 5.1 Embed the default minimal offline page in the worker template; support override by user path (override file added to the precache manifest); worker navigation-fallback wiring covered by generator tests
 
 ## 6. Tests
 

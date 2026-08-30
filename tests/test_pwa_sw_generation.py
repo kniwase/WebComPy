@@ -220,6 +220,29 @@ class TestGenerateSW:
         assert "</script>" not in sw
 
 
+class TestServiceWorkerSourceValidity:
+    def test_generated_worker_is_valid_javascript(self, tmp_path):
+        import shutil
+        import subprocess
+
+        node = shutil.which("node")
+        if node is None:
+            pytest.skip("node executable not available")
+        pwa = _pwa(
+            runtime=[
+                RuntimeCachingRule(pattern="/api/", strategy="network-first", max_entries=5, max_age=30),
+                RuntimeCachingRule(pattern="static/**", strategy="cache-first"),
+                RuntimeCachingRule(pattern="*.svg", strategy="stale-while-revalidate"),
+            ],
+            fallback_path="offline.html",
+        )
+        sw = generate_sw(pwa, "1.0.0", ["./", "index.html", "offline.html", "https://cdn.example/core.js"])
+        target = tmp_path / "sw.js"
+        target.write_text(sw, encoding="utf-8")
+        result = subprocess.run([node, "--check", str(target)], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+
+
 def _make_app(base_url: str = "/"):
     from webcompy.app import WebComPyApp, WebComPyAppConfig
 
