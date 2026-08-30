@@ -4,16 +4,16 @@
 
 ### Requirement: Tabs shall implement the tablist accessibility contract
 
-The headless Tabs SHALL render `role="tablist"` containing `role="tab"` elements, each with `aria-selected` and `aria-controls` referencing its `role="tabpanel"`. The active tab state SHALL be reactive (prop-driven) with a change callback. Inactive panels SHALL be hidden but remain rendered, preserving their internal state across switches. Tabs and panels SHALL expose `data-state="active" | "inactive"` on tab elements.
+The headless Tabs SHALL render `role="tablist"` containing `role="tab"` elements, each with `aria-selected` and `aria-controls` referencing its `role="tabpanel"`. The active tab state SHALL be reactive (prop-driven) with a change callback. Only the active panel SHALL be mounted; inactive panels SHALL NOT be rendered, so panel-internal state is not preserved across switches (applications that need persistence hoist the state above the Tabs component). Tabs SHALL expose `data-state="active" | "inactive"` on tab elements, and the mounted panel SHALL expose `data-state="active"`.
 
-#### Scenario: Panel state survives tab switches
+#### Scenario: Panel switching mounts and unmounts
 
-- **WHEN** a user switches from tab A (containing a form input with entered text) to tab B and back to tab A
-- **THEN** the input SHALL retain the entered text because panel A remained rendered (hidden) while inactive
+- **WHEN** a user switches from tab A to tab B
+- **THEN** panel A SHALL be removed from the document (through its leave handling when animated) and panel B SHALL be mounted as the only rendered panel
 
 ### Requirement: Tabs shall provide arrow-key navigation with automatic activation
 
-While focus is within the tablist, Left/Right arrows SHALL move focus to the previous/next tab with wrapping and SHALL activate it (automatic activation); Home/End SHALL jump to the first/last tab. Activation SHALL update the reactive active state and the visible panel.
+While focus is within the tablist, Left/Right arrows SHALL move focus to the previous/next tab with wrapping and SHALL activate it (automatic activation); Home/End SHALL jump to the first/last tab. Activation SHALL update the reactive active state and the visible panel. The active tab SHALL carry `tabindex="0"` and inactive tabs `tabindex="-1"` (roving tabindex).
 
 #### Scenario: Arrow navigation wraps and activates
 
@@ -29,9 +29,19 @@ Panel switching SHALL optionally animate through the Transition capability using
 - **WHEN** a themed Tabs with animation enabled switches panels in the browser
 - **THEN** the incoming panel content SHALL pass through the configured enter class sequence
 
+### Requirement: Tabs and Collapse shall generate per-instance hydration-stable DOM ids
+
+The Tabs and Collapse SHALL derive their generated DOM ids (tablist, tab, panel, trigger, content) from the component instance's hydration-stable transfer id (sanitized for HTML id use), not from a name-only hash. Ids SHALL be unique among the instances rendered on a page and identical between the server-rendered output and the hydrated client tree, so `aria-controls` and `aria-labelledby` references resolve to the correct instance.
+
+#### Scenario: Two tabs groups on one page have distinct ids
+
+- **WHEN** two Tabs components render on the same page
+- **THEN** their tab and panel elements SHALL have different `id` attribute values
+- **AND** each tab's `aria-controls` SHALL reference its own panel's id
+
 ### Requirement: Collapse shall provide an accessible animated disclosure
 
-The headless Collapse SHALL render a trigger with `aria-expanded` and `aria-controls` and a content region that expands/collapses when the trigger activates. Expand/collapse SHALL animate through the Transition capability (themed default uses a natural-height CSS technique without measurement); animation SHALL be disable-able. Trigger and content SHALL expose `data-state="open" | "closed"`. The open state SHALL be reactive with a change callback.
+The headless Collapse SHALL render a trigger with `aria-expanded` and `aria-controls` and a content region that expands/collapses when the trigger activates. Expand/collapse SHALL animate through the Transition capability (themed default uses a natural-height CSS technique without measurement); animation SHALL be disable-able. The trigger SHALL expose `data-state="open" | "closed"`; the content element SHALL expose `data-state="open"` while it is mounted (including during its leave sequence) and is removed from the DOM once closed. The open state SHALL be reactive with a change callback.
 
 #### Scenario: Trigger toggles content with state exposure
 
@@ -49,7 +59,7 @@ The Accordion SHALL compose multiple Collapse items under a shared open-state an
 
 ### Requirement: Alert shall map variants to announcement roles
 
-The headless Alert SHALL render inline feedback with variant semantics: error and warning variants SHALL use `role="alert"`, info and success variants SHALL use `role="status"`. An accessible message SHALL be announced according to the role's politeness. A dismiss action SHALL be available by prop with an accessible button.
+The headless Alert SHALL render inline feedback with variant semantics: error and warning variants SHALL use `role="alert"`, info and success variants SHALL use `role="status"`. An accessible message SHALL be announced according to the role's politeness. A dismiss action SHALL be available by prop with an accessible button. Dismissing SHALL hide the alert (the root carries the boolean `hidden` attribute, removing it from the accessibility tree) and invoke the optional dismiss callback.
 
 #### Scenario: Error alert announces assertively
 
