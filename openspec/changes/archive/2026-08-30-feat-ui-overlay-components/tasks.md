@@ -69,6 +69,6 @@
 
 ## 11. Spec sync, governance and archive
 
-- [ ] 11.1 Sync delta specs to `openspec/specs/ui-overlay/spec.md`
-- [ ] 11.2 Add `ui-overlay` rows to AGENTS.md (File → Spec Mapping, Current Specs) and the review skill invariant list
+- [x] 11.1 Sync delta specs to `openspec/specs/ui-overlay/spec.md`
+- [x] 11.2 Add `ui-overlay` rows to AGENTS.md (File → Spec Mapping, Current Specs) and the review skill invariant list
 - [ ] 11.3 `python3 scripts/check-doc-spec-refs.py` passes; re-archive the change and push
