@@ -18,8 +18,8 @@
 
 ## 4. Registration and dev-mode safety
 
-- [ ] 4.1 Inject the registration script in the document builder (base-URL scope, load-time registration) when enabled; verify scope correctness under prefixed/embedded deployments
-- [ ] 4.2 Ensure dev mode generates/registers nothing by default and explicit enablement works (unit-level verification via the ASGI app)
+- [x] 4.1 Inject the registration script in the document builder (base-URL scope, load-time registration) when enabled; verify scope correctness under prefixed/embedded deployments
+- [x] 4.2 Ensure dev mode generates/registers nothing by default and explicit enablement works (unit-level verification via the ASGI app)
 
 ## 5. Offline fallback
 

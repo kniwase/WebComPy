@@ -674,6 +674,17 @@ async def _generate_html_impl(
                 ),
             )
         )
+    if pwa_enabled:
+        sw_url = f"{base_url}sw.js"
+        registration_script = " ".join(
+            (
+                'if ("serviceWorker" in navigator) {',
+                'window.addEventListener("load", function () {',
+                f"navigator.serviceWorker.register({json.dumps(sw_url)}, {{ scope: {json.dumps(base_url)} }});",
+                "});}",
+            )
+        )
+        scripts_body.append(({"type": "text/javascript"}, registration_script))
 
     assert ctx._root is not None
     custom_template = _resolve_loading_template(loading_config["template"], app_package_path)

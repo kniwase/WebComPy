@@ -44,3 +44,21 @@ class TestManifestLinkInjection:
     def test_pwa_enabled_defaults_false(self):
         html_str = _render(pwa_enabled=False)
         assert 'rel="manifest"' not in html_str
+
+
+class TestRegistrationScriptInjection:
+    def test_absent_by_default(self):
+        html_str = _render()
+        assert "serviceWorker" not in html_str
+
+    def test_present_when_enabled(self):
+        html_str = _render(pwa_enabled=True)
+        assert 'navigator.serviceWorker.register("/sw.js", { scope: "/" })' in html_str
+
+    def test_prefixed_scope(self):
+        html_str = _render(base_url="/pwa/", pwa_enabled=True)
+        assert 'navigator.serviceWorker.register("/pwa/sw.js", { scope: "/pwa/" })' in html_str
+
+    def test_script_is_in_body(self):
+        html_str = _render(pwa_enabled=True)
+        assert "serviceWorker" in html_str.split("</head>")[1]
