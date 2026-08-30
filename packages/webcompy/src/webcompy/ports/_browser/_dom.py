@@ -45,12 +45,14 @@ class BrowserDOMPort(DOMPort):
     def set_title(self, title: str) -> None:
         self._browser.document.title = title
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         proxy = self._browser.pyscript.ffi.create_proxy(handler)
-        self._browser.document.addEventListener(event_type, proxy)
+        self._browser.document.addEventListener(event_type, proxy, capture)
 
         def _remove() -> None:
-            self._browser.document.removeEventListener(event_type, proxy)
+            self._browser.document.removeEventListener(event_type, proxy, capture)
             if hasattr(proxy, "destroy"):
                 proxy.destroy()
 

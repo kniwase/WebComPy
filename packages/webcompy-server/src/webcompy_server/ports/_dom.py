@@ -181,12 +181,16 @@ class ServerDOMPort(DOMPort):
         """
         pass
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Add a document-level event listener.
 
         Args:
             event_type: Event type.
             handler: Event handler.
+            capture: Ignored on the server; accepted for interface parity
+                with the browser port.
 
         Returns:
             Callable that removes the listener.

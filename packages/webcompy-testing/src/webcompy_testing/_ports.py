@@ -300,12 +300,16 @@ class FakeBrowserDOMPort(ServerDOMPort):
         """
         return _find_by_id(self._html, element_id)
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Register a document-level event listener.
 
         Args:
             event_type: Event type to listen for.
             handler: Callback invoked when the event is dispatched.
+            capture: Accepted for interface parity; the fake dispatches
+                to registered handlers regardless of event phase.
 
         Returns:
             A callable that removes the listener.

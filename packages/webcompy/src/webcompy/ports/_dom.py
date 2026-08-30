@@ -388,12 +388,17 @@ class DOMPort(ABC):
         ...
 
     @abstractmethod
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Register a document-level event listener via ``document.addEventListener``.
 
         Args:
             event_type: Event name (e.g. ``"click"``, ``"keydown"``).
             handler: Callback invoked when the event fires.
+            capture: Register the listener for the capture phase instead
+                of bubbling; capture listeners run before the target's
+                own handlers and observe clicks stopped during bubbling.
 
         Returns:
             A cleanup function; call it to remove the listener.

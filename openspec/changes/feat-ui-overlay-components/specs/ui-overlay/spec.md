@@ -58,7 +58,7 @@ The headless Dropdown SHALL render a trigger button with `aria-expanded`, `aria-
 
 ### Requirement: Dropdown shall close on outside interaction without toggle races
 
-A document-level listener SHALL close the Dropdown when the user clicks outside it; the trigger element SHALL be excluded from outside detection so that clicking the trigger toggles rather than immediately re-closes. The listener SHALL be registered on open and removed on close or unmount.
+A document-level listener SHALL close the Dropdown when the user clicks outside it. The listener SHALL be registered in the capture phase (via `DOMPort.add_document_event_listener` with `capture=True`) so sibling trigger activations — whose propagation the activating Dropdown stops — still close other open menus, and so the Dropdown's own trigger remains excluded from outside detection (clicking the trigger toggles rather than immediately re-closes). The listener SHALL be registered on open and removed on close or unmount.
 
 #### Scenario: Outside click closes the menu
 
@@ -69,6 +69,11 @@ A document-level listener SHALL close the Dropdown when the user clicks outside 
 
 - **WHEN** a Dropdown is open and the user clicks the trigger
 - **THEN** the menu SHALL close exactly once (toggle), not close-and-reopen
+
+#### Scenario: Activating a sibling dropdown closes the open menu
+
+- **WHEN** two Dropdowns are rendered and one is open, and the user clicks the other Dropdown's trigger
+- **THEN** the open menu SHALL close and the clicked trigger's menu SHALL open
 
 ### Requirement: Toast shall provide an imperative queue rendered in a live region
 

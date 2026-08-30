@@ -146,7 +146,7 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
             if on_close is not None:
                 on_close()
 
-        cleanups.append(dom.add_document_event_listener("click", _outside))
+        cleanups.append(dom.add_document_event_listener("click", _outside, capture=True))
 
         def _esc(event: Any) -> None:
             if not is_open():
