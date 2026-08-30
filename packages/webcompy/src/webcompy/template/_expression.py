@@ -9,6 +9,7 @@ from typing import Any
 
 from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase
+from webcompy.signal._graph import SignalNode, consumer_destroy, set_active_consumer
 
 
 @dataclass(frozen=True, eq=False)
@@ -168,14 +169,28 @@ def evaluate(
     scope: dict[str, Any],
     state: _EvalState | None = None,
 ) -> Any:
+    probe: SignalNode | None = None
+    prev_consumer: SignalNode | None = None
+    if state is not None:
+        probe = SignalNode()
+        prev_consumer = set_active_consumer(probe)
     try:
-        return _eval_node(plan.node.body, scope, state)
-    except WebComPyException:
-        raise
-    except KeyError:
-        raise
-    except Exception as e:
-        raise WebComPyException(f"Error evaluating template expression {plan.source!r}: {e}") from None
+        try:
+            result = _eval_node(plan.node.body, scope, state)
+            if probe is not None and state is not None and probe.producers is not None:
+                state.saw_signal = True
+            return result
+        except WebComPyException:
+            raise
+        except KeyError:
+            raise
+        except Exception as e:
+            raise WebComPyException(f"Error evaluating template expression {plan.source!r}: {e}") from None
+    finally:
+        if probe is not None:
+            set_active_consumer(prev_consumer)
+            if probe.producers is not None:
+                consumer_destroy(probe)
 
 
 def _unwrap(v: Any, state: _EvalState | None) -> Any:

@@ -2,8 +2,8 @@
 
 ## 0. Template interpolation reactive tracking
 
-- [ ] 0.1 Extend `webcompy/template/_expression.py` `evaluate()` so that when a `_EvalState` is supplied, expression evaluation runs under a transient probe consumer; set `state.saw_signal = True` when any producer edge was created, and tear the probe down (no leaks) afterward
-- [ ] 0.2 Add unit tests: an interpolation `{{ f() }}` where `f` reads a Signal re-renders on change; an interpolation where the function reads no Signal stays static
+- [x] 0.1 Extend `webcompy/template/_expression.py` `evaluate()` so that when a `_EvalState` is supplied, expression evaluation runs under a transient probe consumer; set `state.saw_signal = True` when any producer edge was created, and tear the probe down (no leaks) afterward
+- [x] 0.2 Add unit tests: an interpolation `{{ f() }}` where `f` reads a Signal re-renders on change; an interpolation where the function reads no Signal stays static
 
 ## 1. Core manager and composable
 
