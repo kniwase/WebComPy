@@ -2,19 +2,19 @@
 
 ## Why
 
-The second component family for the first-party UI toolkit covers disclosure and feedback patterns: tabs and collapsible sections (showing/hiding content regions), and status indicators (alerts, progress, badges, skeletons, cards). These appear in nearly every application, are cheap to get wrong accessibly (tab roles, expanded states, progressbar values, live announcements), and — under WebComPy's "no JavaScript" promise — cannot be sourced from a JS ecosystem library. Per the foundation architecture, each ships as a headless component (behavior, ARIA, keyboard) plus a themed component (token-based defaults). Tabs and Collapse additionally consume the Transition capability for animated panel switching and expand/collapse.
+The second component family for the first-party UI toolkit covers disclosure and feedback patterns: tabs and collapsible sections (showing/hiding content regions), and status indicators (alerts, progress, badges, skeletons, cards). These appear in nearly every application, are cheap to get wrong accessibly (tab roles, expanded states, progressbar values, live announcements), and — under WebComPy's "no JavaScript" promise — cannot be sourced from a JS ecosystem library. Per the foundation architecture, each ships as a headless component (behavior, ARIA, keyboard) plus a themed component (token-based defaults). Collapse/Accordion additionally consume the Transition capability for animated expand/collapse; Tabs switches instantly while preserving panel state (all panels stay mounted, inactive ones hidden).
 
 ## What Changes
 
 - Seven component pairs under the two-layer architecture (`webcompy.ui.headless` / `webcompy.ui.components`, themed re-exported at `webcompy.ui`):
-  - **Tabs**: `role="tablist"`/`tab`/`tabpanel` with `aria-selected` and `aria-controls`, arrow-key navigation (Left/Right with wrapping, Home/End), automatic activation, optional Transition on panel switch, reactive active-tab state.
+  - **Tabs**: `role="tablist"`/`tab`/`tabpanel` with `aria-selected` and `aria-controls`, arrow-key navigation (Left/Right with wrapping, Home/End), automatic activation with roving tabindex, reactive active-tab state, all panels stay mounted with inactive panels hidden via the boolean `hidden` attribute (state-preserving instant switching).
   - **Collapse**: disclosure trigger (`aria-expanded`, `aria-controls`) plus collapsible content with animated expand/collapse via Transition; **Accordion** composition of Collapse items with optional single-open policy.
   - **Alert**: inline feedback with variant semantics (info/success/warning/error), `role="alert"` for assertive variants and `role="status"` for polite ones, optional dismiss action.
   - **Progress**: `role="progressbar"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` for determinate state and an indeterminate mode with correct ARIA.
   - **Badge**: compact status label with variants.
   - **Skeleton**: loading placeholder marked decorative to assistive technology, with container-level labeling guidance.
   - **Card**: structural container (header/body/footer regions) promoted from the docs_app ad-hoc implementation.
-- Themed styles for all seven appended to `_styles/primitives.css` consuming design tokens; Collapse/Tabs use default transition class sets.
+- Themed styles for all seven appended to `_styles/primitives.css` consuming design tokens; Collapse (and the Accordion built from it) uses the default transition class set.
 
 ## Capabilities
 
@@ -39,6 +39,7 @@ The second component family for the first-party UI toolkit covers disclosure and
 
 ## Non-goals
 
+- Tabs panel-switch enter/leave animation — element *replacement* animation is outside the Transition capability's contract (same-tag children patch in place without a sequence); Tabs switching is instant in v1 and applications can layer their own CSS effects on `data-state` changes.
 - Vertical tab orientation and tab reordering/drag — horizontal tabs only in v1.
 - Nested accordions beyond one level (documented limitation).
 - Alert queues/toasts (covered by the Toast component in the overlay change).

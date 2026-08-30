@@ -4,12 +4,12 @@
 
 ### Requirement: Tabs shall implement the tablist accessibility contract
 
-The headless Tabs SHALL render `role="tablist"` containing `role="tab"` elements, each with `aria-selected` and `aria-controls` referencing its `role="tabpanel"`. The active tab state SHALL be reactive (prop-driven) with a change callback. Only the active panel SHALL be mounted; inactive panels SHALL NOT be rendered, so panel-internal state is not preserved across switches (applications that need persistence hoist the state above the Tabs component). Tabs SHALL expose `data-state="active" | "inactive"` on tab elements, and the mounted panel SHALL expose `data-state="active"`.
+The headless Tabs SHALL render `role="tablist"` containing `role="tab"` elements, each with `aria-selected` and `aria-controls` referencing its `role="tabpanel"`. The active tab state SHALL be reactive (prop-driven) with a change callback. All panels SHALL be rendered; inactive panels SHALL stay mounted and be hidden via the boolean `hidden` attribute, preserving their internal state across switches. Tabs and panels SHALL expose `data-state="active" | "inactive"` on tab and panel elements.
 
-#### Scenario: Panel switching mounts and unmounts
+#### Scenario: Panel state survives tab switches
 
-- **WHEN** a user switches from tab A to tab B
-- **THEN** panel A SHALL be removed from the document (through its leave handling when animated) and panel B SHALL be mounted as the only rendered panel
+- **WHEN** a user switches from tab A (containing a form input with entered text) to tab B and back to tab A
+- **THEN** the input SHALL retain the entered text because panel A remained rendered (hidden) while inactive
 
 ### Requirement: Tabs shall provide arrow-key navigation with automatic activation
 
@@ -19,15 +19,6 @@ While focus is within the tablist, Left/Right arrows SHALL move focus to the pre
 
 - **WHEN** focus is on the last of three tabs and the user presses Right Arrow
 - **THEN** focus SHALL move to the first tab and the first tab SHALL become active
-
-### Requirement: Tab panel switching shall support transition animation
-
-Panel switching SHALL optionally animate through the Transition capability using a default themed class set; animation SHALL be disable-able by prop. When disabled or outside the browser, switching SHALL be instant.
-
-#### Scenario: Animated switch uses transition classes
-
-- **WHEN** a themed Tabs with animation enabled switches panels in the browser
-- **THEN** the incoming panel content SHALL pass through the configured enter class sequence
 
 ### Requirement: Tabs and Collapse shall generate per-instance hydration-stable DOM ids
 

@@ -2,12 +2,12 @@
 
 ## Context
 
-Second component family on the `ui-primitives` foundation. Tabs and Collapse consume the `transition` capability for animated state changes; the remaining components (Alert, Progress, Badge, Skeleton, Card) are static or near-static and need only the foundation contracts. No Teleport dependency — all components render in place.
+Second component family on the `ui-primitives` foundation. Collapse and the Accordion built from it consume the `transition` capability for animated expand/collapse; Tabs switches instantly while keeping panels mounted (see D2), and the remaining components (Alert, Progress, Badge, Skeleton, Card) are static or near-static and need only the foundation contracts. No Teleport dependency — all components render in place.
 
 Grounded facts (verified in codebase):
 
 - docs_app already has an ad-hoc `DocsCard` (`docs_app/components/ui.py:19-38`, scoped styles at `:120`) to promote; its scoped-style pattern shows the token-consuming style shape the themed layer standardizes.
-- Function-style components with `TypedDict` props and reactive prop values are the established pattern, and every component is a named custom element (`@define_component(custom_element_name=...)`; single-word names cannot be derived because custom-element tags must contain a hyphen). The Transition element (preceding change) accepts a child generator, which Collapse/Tabs use for animated content switching.
+- Function-style components with `TypedDict` props and reactive prop values are the established pattern, and every component is a named custom element (`@define_component(custom_element_name=...)`; single-word names cannot be derived because custom-element tags must contain a hyphen). The Transition element (preceding change) accepts a child generator, which Collapse uses for animated expand/collapse.
 - `primitives.css` (introduced by the foundation change and extended by the overlay change) is the delivery point for themed rules inside `@layer components`.
 
 ## Goals / Non-Goals
@@ -15,12 +15,12 @@ Grounded facts (verified in codebase):
 **Goals:**
 
 - Seven headless/themed pairs (Tabs, Collapse/Accordion, Alert, Progress, Badge, Skeleton, Card) with correct ARIA contracts and keyboard behavior.
-- Transition integration for tab panel switching and collapse expand/collapse.
+- Transition integration for collapse/expand animation (Collapse, and the Accordion composed from it). Tabs switches instantly with state-preserving hidden panels (D2).
 - Consistent `data-state` vocabularies and class pass-through per the foundation contract.
 
 **Non-Goals:**
 
-- Vertical tabs, nested accordions beyond one level, alert queues, advanced skeleton variants, content lazy-loading (see proposal Non-goals).
+- Vertical tabs, nested accordions beyond one level, alert queues, advanced skeleton variants, content lazy-loading, and Tabs panel-switch animation (see proposal Non-goals).
 
 ## Decisions
 
@@ -28,9 +28,14 @@ Grounded facts (verified in codebase):
 
 Keyboard model follows the WAI-ARIA APG tab pattern with automatic activation: Left/Right arrows move focus and activate the adjacent tab (wrapping), Home/End jump to first/last. Rationale for automatic over manual activation: WebComPy panels are local DOM with no fetch-on-activate cost, which is precisely the case the APG recommends automatic activation for. Each tab carries `role="tab"`, `aria-selected`, `aria-controls`; panels carry `role="tabpanel"` and are hidden when inactive.
 
-### D2: Tabs mount only the active panel
+### D2: Tabs render all panels, hide inactive ones
 
-The active panel is mounted and inactive panels are not rendered at all (the Radix Tabs model). Rationale: panel switching animates through the Transition capability, which drives enter/leave through child mount/unmount — a leaving node is removed through the standard removal path including callback-consumer destruction — so keeping inactive panels mounted cannot coexist with Transition-driven switching. Panel-internal state is therefore not preserved across switches; applications that need persistence hoist state above the Tabs component (tab state is exposed), which is the same guidance downstream UI kits document. The alternative (all panels rendered, hidden) was dropped because it conflicts with the Transition integration required by the panel-switching animation.
+All panels render and stay mounted; inactive panels are hidden with the boolean `hidden` attribute, preserving internal state (form inputs, scroll position, component lifecycle) across switches. Switching is instant. Rationale:
+
+- Instant activation with state preservation is the primary value of a local tab widget; it is exactly what the WAI-ARIA APG pattern and downstream kits optimize for.
+- Panel switching animates through element *replacement*, which is outside the Transition capability's contract: the transition spec patches same-tag children in place without running a class sequence, so a Transition-driven swap cannot be guaranteed to animate (two framework `div` panels are always same-tag; user content of equal type likewise patches). Rather than keep spec wording the framework cannot deliver, Tabs carries no switch animation in v1.
+
+Alternative (active-only mounting, the Radix model) rejected: it loses panel-internal state and buys no animation for the same reason. Applications that want a visual flourish can bind CSS animations to the panels' `data-state` changes themselves; this is documented as a non-goal.
 
 ### D3: Collapse animation via Transition with a CSS height technique
 
@@ -66,7 +71,7 @@ Card becomes a structural headless component (header/body/footer regions via chi
 
 ### D9: data-state vocabularies
 
-- Tabs: `data-state="active" | "inactive"` on tab elements; only the active panel is mounted and carries `data-state="active"`.
+- Tabs: `data-state="active" | "inactive"` on both tab and panel elements; inactive panels stay mounted and hidden.
 - Collapse/Accordion triggers: `data-state="open" | "closed"`; Collapse content carries `data-state="open"` while mounted (including its leave sequence).
 - Progress: `data-state="determinate" | "indeterminate"`.
 - Alert/Badge/Skeleton/Card: no interaction state (static vocabularies only, e.g. variant attributes).
@@ -85,7 +90,7 @@ Tabs and Collapse derive `aria-controls`/`aria-labelledby` ids from the instance
 
 ## Risks / Trade-offs
 
-- **Active-only panels** (D2): switching tabs unmounts the previous panel, so panel-internal DOM state (uncommitted form input, scroll position) is lost. Accepted as the price of Transition-driven switching; documented hoisting guidance.
+- **All-panels-rendered** (D2): every panel's content is created and mounted up front, so large panel sets pay full render cost immediately and content generators must not assume they run lazily on activation. Accepted for state preservation and the reliable instant switching it enables.
 - **Grid-rows technique support**: requires modern browsers (grid-template-rows animation). Acceptable for the PyScript-era baseline; fallback is instant show/hide (transition simply does not animate where unsupported — the duration resolution handles this with immediate finalization).
 - **Automatic activation** (D1): keyboard users traversing tabs switch panels at each step; with local panels this is the intended UX.
 - **Accordion nesting**: one level supported; deeper nesting is untested and documented as unsupported.
