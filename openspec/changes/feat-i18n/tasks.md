@@ -36,8 +36,8 @@
 
 ## 6. Docs and dogfooding
 
-- [ ] 6.1 Add a docs_app multilingual demo (EN/JA): locale switcher via `use_i18n`, interpolation and plural examples; link from docs navigation
-- [ ] 6.2 Document catalog format, plural rules (built-in table coverage, Babel adapter opt-in), fallback chain, and SSR resolution order in the docs guide
+- [x] 6.1 Add a docs_app multilingual demo (EN/JA): locale switcher via `use_i18n`, interpolation and plural examples; link from docs navigation
+- [x] 6.2 Document catalog format, plural rules (built-in table coverage, Babel adapter opt-in), fallback chain, and SSR resolution order in the docs guide
 
 ## 7. Validation
 

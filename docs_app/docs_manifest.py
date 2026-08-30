@@ -58,6 +58,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "source": "documents/readonly_signal.md",
             },
             {
+                "label": "Internationalization",
+                "path": "/documents/i18n",
+                "source": "documents/i18n.md",
+            },
+            {
                 "label": "Custom Elements",
                 "path": "/documents/custom-elements",
                 "source": "documents/custom_elements.md",
