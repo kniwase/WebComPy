@@ -51,5 +51,5 @@
 - [x] 8.2 `i18n/_manager.py`: remove `navigator.language` detection (`_browser_language`, `HOST_PORT_KEY` use); `_resolve_initial` = initial_locale → cookie → default; update docstrings
 - [x] 8.3 `tests/test_i18n.py`: replace Accept-Language tests with cookie-only contract tests (cookie wins, no cookie → default, unsupported cookie → default, Accept-Language ignored); add parity test using `ServerCookiePort`
 - [x] 8.4 `docs_app/documents/i18n.md`: update the resolution/persistence and SSR sections to the cookie-only model and note the deferred negotiation
-- [ ] 8.5 Add `e2e/docs/test_i18n.py` (guide renders; demo switch en→ja updates text) and register it in the `docs-documents` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`; update `test_readonly_signal.py` pager expectation for the inserted guide
+- [x] 8.5 Add `e2e/docs/test_i18n.py` (guide renders; demo switch en→ja updates text) and register it in the `docs-documents` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`; update `test_readonly_signal.py` pager expectation for the inserted guide
 - [ ] 8.6 Re-run validation: static checks, full `pytest tests/`, SSG generate, E2E `docs-documents` (both modes) then the full suite
