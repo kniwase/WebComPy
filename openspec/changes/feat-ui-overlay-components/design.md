@@ -87,6 +87,10 @@ The reworked navbar drops the hand-rolled positioning workaround (toggle-rect me
 - Menu positioning (mobile): the menu remains a fixed full-width strip directly below the navbar (flat borders, no shadow), overlaying the expanded mobile panel; the teleported menu can never sit in flow inside the panel.
 - Menu semantics: menu links carry `role="menuitem"` so the headless keyboard navigation (`[role="menuitem"]` lookup) operates on them.
 
+### D14: Dropdown static render mode (`render_closed`) for crawlable, SSR-visible menus
+
+The default Dropdown renders its menu conditionally (menu absent while closed), which erases closed-menu content from SSR output — the docs navbar's menu links (e.g. `/documents/…`, `/sample/…`) stopped being crawlable, regressing an explicit property protected by E2E. The headless and themed Dropdown therefore accept a `render_closed: bool` prop (default `False`, preserving the conditional + animated behavior): when enabled, the menu element is always rendered through Teleport without a Transition wrapper, and closedness is expressed as a reactive boolean `hidden` attribute (`True` → attribute present → UA `display: none`; `False` → removed — the framework's `_proc_attr` boolean semantics). Consequences: menu content is present in SSR HTML (crawlable), `aria-controls` never dangles, and closed menus are inert (display-none content is not focusable and keydown handling is guarded by `is_open()`). The docs navbar opts in; animated use cases keep the default.
+
 ## Risks / Trade-offs
 
 - **Focus trap edge cases**: elements becoming focusable/unfocusable while open are handled by query-at-trap-time; if the overlay contains no focusable element, the panel itself receives focus (`tabindex="-1"`). Specified as required behavior. `AUDIO`/`VIDEO` are considered focusable only when `controls` is present; otherwise they are skipped.

@@ -111,6 +111,7 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
                         "on_close": lambda idx=idx: _close_one(idx),
                         "class_trigger": "navbar-dropdown-toggle",
                         "class_menu": "navbar-dropdown",
+                        "render_closed": True,
                     },
                     slots={
                         "trigger": lambda idx=idx: html.SPAN({}, page["title"]),
@@ -227,7 +228,7 @@ DocsNavbar.scoped_style = {
     " .navbar-item-dropdown": {
         "position": "relative",
     },
-    " .navbar-list a,  .navbar-list button": {
+    " .navbar-list a": {
         "display": "block",
         "padding": "var(--space-2)",
         "text-decoration": "none",
@@ -237,44 +238,13 @@ DocsNavbar.scoped_style = {
         "cursor": "pointer",
         "border-radius": "var(--radius-sm)",
         "transition": "background-color 0.15s ease, color 0.15s ease",
-        "background": "none",
-        "border": "0",
-        "text-align": "left",
     },
-    " .navbar-list a:hover,  .navbar-list button:hover": {
+    " .navbar-list a:hover": {
         "background-color": "var(--color-bg-elevated)",
         "color": "var(--color-fg)",
     },
-    " .navbar-list a[aria-expanded='true'],  .navbar-list button[aria-expanded='true']": {
+    " .navbar-list a[aria-expanded='true']": {
         "background-color": "var(--color-bg-elevated)",
-    },
-    " .navbar-dropdown": {
-        "position": "fixed",
-        "top": "calc(var(--space-3) * 2 + 2.5rem + 1px)",
-        "left": "auto",
-        "right": "max(var(--space-5), calc((100vw - 1200px) / 2 + var(--space-5)))",
-        "background-color": "var(--color-bg)",
-        "border": "1px solid var(--color-border)",
-        "border-radius": "var(--radius-md)",
-        "min-width": "12rem",
-        "padding": "var(--space-2) 0",
-        "list-style": "none",
-        "z-index": "1000",
-        "box-shadow": "var(--shadow-md)",
-        "margin": "0",
-    },
-    " .navbar-dropdown a": {
-        "padding": "var(--space-2) var(--space-4)",
-        "font-size": "var(--font-size-sm)",
-        "border-radius": "0",
-    },
-    " .navbar-dropdown a:hover": {
-        "background-color": "var(--color-bg-elevated)",
-    },
-    " .navbar-dropdown hr": {
-        "margin": "var(--space-2) 0",
-        "border": "0",
-        "border-top": "1px solid var(--color-border)",
     },
     " @media (max-width: 768px)": {
         " .navbar-inner": {
@@ -312,19 +282,9 @@ DocsNavbar.scoped_style = {
         " .navbar-item,  .navbar-item-dropdown": {
             "width": "100%",
         },
-        " .navbar-list a,  .navbar-list button": {
+        " .navbar-list a": {
             "padding": "var(--space-3) 0",
             "border-radius": "0",
-        },
-        " .navbar-dropdown": {
-            "left": "0",
-            "right": "0",
-            "width": "auto",
-            "border": "none",
-            "border-radius": "0",
-            "box-shadow": "none",
-            "padding-left": "var(--space-4)",
-            "min-width": "auto",
         },
     },
 }

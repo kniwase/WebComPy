@@ -109,6 +109,16 @@ The Dropdown, Modal, and Drawer SHALL derive their generated DOM ids (trigger, m
 - **THEN** their trigger and menu elements SHALL have different `id` attribute values
 - **AND** each trigger's `aria-controls` SHALL reference its own menu
 
+### Requirement: Dropdown shall support a static render mode for SSR-visible menus
+
+The Dropdown SHALL accept a `render_closed` prop (default `False`). When enabled, the menu element SHALL stay in the DOM through Teleport even while closed — hidden via the boolean `hidden` attribute instead of conditional rendering, without enter/leave animation — so the menu content is present in server-rendered HTML (crawlable) and `aria-controls` references an in-DOM element at all times.
+
+#### Scenario: Closed menu content is present in server-rendered output
+
+- **WHEN** a page server-renders a Dropdown with `render_closed` enabled and the menu closed
+- **THEN** the menu's item links SHALL be present in the SSR HTML (inside the Teleport block, hidden)
+- **AND** after hydration the menu element SHALL remain in the DOM and hidden
+
 ### Requirement: Overlay components shall ship as headless/themed pairs per the foundation contract
 
 Each overlay component (Modal, Drawer, Dropdown, Toast host and items) SHALL exist as a headless component honoring the headless contract (behavior-only, `data-state`, class pass-through) and a themed component composing it with token-based defaults in the primitives stylesheet, re-exported at the `webcompy.ui` top level. Default open/close transition classes SHALL be provided by the themed layer; users SHALL be able to override them.

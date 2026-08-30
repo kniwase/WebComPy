@@ -19,6 +19,7 @@ class DropdownProps(TypedDict, total=False):
     class_name: str
     class_trigger: str
     class_menu: str
+    render_closed: bool
 
 
 def _compose_class(*parts: str) -> str:
@@ -52,5 +53,6 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
         "class_name": _compose_class("webcompy-dropdown", props.get("class_name", "")),
         "class_trigger": _compose_class("webcompy-dropdown-trigger", props.get("class_trigger", "")),
         "class_menu": _compose_class("webcompy-dropdown-menu", props.get("class_menu", "")),
+        "render_closed": bool(props.get("render_closed", False)),
     }
     return HeadlessDropdown(headless_props, slots=slots)  # type: ignore[call-arg, arg-type]

@@ -24,6 +24,7 @@ class DropdownProps(TypedDict, total=False):
     class_name: str
     class_trigger: str
     class_menu: str
+    render_closed: bool
 
 
 _FRAMEWORK_CLASS = "webcompy-headless-dropdown"
@@ -58,6 +59,7 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     class_name = props.get("class_name", "")
     class_trigger = props.get("class_trigger", "")
     class_menu = props.get("class_menu", "")
+    render_closed = bool(props.get("render_closed", False))
 
     trigger_id = overlay_dom_id("dropdown-trigger", context)
     menu_id = overlay_dom_id("dropdown-menu", context)
@@ -376,6 +378,14 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
     }
     if is_signal:
         menu_attrs["data-state"] = use_computed(lambda: "open" if bool(is_open_computed.value) else "closed")  # type: ignore[union-attr]
+    if render_closed:
+        # Static render mode: the menu always stays in the DOM (hidden
+        # while closed) so its content is present in SSR output and
+        # ``aria-controls`` never dangles. No enter/leave animation.
+        if is_signal:
+            menu_attrs["hidden"] = use_computed(lambda: not bool(is_open_computed.value))  # type: ignore[union-attr]
+        else:
+            menu_attrs["hidden"] = not bool(open_raw)
 
     m_content = context.slots("default", fallback=lambda: None)
     menu_inner: list[Any] = []
@@ -396,9 +406,11 @@ def Dropdown(context: ComponentContext[DropdownProps]) -> Any:
             return None
         return menu_el
 
-    if is_signal and transition_name:
+    if render_closed:
+        teleported: Any = Teleport({"to": "body"}, menu_el)
+    elif is_signal and transition_name:
         content: Any = Transition({"name": transition_name}, _child_gen)
-        teleported: Any = Teleport({"to": "body"}, content)
+        teleported = Teleport({"to": "body"}, content)
     elif is_signal and not transition_name:
         content2: Any = Transition({"name": "webcompy-headless-dropdown", "duration": 0}, _child_gen)
         teleported = Teleport({"to": "body"}, content2)
