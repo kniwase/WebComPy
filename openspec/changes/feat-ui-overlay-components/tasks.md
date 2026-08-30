@@ -48,3 +48,27 @@
 - [x] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
 - [x] 8.2 `uv run pyright` passes
 - [x] 8.3 `uv run python -m pytest tests/ --tb=short` passes
+
+## 9. Regression fixes from post-change verification
+
+- [x] 9.1 Reopen the change: revert the spec sync and archive commits so this change can absorb the verification findings
+- [ ] 9.2 D11: stop event propagation in the headless Dropdown trigger click handler (guarded for fake events)
+- [ ] 9.3 D12: expose the per-instance transfer id on the component context and derive Dropdown trigger/menu and Modal/Drawer panel/backdrop DOM ids from it (sanitized)
+- [ ] 9.4 D13: fix docs_app navbar — scoped styles cover the `<button>` trigger with a button reset, menu items carry `role="menuitem"`, desktop menu re-anchored (fixed, below navbar, right-aligned), mobile menu rendered as a static accordion section (drop `--nav-dropdown-*` dependency)
+- [ ] 9.5 Unit tests: trigger click does not reach a document-level listener; two Dropdown instances produce distinct trigger/menu ids and correct `aria-controls` pairing; Modal/Drawer instance ids differ across instances
+- [ ] 9.6 E2E: multi-instance Dropdown page — both dropdowns open/close independently, outside click closes, no cross-instance interference; docs navbar dropdown opens and closes on desktop and mobile viewports
+
+## 10. Re-validation
+
+- [ ] 10.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [ ] 10.2 `uv run pyright` passes
+- [ ] 10.3 `uv run python -m pytest tests/ --tb=short` passes
+- [ ] 10.4 `scripts/run-browser-tests.sh` passes (probes hard gate)
+- [ ] 10.5 `scripts/run-e2e-tests.sh` full suite passes (all groups, prod + static)
+- [ ] 10.6 `openspec validate` passes; visual navbar verification via `webcompy inspect` screenshots
+
+## 11. Spec sync, governance and archive
+
+- [ ] 11.1 Sync delta specs to `openspec/specs/ui-overlay/spec.md`
+- [ ] 11.2 Add `ui-overlay` rows to AGENTS.md (File → Spec Mapping, Current Specs) and the review skill invariant list
+- [ ] 11.3 `python3 scripts/check-doc-spec-refs.py` passes; re-archive the change and push

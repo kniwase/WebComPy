@@ -33,7 +33,12 @@ Overlay UI — modals, drawers, dropdown menus, toasts — is ubiquitous in real
 
 ## Known Issues Addressed
 
-(none)
+Regressions found while verifying the reworked docs_app navbar (kept inside this change):
+
+- **Navbar trigger visual degradation**: the headless Dropdown renders its trigger as a `<button>`, while the navbar's scoped styles only targeted `a` elements — browser-default button styling (background, padding, font weight) leaked through. Fixed by extending the navbar styles to cover the button trigger.
+- **Navbar dropdowns never open**: the headless trigger click handler does not stop event propagation, so the navbar's own document-level click listener immediately re-closed the menu. Fixed by stopping propagation on trigger activation.
+- **Duplicate instance DOM ids**: overlay components derived DOM ids from a name-only hash, so every instance on a page shared ids (`webcompy-dropdown-trigger-…`), breaking outside-click detection, keyboard focus return, and `aria-controls` for the second and later instances. Fixed by deriving ids from the hydration-stable per-instance transfer id.
+- **Navbar dropdown positioning lost**: the reworked navbar referenced `--nav-dropdown-top`/`--nav-dropdown-right` custom properties that were no longer computed. Fixed by re-anchoring the teleported menu under the navbar (fixed, right-aligned on desktop; static accordion inside the mobile panel).
 
 ## Non-goals
 

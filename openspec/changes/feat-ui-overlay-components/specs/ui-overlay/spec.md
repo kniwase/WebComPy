@@ -39,7 +39,7 @@ The headless Drawer SHALL render a panel sliding from a configurable edge (left,
 
 ### Requirement: Dropdown shall implement the menu button pattern
 
-The headless Dropdown SHALL render a trigger button with `aria-expanded`, `aria-haspopup="menu"`, and `aria-controls` referencing the menu, plus a menu with `role="menu"` whose items carry `role="menuitem"`. Activating the trigger SHALL toggle the menu; the menu SHALL render through Teleport + Transition and expose `data-state` on both trigger and menu. Keyboard behavior while open: ArrowDown/ArrowUp SHALL move focus among items with wrapping, Home/End SHALL jump to first/last, Escape SHALL close and return focus to the trigger, and Enter/Space SHALL activate the focused item and close.
+The headless Dropdown SHALL render a trigger button with `aria-expanded`, `aria-haspopup="menu"`, and `aria-controls` referencing the menu, plus a menu with `role="menu"` whose items carry `role="menuitem"`. Activating the trigger SHALL toggle the menu and SHALL stop propagation of the click event so application-level document listeners do not observe the activation (the Dropdown owns its toggle semantics). The menu SHALL render through Teleport + Transition and expose `data-state` on both trigger and menu. Keyboard behavior while open: ArrowDown/ArrowUp SHALL move focus among items with wrapping, Home/End SHALL jump to first/last, Escape SHALL close and return focus to the trigger, and Enter/Space SHALL activate the focused item and close.
 
 #### Scenario: Arrow key navigation
 
@@ -50,6 +50,11 @@ The headless Dropdown SHALL render a trigger button with `aria-expanded`, `aria-
 
 - **WHEN** a Dropdown is open and the user presses Escape
 - **THEN** the menu SHALL close and focus SHALL return to the trigger button
+
+#### Scenario: Trigger activation does not reach document listeners
+
+- **WHEN** the application registers a document-level click listener and the user clicks the trigger of a closed Dropdown
+- **THEN** the menu SHALL open and stay open (the click SHALL NOT propagate to document listeners that would close it)
 
 ### Requirement: Dropdown shall close on outside interaction without toggle races
 
@@ -88,6 +93,16 @@ Each toast SHALL auto-dismiss after its duration in seconds (default `3.0` unles
 
 - **WHEN** a component with pending toast timers is destroyed
 - **THEN** all pending timers SHALL be cancelled and SHALL NOT dismiss or error afterwards
+
+### Requirement: Overlay components shall generate per-instance, hydration-stable DOM ids
+
+The Dropdown, Modal, and Drawer SHALL derive their generated DOM ids (trigger, menu, panel, backdrop) from the component instance's hydration-stable transfer id (sanitized for HTML id use), not from a name-only hash. Ids SHALL be unique among the instances rendered on a page, and the ids present in the SSR output SHALL match the ids used by the hydrated client tree, so `aria-controls`, outside-click target resolution, keyboard focus return, and Escape lookups address the correct instance.
+
+#### Scenario: Two dropdowns on one page have distinct ids
+
+- **WHEN** a page renders two Dropdown components at the same time
+- **THEN** their trigger and menu elements SHALL have different `id` attribute values
+- **AND** each trigger's `aria-controls` SHALL reference its own menu
 
 ### Requirement: Overlay components shall ship as headless/themed pairs per the foundation contract
 

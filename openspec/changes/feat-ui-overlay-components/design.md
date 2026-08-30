@@ -68,6 +68,23 @@ These follow the foundation contract and give user CSS stable state hooks. The r
 
 `Context.__on_before_destroy` is changed from a single callable to a `list[Callable]` with LIFO insertion for composable helpers (`_register_before_destroy_chained` inserts at index 0). This guarantees overlay document listeners and toast timers are removed before user-registered `on_before_destroy` hooks, and multiple helpers (focus trap, escape, outside-click, timers) each register independently without overwriting. The public `on_before_destroy` API remains additive; `__get_lifecyclehooks__` exposes a combined wrapper that iterates the list.
 
+### D11: Dropdown trigger activation stops event propagation
+
+The headless Dropdown's trigger click handler (`_on_trigger_click`) SHALL stop propagation after toggling. Rationale (found by verification): the toggle mutates the `open` signal during the button's own handler; any application-level document `click` listener (e.g. a navbar "close all menus" handler) runs later in the same bubble phase and immediately re-closes the menu, so the dropdown can never open. The Dropdown's own outside-click exclusion (D4) already treats trigger clicks as "inside", so stopping propagation is behavior-neutral for the component itself and removes the dependence on document listeners running after an exclusion check. Other overlay components have no trigger element (they are opened by prop), so this applies to Dropdown only. The `stopPropagation` call is guarded (`hasattr`) because fake test events may not implement it.
+
+### D12: Overlay DOM ids are derived from the per-instance transfer id
+
+`generate_id(name)` is a hash of the component *name* — constant across instances — so the v1 overlays produced duplicate DOM ids whenever a page hosted two or more of the same overlay (`id="webcompy-dropdown-trigger-ad973c25"` twice on the docs navbar), silently breaking outside-click target resolution, keyboard focus return, Escape lookups, and `aria-controls` for the second and later instances. Dropdown, Modal, and Drawer SHALL derive their generated DOM ids (trigger, menu, panel, backdrop) from the component context's transfer id (`context._transfer_id`, exposed via a `transfer_id` property), sanitized for use in an HTML id (the `#` ordinal separator replaced with `-`). The transfer id is `{name-hash}#{ordinal}` with the ordinal assigned by the app render context's per-name counter (`_next_transfer_id`), which is the same mechanism the hydration value transfer relies on for server/browser identity — so ids are unique per instance within a page and identical between SSR output and the hydrated client tree. Environments without an app render context (bare test renderer) degrade to the name hash (ids may collide there), matching the framework-wide `transfer_id or generate_id(name)` fallback; uniqueness requirements are specified and tested where an app context is present. Toast does not generate DOM ids and is unaffected.
+
+### D13: docs_app navbar consumes the Dropdown component without the old measurement layer
+
+The reworked navbar drops the hand-rolled positioning workaround (toggle-rect measurement into `--nav-dropdown-top`/`--nav-dropdown-right`), which left the scoped styles referencing undefined custom properties. The navbar integration is fixed by design instead of by measurement:
+
+- Trigger styling: navbar scoped styles target both `.navbar-list a` and `.navbar-list button` (the Dropdown trigger is a `<button>`), with a button reset (background, border, text alignment, full-width in the mobile list) so no browser-default button styling leaks.
+- Menu positioning (desktop): the teleported menu is `position: fixed`, anchored to the top of the viewport just below the navbar and right-aligned to the page gutter. Per-toggle measurement is intentionally not reinstated: the two menus are mutually exclusive (opening one closes the other via each Dropdown's outside-click close), so a single shared anchor is visually equivalent without measurement code.
+- Menu positioning (mobile): the menu is `position: static` inside the expanded mobile panel — an in-flow accordion section rather than an overlay.
+- Menu semantics: menu links carry `role="menuitem"` so the headless keyboard navigation (`[role="menuitem"]` lookup) operates on them.
+
 ## Risks / Trade-offs
 
 - **Focus trap edge cases**: elements becoming focusable/unfocusable while open are handled by query-at-trap-time; if the overlay contains no focusable element, the panel itself receives focus (`tabindex="-1"`). Specified as required behavior. `AUDIO`/`VIDEO` are considered focusable only when `controls` is present; otherwise they are skipped.
@@ -76,3 +93,5 @@ These follow the foundation contract and give user CSS stable state hooks. The r
 - **Nested overlays**: LIFO focus return works for typical nesting; pathological interleaving is out of scope (documented).
 - **Toast timer leaks**: timers tracked per toast and cleared on dismiss/destroy; specified as a requirement, tested.
 - **Initial-open macro-task guard**: when `open=True` on mount, listener setup is deferred via `HostPort.schedule_macro_task`; a `destroyed` guard prevents registration after unmount racing the task.
+- **Trigger propagation change (D11)**: stopping propagation on trigger clicks means host document-level listeners no longer observe trigger clicks; hosts relying on observing every click must instead rely on the Dropdown's `on_close`/`open` contract. Accepted: observing trigger clicks from outside contradicts the component's own toggle ownership.
+- **Transfer-id-derived DOM ids (D12)**: ids depend on the app render context's ordinal counter; renders without an app context (bare test renderer) fall back to the name hash and may collide — the same fallback every hydration transfer id has. Renders inside Suspense probing skip ordinals (existing `_transfer_probe_depth` behavior), matching transfer-id semantics.
