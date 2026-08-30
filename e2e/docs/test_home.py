@@ -172,7 +172,11 @@ def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_cons
     trigger_box = dropdown_toggle.bounding_box()
     box = dropdown.bounding_box()
     assert box is not None and trigger_box is not None
-    assert box["x"] + box["width"] <= 600
+    # The menu spans the strip width: left edge at the strip padding,
+    # right edge on the trigger's right edge (anchored, full-width)
+    strip_padding = 24
+    assert abs(box["x"] - strip_padding) < 2
+    assert abs((box["x"] + box["width"]) - (trigger_box["x"] + trigger_box["width"])) < 2
     # The expanded strip stays visible and interactive above the menu
     home_link = docs_app_page.locator("li.navbar-item a").filter(has_text="Home")
     expect(home_link).to_be_visible()

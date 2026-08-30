@@ -129,6 +129,6 @@
     border-radius: 0;
     box-shadow: none;
     padding-left: var(--space-4);
-    min-width: auto;
+    min-width: calc(100vw - 2 * var(--space-5));
   }
 }
