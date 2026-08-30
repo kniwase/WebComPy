@@ -75,10 +75,10 @@
 
 ## 12. Anchor positioning (mobile navbar regression, round 2)
 
-- [ ] 12.1 Headless Dropdown measures the trigger rect while open (DOM port) and supplies anchor inline styles (`top`, `left`/`right` per `align`), re-measuring on document scroll and window resize via listeners registered only while open
-- [ ] 12.2 Themed Dropdown anchors by default (`positioning="anchor"`) with `align` and `positioning` props passed through; `primitives.css` updated for the anchored default
-- [ ] 12.3 docs_app navbar drops the fixed-anchor CSS (desktop and mobile `top`/`right` overrides) and adopts the anchored default
-- [ ] 12.4 Unit tests: anchor offsets on open, scroll/resize re-measurement, `positioning="none"` opt-out, SSR/no-measurement fallback
-- [ ] 12.5 E2E: mobile menu opens below the trigger with the strip visible (nested look), desktop menus stay right-aligned below the navbar
-- [ ] 12.6 Lint, type check, unit tests, browser tests, full E2E suite, and visual verification pass
+- [x] 12.1 Headless Dropdown measures the trigger rect while open (DOM port) and supplies anchor inline styles (`top`, `left`/`right` per `align`), re-measuring on document scroll and window resize via listeners registered only while open
+- [x] 12.2 Themed Dropdown anchors by default (`positioning="anchor"`) with `align` and `positioning` props passed through; `primitives.css` updated for the anchored default
+- [x] 12.3 docs_app navbar drops the fixed-anchor CSS (desktop and mobile `top`/`right` overrides) and adopts the anchored default
+- [x] 12.4 Unit tests: anchor offsets on open, scroll/resize re-measurement, `positioning="none"` opt-out, SSR/no-measurement fallback
+- [x] 12.5 E2E: mobile menu opens below the trigger with the strip visible (nested look), desktop menus stay right-aligned below the navbar
+- [x] 12.6 Lint, type check, unit tests, browser tests, full E2E suite, and visual verification pass
 - [ ] 12.7 Re-sync specs, governance references, re-archive, push
