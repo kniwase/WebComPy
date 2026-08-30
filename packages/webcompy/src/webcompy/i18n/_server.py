@@ -54,13 +54,14 @@ def read_locale_from_cookie(
     return None
 
 
-def _is_supported(locale: str, supported: set[str]) -> bool:
+def _match_supported(locale: str, supported: set[str]) -> str | None:
     lowered = locale.strip().lower()
-    for candidate in supported:
-        if candidate.lower() == lowered:
-            return True
+    exact = sorted(c for c in supported if c.lower() == lowered)
+    if exact:
+        return exact[0]
     language = lowered.split("-", 1)[0]
-    return any(candidate.lower().split("-", 1)[0] == language for candidate in supported)
+    matches = sorted(c for c in supported if c.lower().split("-", 1)[0] == language)
+    return matches[0] if matches else None
 
 
 def _accept_language_pref(headers: Mapping[str, str] | Sequence[tuple[str, str]] | None) -> str | None:
@@ -97,7 +98,9 @@ def resolve_locale(
     """Resolve the locale for a request from its headers.
 
     Resolution order: the locale cookie first, then the Accept-Language
-    header's highest-priority supported locale, then ``default_locale``.
+    header's highest-priority locale, then ``default_locale``. A matched
+    header entry is mapped back to a supported locale by exact tag or by
+    its language part.
 
     Args:
         headers: Request headers as a mapping or a sequence of
@@ -112,9 +115,11 @@ def resolve_locale(
     """
     supported = {loc.strip().lower() for loc in supported_locales if loc and loc.strip()}
     cookie_locale = read_locale_from_cookie(headers)
-    if cookie_locale is not None and _is_supported(cookie_locale, supported):
-        return cookie_locale
+    matched = _match_supported(cookie_locale, supported) if cookie_locale is not None else None
+    if matched is not None:
+        return matched
     accept_locale = _accept_language_pref(headers)
-    if accept_locale is not None and _is_supported(accept_locale, supported):
-        return accept_locale
+    matched = _match_supported(accept_locale, supported) if accept_locale is not None else None
+    if matched is not None:
+        return matched
     return default_locale
