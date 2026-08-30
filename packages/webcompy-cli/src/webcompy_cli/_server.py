@@ -200,6 +200,7 @@ def create_asgi_app(
     static_file_routes: list[Route] = []
     static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
     static_relative_paths = get_static_files(static_files_dir)
+    static_url_prefix = "/" + base_url.strip("/") if base_url.strip("/") else ""
     for relative_path in static_relative_paths:
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
@@ -211,6 +212,8 @@ def create_asgi_app(
             return Response(content, media_type=_media_type)
 
         static_file_routes.append(Route("/" + relative_path, send_file))
+        if static_url_prefix:
+            static_file_routes.append(Route(static_url_prefix + "/" + relative_path, send_file))
 
     resource_routes: list[Route] = []
     resource_allow_list = artifacts.resource_allow_list

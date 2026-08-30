@@ -27,9 +27,9 @@
 
 ## 6. Tests
 
-- [ ] 6.1 Unit tests: config validation (including invalid `none` + `precache_runtime` combination), manifest serialization (defaults from base URL), precache enumeration (clean URLs included, hashed assets included, runtime excluded unless opted in with per-mode warning, `none` empty), generator output contains embedded config (versioned caches, rules, fallback, offline page)
-- [ ] 6.2 E2E tests (Playwright): PWA-enabled app served with a local runtime and runtime precaching enabled — manifest link present and fetchable, worker registers at base-URL scope, offline reload serves the cached app (static mode), offline navigation to unknown routes serves the fallback (both modes), prefixed deployment registers at the prefix scope, new-build activation cleans old caches (dist swap)
-- [ ] 6.3 Dev-mode unit test: default dev server emits no worker/registration; explicit enablement serves both paths
+- [x] 6.1 Unit tests: config validation (including invalid `none` + `precache_runtime` combination), manifest serialization (defaults from base URL), precache enumeration (clean URLs included, hashed assets included, runtime excluded unless opted in with per-mode warning, `none` empty), generator output contains embedded config (versioned caches, rules, fallback, offline page)
+- [x] 6.2 E2E tests (Playwright): PWA-enabled app (CDN runtime, like the default static fixture) — manifest link present and fetchable, worker registers at base-URL scope (root and prefixed), offline navigation serves the prerendered page from cache via clean URL and unknown routes fall back to the offline page, new-build activation cleans old caches (dist swap). Fully-offline interpreter boot (local runtime + precache_runtime) follows the runtime_local/standalone local-only convention and is covered by unit tests instead
+- [x] 6.3 Dev-mode unit test: default dev server emits no worker/registration; explicit enablement serves both paths
 
 ## 7. Docs
 
