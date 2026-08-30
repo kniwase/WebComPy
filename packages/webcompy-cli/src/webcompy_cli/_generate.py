@@ -11,7 +11,13 @@ import httpx
 from webcompy.app._app import WebComPyApp
 from webcompy.router import LazyComponentGenerator
 from webcompy_cli._argparser import get_params
-from webcompy_cli._pwa import MANIFEST_FILENAME, serialize_manifest
+from webcompy_cli._pwa import (
+    MANIFEST_FILENAME,
+    SW_FILENAME,
+    generate_sw,
+    precache_entries_for_artifacts,
+    serialize_manifest,
+)
 from webcompy_cli._server import create_asgi_app
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
@@ -198,6 +204,11 @@ async def generate_static_site(app: WebComPyApp | None = None):
         manifest_path = dist_dir / MANIFEST_FILENAME
         manifest_path.write_text(serialize_manifest(build_config.pwa, app.config.base_url), encoding="utf-8")
         print(manifest_path)
+
+        precache = precache_entries_for_artifacts(build_config.pwa, artifacts, dist_dir=dist_dir)
+        sw_path = dist_dir / SW_FILENAME
+        sw_path.write_text(generate_sw(build_config.pwa, artifacts.app_version, precache), encoding="utf-8")
+        print(sw_path)
 
     print("done")
 

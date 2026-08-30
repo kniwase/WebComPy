@@ -12,9 +12,9 @@
 
 ## 3. Service Worker generation
 
-- [ ] 3.1 Author the framework-owned worker template (vanilla JS): resilient install-time precaching (per-entry fetch, `no-cors` for cross-origin, opaque accepted, failures logged without failing install), same-origin-only fetch dispatch for the three strategies with eviction into rule-isolated caches (max-entries/max-age), activate cleanup of old version caches, `skipWaiting`/`clientsClaim`, offline navigation fallback (embedded default page as a 200 response with `X-WebComPy-Offline` header; directory-index cache retry)
-- [ ] 3.2 Implement the build-time generator: embed serialized config (precache manifest, rules, fallback path, versioned cache names with config hash) into the template and emit `sw.js` into SSG output; serve the generated worker from the server with `Cache-Control: no-cache` in non-static mode
-- [ ] 3.3 Implement `precache="auto"` build-output enumeration (SSG pages + emitted assets, including clean URLs alongside each page's `index.html`; runtime files excluded regardless of serving mode), `precache="none"` (empty manifest), and the `precache_runtime` opt-in with per-mode size warning (local: summed bytes of runtime files; CDN: entry files only with an offline-startup caveat)
+- [x] 3.1 Author the framework-owned worker template (vanilla JS): resilient install-time precaching (per-entry fetch, `no-cors` for cross-origin, opaque accepted, failures logged without failing install), same-origin-only fetch dispatch for the three strategies with eviction into rule-isolated caches (max-entries/max-age), activate cleanup of old version caches, `skipWaiting`/`clientsClaim`, offline navigation fallback (embedded default page as a 200 response with `X-WebComPy-Offline` header; directory-index cache retry)
+- [x] 3.2 Implement the build-time generator: embed serialized config (precache manifest, rules, fallback path, versioned cache names with config hash) into the template and emit `sw.js` into SSG output; serve the generated worker from the server with `Cache-Control: no-cache` in non-static mode
+- [x] 3.3 Implement `precache="auto"` build-output enumeration (SSG pages + emitted assets, including clean URLs alongside each page's `index.html`; runtime files excluded regardless of serving mode), `precache="none"` (empty manifest), and the `precache_runtime` opt-in with per-mode size warning (local: summed bytes of runtime files; CDN: entry files only with an offline-startup caveat)
 
 ## 4. Registration and dev-mode safety
 

@@ -27,7 +27,16 @@ from webcompy.rpc._registry import ProcedureRegistry
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
 from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
-from webcompy_cli._pwa import MANIFEST_FILENAME, MANIFEST_MEDIA_TYPE, PWA_OUTPUT_NAMES, serialize_manifest
+from webcompy_cli._pwa import (
+    MANIFEST_FILENAME,
+    MANIFEST_MEDIA_TYPE,
+    PWA_OUTPUT_NAMES,
+    SW_FILENAME,
+    SW_MEDIA_TYPE,
+    generate_sw,
+    precache_entries_for_artifacts,
+    serialize_manifest,
+)
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
@@ -248,14 +257,21 @@ def create_asgi_app(
     pwa_routes: list[Route] = []
     if pwa_enabled:
         manifest_content = serialize_manifest(build_config.pwa, base_url).encode("utf-8")
+        precache = precache_entries_for_artifacts(build_config.pwa, artifacts)
+        sw_content = generate_sw(build_config.pwa, artifacts.app_version, precache).encode("utf-8")
         base_url_prefix = "/" + base_url.strip("/") if base_url.strip("/") else ""
 
         async def send_manifest(request: Request):
             return Response(manifest_content, media_type=MANIFEST_MEDIA_TYPE)
 
+        async def send_service_worker(request: Request):
+            return Response(sw_content, media_type=SW_MEDIA_TYPE, headers={"Cache-Control": "no-cache"})
+
         pwa_routes.append(Route(f"/{MANIFEST_FILENAME}", send_manifest))
+        pwa_routes.append(Route(f"/{SW_FILENAME}", send_service_worker))
         if base_url_prefix:
             pwa_routes.append(Route(f"{base_url_prefix}/{MANIFEST_FILENAME}", send_manifest))
+            pwa_routes.append(Route(f"{base_url_prefix}/{SW_FILENAME}", send_service_worker))
         collisions = sorted(PWA_OUTPUT_NAMES.intersection(static_relative_paths))
         if collisions:
             print(
