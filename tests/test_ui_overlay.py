@@ -16,6 +16,42 @@ def overlay_env(monkeypatch):
     monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
 
 
+def _find_all(node, predicate):
+    """Collect virtual descendants of ``node`` matching ``predicate``."""
+    from webcompy_server.ports import VirtualDOMNode
+
+    found = []
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if predicate(current):
+            found.append(current)
+        for i in range(current.childNodes.length - 1, -1, -1):
+            child = current.childNodes[i]
+            if isinstance(child, VirtualDOMNode):
+                stack.append(child)
+    return found
+
+
+class _FakeAppCtx:
+    """Minimal app context providing deterministic per-instance transfer ids."""
+
+    def __init__(self):
+        from webcompy.components._libs import generate_id
+
+        self._generate_id = generate_id
+        self._counters: dict[str, int] = {}
+        self._defer_depth = 0
+        self._deferred_callbacks: list = []
+        self._hydration_payload_closed = False
+        self._config = type("Config", (), {"on_error": staticmethod(lambda exc: None)})()
+
+    def _next_transfer_id(self, name):
+        ordinal = self._counters.get(name, 0)
+        self._counters[name] = ordinal + 1
+        return f"{self._generate_id(name)}#{ordinal}"
+
+
 class TestModal:
     """Modal 6.1: dialog semantics, focus, Escape, backdrop, listener cleanup."""
 
@@ -194,6 +230,33 @@ class TestModal:
             # It may have no listeners or only initial
             pass
 
+    def test_two_modals_have_distinct_panel_ids(self, overlay_env):
+        from webcompy.components._component import _active_app_context
+        from webcompy.ui.headless import Modal
+
+        app_ctx = _FakeAppCtx()
+
+        @define_component(custom_element_name="test-modal-dup-ids")
+        def Page(ctx):
+            return html.DIV(
+                {},
+                Modal({"open": True, "aria_label": "First", "transition_name": "webcompy-modal"}),
+                Modal({"open": True, "aria_label": "Second", "transition_name": "webcompy-modal"}),
+            )
+
+        token = _active_app_context.set(app_ctx)
+        try:
+            with TestRenderer.render(Page) as result:
+                panels = _find_all(
+                    result.body_node,
+                    lambda n: "webcompy-headless-modal-panel" in (n.getAttribute("class") or ""),
+                )
+                assert len(panels) == 2
+                panel_ids = [p.getAttribute("id") for p in panels]
+                assert panel_ids[0] != panel_ids[1]
+        finally:
+            _active_app_context.reset(token)
+
 
 class TestDrawer:
     """Drawer 6.2: edge prop, shared a11y contract."""
@@ -343,6 +406,85 @@ class TestDropdown:
             assert trigger is not None
             dom_port.dispatch_document_event("click", {"target": trigger})
             assert called == []
+
+    def test_trigger_click_stops_propagation(self, overlay_env):
+        from webcompy.ui.headless import Dropdown
+        from webcompy_server.ports._virtual_dom import VirtualDOMEvent
+
+        class _SpyEvent(VirtualDOMEvent):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.propagation_stopped = False
+
+            def stopPropagation(self):
+                super().stopPropagation()
+                self.propagation_stopped = True
+
+        sig = Signal(False)
+        bubbled: list[str] = []
+
+        @define_component(custom_element_name="test-dropdown-propagation")
+        def Page(ctx):
+            return Dropdown(
+                {"open": sig, "transition_name": "webcompy-dropdown"},
+                slots={"trigger": lambda: "Menu", "default": lambda: html.LI({"role": "menuitem"}, "Item")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            triggers = _find_all(
+                result._root_node,
+                lambda n: n.nodeName == "BUTTON" and n.getAttribute("aria-haspopup") == "menu",
+            )
+            assert len(triggers) == 1
+            result._root_node.addEventListener("click", lambda _ev: bubbled.append("root"))
+            event = _SpyEvent("click", bubbles=True, cancelable=True)
+            triggers[0].dispatchEvent(event)
+            assert sig.value is True
+            assert event.propagation_stopped is True
+            assert bubbled == []
+
+    def test_two_dropdowns_have_distinct_ids(self, overlay_env):
+        from webcompy.components._component import _active_app_context
+        from webcompy.ui.headless import Dropdown
+
+        app_ctx = _FakeAppCtx()
+
+        @define_component(custom_element_name="test-dropdown-dup-ids")
+        def Page(ctx):
+            return html.DIV(
+                {},
+                Dropdown(
+                    {"open": True, "transition_name": "webcompy-dropdown"},
+                    slots={"trigger": lambda: "First", "default": lambda: html.LI({"role": "menuitem"}, "A")},
+                ),
+                Dropdown(
+                    {"open": True, "transition_name": "webcompy-dropdown"},
+                    slots={"trigger": lambda: "Second", "default": lambda: html.LI({"role": "menuitem"}, "B")},
+                ),
+            )
+
+        token = _active_app_context.set(app_ctx)
+        try:
+            with TestRenderer.render(Page) as result:
+                triggers = _find_all(
+                    result._root_node,
+                    lambda n: n.nodeName == "BUTTON" and n.getAttribute("aria-haspopup") == "menu",
+                )
+                assert len(triggers) == 2
+                trigger_ids = [t.getAttribute("id") for t in triggers]
+                controls = [t.getAttribute("aria-controls") for t in triggers]
+                assert trigger_ids[0] != trigger_ids[1]
+                assert controls[0] != controls[1]
+                menus = _find_all(
+                    result.body_node,
+                    lambda n: n.getAttribute("role") == "menu",
+                )
+                assert len(menus) == 2
+                menu_ids = [m.getAttribute("id") for m in menus]
+                assert menu_ids[0] != menu_ids[1]
+                assert set(menu_ids) == set(controls)
+        finally:
+            _active_app_context.reset(token)
 
     def test_enter_space_activates_via_keydown(self, overlay_env):
         from webcompy.ui.headless import Dropdown
