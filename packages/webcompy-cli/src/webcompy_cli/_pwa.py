@@ -429,8 +429,18 @@ def precache_entries_for_artifacts(
     )
 
 
+def _normalize_pattern(pattern: str) -> str:
+    if pattern.startswith("/"):
+        return pattern
+    return "/" + pattern
+
+
 def generate_sw(pwa: PWAConfig, app_version: str, precache_entries: list[str]) -> str:
     """Generate the framework-owned Service Worker with the build config embedded.
+
+    Runtime rule patterns are normalized to start with a slash so patterns
+    written without the leading slash match the scope-relative request
+    paths the worker compares against.
 
     Args:
         pwa: Validated PWA configuration.
@@ -443,7 +453,7 @@ def generate_sw(pwa: PWAConfig, app_version: str, precache_entries: list[str]) -
     """
     rules: list[dict] = []
     for rule in pwa.runtime:
-        entry: dict = {"pattern": rule.pattern, "strategy": rule.strategy}
+        entry: dict = {"pattern": _normalize_pattern(rule.pattern), "strategy": rule.strategy}
         if rule.max_entries is not None:
             entry["maxEntries"] = rule.max_entries
         if rule.max_age is not None:

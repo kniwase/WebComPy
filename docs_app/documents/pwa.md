@@ -81,7 +81,7 @@ Enabling it logs a build-time warning. With **local** runtime serving the warnin
 
 ## Runtime caching
 
-Each `RuntimeCachingRule` matches same-origin requests by URL `pattern` — a path prefix (`"/api/"`) or a glob with `*` (single segment) and `**` (any depth, `"static/**"`) — matched against the path relative to the app scope, and applies one of three strategies:
+Each `RuntimeCachingRule` matches same-origin requests by URL `pattern` — a path prefix (`"/api/"`) or a glob with `*` (single segment) and `**` (any depth, `"static/**"`) — matched against the request path relative to the app scope (which always starts with `/`; a pattern that omits the leading slash gets one added automatically), and applies one of three strategies:
 
 - `cache-first` — return the cached copy when present (and fresh), otherwise hit the network and cache the result. Best for immutable, hashed assets.
 - `network-first` — try the network and fall back to cache when offline. Best for API data and other content you want fresh when possible.

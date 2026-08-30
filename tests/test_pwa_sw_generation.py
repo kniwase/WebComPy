@@ -190,6 +190,19 @@ class TestGenerateSW:
         assert "cache.match(request, { ignoreSearch" not in sw
         assert "cache.match(request)" in sw
 
+    def test_rule_patterns_normalized(self):
+        pwa = _pwa(
+            runtime=[
+                RuntimeCachingRule(pattern="static/**", strategy="cache-first"),
+                RuntimeCachingRule(pattern="*.svg", strategy="stale-while-revalidate"),
+                RuntimeCachingRule(pattern="/api/", strategy="network-first"),
+            ]
+        )
+        sw = self._sw(pwa)
+        assert '"pattern":"/static/**"' in sw
+        assert '"pattern":"/*.svg"' in sw
+        assert '"pattern":"/api/"' in sw
+
     def test_version_embedded_in_cache_names(self):
         sw = self._sw(version="7.7.7")
         match = re.search(r'"version":"([^"]+)"', sw)

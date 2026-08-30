@@ -77,7 +77,7 @@ The precache uses `webcompy-pwa-v-<version>-<hash>` and each runtime rule uses `
 
 ### D13: Precache entries are scope-relative
 
-SSG precache entries are emitted relative to the worker's scope (the base URL), e.g. `./`, `index.html`, `documents/foo/`, `_webcompy-app-package/app-0+sha.whl`; the worker resolves them against `self.location` so prefix-deployed and embedded sites cache and match the correct absolute URLs. Cross-origin CDN runtime entries are emitted as absolute URLs. Runtime rule patterns are matched against the request pathname made scope-relative (the segment after the worker's scope), so a rule like `/api/` works identically at the root and under a base-URL prefix.
+SSG precache entries are emitted relative to the worker's scope (the base URL), e.g. `./`, `index.html`, `documents/foo/`, `_webcompy-app-package/app-0+sha.whl`; the worker resolves them against `self.location` so prefix-deployed and embedded sites cache and match the correct absolute URLs. Cross-origin CDN runtime entries are emitted as absolute URLs. Runtime rule patterns are matched against the request pathname made scope-relative (the segment after the worker's scope), so a rule like `/api/` works identically at the root and under a base-URL prefix. Patterns written without the leading slash (e.g. `static/**`) are normalized to one at generation time, because scope-relative pathnames always keep the leading slash.
 
 ### D14: Same-origin control only
 

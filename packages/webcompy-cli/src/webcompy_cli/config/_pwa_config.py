@@ -84,7 +84,11 @@ class RuntimeCachingRule:
 
     Args:
         pattern: Same-origin URL pattern; a path prefix or a glob with
-            ``*`` (single segment) and ``**`` (any depth).
+            ``*`` (single segment) and ``**`` (any depth). Matched against
+            the request path relative to the app scope (always starting
+            with ``/``); a missing leading slash is added at generation
+            time. Matching uses the full URL, so different query strings
+            are cached independently.
         strategy: Caching strategy applied to matching requests; one of
             ``cache-first``, ``network-first`` or
             ``stale-while-revalidate``.
