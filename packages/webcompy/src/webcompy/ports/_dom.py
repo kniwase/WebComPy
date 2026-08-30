@@ -345,6 +345,26 @@ class DOMPort(ABC):
         ...
 
     @abstractmethod
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: DOMNode | None = None,
+    ) -> list[DOMNode]:
+        """Query for all elements matching a CSS selector.
+
+        Args:
+            selector: CSS selector string.
+            root: Optional subtree root to scope the query to. When
+                ``None``, the document root is searched.
+
+        Returns:
+            Matching element nodes in document order.
+
+        """
+        ...
+
+    @abstractmethod
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         """Retrieve an element by its ``id`` attribute.
 
@@ -368,12 +388,17 @@ class DOMPort(ABC):
         ...
 
     @abstractmethod
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Register a document-level event listener via ``document.addEventListener``.
 
         Args:
             event_type: Event name (e.g. ``"click"``, ``"keydown"``).
             handler: Callback invoked when the event fires.
+            capture: Register the listener for the capture phase instead
+                of bubbling; capture listeners run before the target's
+                own handlers and observe clicks stopped during bubbling.
 
         Returns:
             A cleanup function; call it to remove the listener.

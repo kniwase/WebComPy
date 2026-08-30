@@ -243,6 +243,51 @@ class FakeBrowserDOMPort(ServerDOMPort):
             return _find_by_tag(self._html, tag_match.group(1))
         return None
 
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: Any | None = None,
+    ) -> list[FakeDOMNode]:
+        """Find all nodes matching ``selector`` within ``root`` or document.
+
+        Args:
+            selector: CSS selector string. Comma-separated groups and
+                ``:not()`` are supported for the overlay use case.
+            root: Optional subtree root.
+
+        Returns:
+            Matching nodes in document order.
+
+        """
+        scope = root if root is not None else self._html
+        if not isinstance(scope, FakeDOMNode):
+            return []
+        collected: list[FakeDOMNode] = []
+        stack: list[FakeDOMNode] = [scope]
+        while stack:
+            node = stack.pop()
+            if node.nodeType == 1 and _node_matches_fake_selector(node, selector):
+                collected.append(node)
+            children = node.childNodes
+            for index in range(children.length - 1, -1, -1):
+                child = children[index]
+                if isinstance(child, FakeDOMNode):
+                    stack.append(child)
+        order: list[FakeDOMNode] = []
+        s: list[FakeDOMNode] = [scope]  # type: ignore[assignment]
+        while s:
+            cur = s.pop()
+            order.append(cur)
+            kids = cur.childNodes
+            for idx in range(kids.length - 1, -1, -1):
+                ch = kids[idx]
+                if isinstance(ch, FakeDOMNode):
+                    s.append(ch)
+        index_map = {id(n): i for i, n in enumerate(order)}
+        collected.sort(key=lambda n: index_map.get(id(n), len(order)))
+        return collected
+
     def get_element_by_id(self, element_id: str) -> FakeDOMNode | None:
         """Return the element with the given identifier.
 
@@ -255,12 +300,16 @@ class FakeBrowserDOMPort(ServerDOMPort):
         """
         return _find_by_id(self._html, element_id)
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Register a document-level event listener.
 
         Args:
             event_type: Event type to listen for.
             handler: Callback invoked when the event is dispatched.
+            capture: Accepted for interface parity; the fake dispatches
+                to registered handlers regardless of event phase.
 
         Returns:
             A callable that removes the listener.
@@ -326,11 +375,73 @@ def _find_by_tag_attr(node: FakeDOMNode, tag: str, attr_name: str, attr_value: s
     return None
 
 
+def _node_matches_fake_selector(node: FakeDOMNode, selector: str) -> bool:
+    for group in selector.split(","):
+        group = group.strip()
+        if group and _fake_group_matches(node, group):
+            return True
+    return False
+
+
+def _fake_group_matches(node: FakeDOMNode, group: str) -> bool:
+    if ":not(" in group:
+        outer, _, inner = group.partition(":not(")
+        inner = inner.rstrip(")")
+        outer = outer.strip()
+        if not _fake_simple_attr_match(node, outer):
+            return False
+        return not _fake_simple_attr_match(node, inner.strip())
+    return _fake_simple_attr_match(node, group)
+
+
+def _fake_simple_attr_match(node: FakeDOMNode, expr: str) -> bool:
+    expr = expr.strip()
+    if not expr:
+        return False
+    tag: str | None = None
+    tag_m = re.match(r"^([a-zA-Z][a-zA-Z0-9]*)", expr)
+    rest = expr
+    if tag_m:
+        tag = tag_m.group(1).lower()
+        rest = expr[len(tag_m.group(1)) :]
+        if not rest.strip():
+            return node.nodeName.lower() == tag
+    rest = rest.strip()
+    if tag is not None and not rest:
+        return node.nodeName.lower() == tag
+    attr_re = re.compile(r'^\[([a-zA-Z0-9_-]+)(?:="([^"]*)")?\]')
+    has_predicate = False
+    while rest:
+        rest = rest.strip()
+        if not rest:
+            break
+        m = attr_re.match(rest)
+        if m is None:
+            return False
+        has_predicate = True
+        attr_name = m.group(1)
+        attr_value = m.group(2)
+        actual = node.getAttribute(attr_name)
+        if attr_value is None:
+            if actual is None:
+                return False
+        else:
+            if actual != attr_value:
+                return False
+        rest = rest[m.end() :]
+    if has_predicate:
+        return not (tag is not None and node.nodeName.lower() != tag)
+    if tag is not None:
+        return node.nodeName.lower() == tag
+    return False
+
+
 class FakeBrowserHostPort(HostPort):
     """Provide synthetic window events and macro-task scheduling."""
 
-    def __init__(self) -> None:
+    def __init__(self, dom_port: FakeBrowserDOMPort | None = None) -> None:
         self._window_listeners: dict[str, list[Any]] = {}
+        self._dom_port = dom_port
 
     def schedule_macro_task(self, callback: Any) -> None:
         """Execute a macro task immediately.
@@ -395,6 +506,14 @@ class FakeBrowserHostPort(HostPort):
         """
 
         def _getter() -> Any:
+            if self._dom_port is not None and name == "document":
+                doc = self._dom_port._html  # type: ignore[attr-defined]
+                fake_active = getattr(doc, "_fake_active_element", None)
+                if wrapper is not None:
+                    if fake_active is not None:
+                        fake_doc = type("FakeDoc", (), {"activeElement": fake_active})()
+                        return wrapper(fake_doc)
+                    return wrapper(None)
             if wrapper is not None:
                 return wrapper(None)
             return default

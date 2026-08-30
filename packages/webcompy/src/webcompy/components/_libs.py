@@ -57,7 +57,7 @@ class Context(Generic[PropsType]):
 
     __on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
     __on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
-    __on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
+    __on_before_destroy: list[Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]]
     __on_mounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
     __on_unmounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
 
@@ -84,7 +84,7 @@ class Context(Generic[PropsType]):
         self._transfer_id = transfer_id or generate_id(component_name)
         self.__on_before_rendering = None
         self.__on_after_rendering = None
-        self.__on_before_destroy = None
+        self.__on_before_destroy = []
         self.__on_mounted = None
         self.__on_unmounted = None
         self.__title_getter = title_getter
@@ -99,6 +99,20 @@ class Context(Generic[PropsType]):
     @property
     def props(self) -> PropsType:
         return self.__props
+
+    @property
+    def transfer_id(self) -> str:
+        """Return the hydration-stable per-instance transfer id.
+
+        The id is ``{name-hash}#{ordinal}`` when an app render context is
+        available (identical between the server-rendered output and the
+        hydrated client tree) and degrades to the name hash otherwise.
+
+        Returns:
+            The per-instance stable id string.
+
+        """
+        return self._transfer_id
 
     def slots(
         self,
@@ -120,7 +134,7 @@ class Context(Generic[PropsType]):
         self.__on_after_rendering = func
 
     def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
-        self.__on_before_destroy = func
+        self.__on_before_destroy.append(func)
 
     def on_mounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_mounted = func
@@ -246,7 +260,12 @@ class Context(Generic[PropsType]):
         if self.__on_after_rendering:
             hooks["on_after_rendering"] = self.__on_after_rendering
         if self.__on_before_destroy:
-            hooks["on_before_destroy"] = self.__on_before_destroy
+
+            def _combined() -> None:
+                for _hook in self.__on_before_destroy:
+                    _hook()
+
+            hooks["on_before_destroy"] = _combined
         if self.__on_mounted:
             hooks["on_mounted"] = self.__on_mounted
         if self.__on_unmounted:
@@ -264,6 +283,7 @@ class ComponentContext(Protocol[PropsType]):
 
     Attributes:
         props: The props object passed to the component.
+        transfer_id: The hydration-stable per-instance id of the component.
 
     """
 
@@ -273,6 +293,16 @@ class ComponentContext(Protocol[PropsType]):
 
         Returns:
             The component props.
+
+        """
+        ...
+
+    @property
+    def transfer_id(self) -> str:
+        """Return the hydration-stable per-instance transfer id.
+
+        Returns:
+            The per-instance stable id string.
 
         """
         ...

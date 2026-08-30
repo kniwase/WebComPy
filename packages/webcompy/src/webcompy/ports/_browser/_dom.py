@@ -30,18 +30,29 @@ class BrowserDOMPort(DOMPort):
     def query_selector(self, selector: str) -> DOMNode | None:
         return self._browser.document.querySelector(selector) or None
 
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: DOMNode | None = None,
+    ) -> list[DOMNode]:
+        scope = root if root is not None else self._browser.document
+        return list(scope.querySelectorAll(selector))
+
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         return self._browser.document.getElementById(element_id) or None
 
     def set_title(self, title: str) -> None:
         self._browser.document.title = title
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         proxy = self._browser.pyscript.ffi.create_proxy(handler)
-        self._browser.document.addEventListener(event_type, proxy)
+        self._browser.document.addEventListener(event_type, proxy, capture)
 
         def _remove() -> None:
-            self._browser.document.removeEventListener(event_type, proxy)
+            self._browser.document.removeEventListener(event_type, proxy, capture)
             if hasattr(proxy, "destroy"):
                 proxy.destroy()
 

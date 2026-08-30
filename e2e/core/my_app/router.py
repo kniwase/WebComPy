@@ -27,6 +27,7 @@ from .pages.nested_docs import (
 )
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
+from .pages.overlay import OverlayPage
 from .pages.repeat import RepeatPage
 from .pages.route_guards import GuardAdminPage, GuardLoginPage, auth_guard
 from .pages.rpc_mock import RpcMockPage
@@ -98,6 +99,7 @@ router = Router(
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/teleport", "component": TeleportPage},
     {"path": "/transition", "component": TransitionPage},
+    {"path": "/overlay", "component": OverlayPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},

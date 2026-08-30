@@ -135,6 +135,28 @@ class ServerDOMPort(DOMPort):
             return None
         return resolve_parsed(self._document_root, parsed)
 
+    def query_selector_all(
+        self,
+        selector: str,
+        *,
+        root: DOMNode | None = None,
+    ) -> list[DOMNode]:
+        """Query for all matching nodes, scoped to ``root`` when given.
+
+        Args:
+            selector: CSS selector string.
+            root: Optional subtree root.
+
+        Returns:
+            Matching element nodes in document order.
+
+        """
+        scope = root if root is not None else self._document_root
+        if scope is None:
+            return []
+        nodes = _collect_all(selector, scope)
+        return nodes
+
     def get_element_by_id(self, element_id: str) -> DOMNode | None:
         """Return the element with ``element_id``.
 
@@ -159,12 +181,16 @@ class ServerDOMPort(DOMPort):
         """
         pass
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+    def add_document_event_listener(
+        self, event_type: str, handler: Any, *, capture: bool = False
+    ) -> Callable[[], None]:
         """Add a document-level event listener.
 
         Args:
             event_type: Event type.
             handler: Event handler.
+            capture: Ignored on the server; accepted for interface parity
+                with the browser port.
 
         Returns:
             Callable that removes the listener.
@@ -183,6 +209,120 @@ class ServerDOMPort(DOMPort):
 
         """
         return _serialize_node(node)
+
+
+def _collect_all(selector: str, scope: DOMNode) -> list[DOMNode]:
+    """Collect all nodes matching ``selector`` within ``scope``."""
+    try:
+        parsed = parse_selector(selector)
+    except ValueError:
+        return _collect_by_attribute_fallback(selector, scope)
+    collected: list[DOMNode] = []
+    stack: list[DOMNode] = [scope]
+    while stack:
+        node = stack.pop()
+        if node.nodeType != 1:
+            continue
+        from webcompy_server.ports._selector import _matches_chain  # type: ignore[attr-defined]
+
+        if any(_matches_chain(node, chain, scope) for chain in parsed):  # type: ignore[arg-type]
+            collected.append(node)
+        children = node.childNodes
+        for index in range(children.length - 1, -1, -1):
+            stack.append(children[index])
+    return _sort_document_order(collected, scope)
+
+
+def _sort_document_order(nodes: list[DOMNode], scope: DOMNode) -> list[DOMNode]:
+    order: list[DOMNode] = []
+    stack: list[DOMNode] = [scope]
+    while stack:
+        current = stack.pop()
+        order.append(current)
+        children = current.childNodes
+        for index in range(children.length - 1, -1, -1):
+            stack.append(children[index])
+    index_map = {id(n): i for i, n in enumerate(order)}
+    return sorted(nodes, key=lambda n: index_map.get(id(n), len(order)))
+
+
+def _collect_by_attribute_fallback(selector: str, scope: DOMNode) -> list[DOMNode]:
+    """Fallback for attribute-containing selectors on the server virtual DOM."""
+
+    results: list[DOMNode] = []
+    stack: list[DOMNode] = [scope]
+    while stack:
+        node = stack.pop()
+        if node.nodeType == 1 and _node_matches_any_group(node, selector):
+            results.append(node)
+        children = node.childNodes
+        for index in range(children.length - 1, -1, -1):
+            stack.append(children[index])
+    return _sort_document_order(results, scope)
+
+
+def _node_matches_any_group(node: DOMNode, selector: str) -> bool:
+    for group in selector.split(","):
+        group = group.strip()
+        if group and _matches_attr_group(node, group):
+            return True
+    return False
+
+
+def _matches_attr_group(node: DOMNode, group: str) -> bool:
+
+    if ":not(" in group:
+        outer, _, inner = group.partition(":not(")
+        inner = inner.rstrip(")")
+        outer = outer.strip()
+        if not _attr_match(node, outer):
+            return False
+        return not _attr_match(node, inner.strip())
+    return _attr_match(node, group)
+
+
+def _attr_match(node: DOMNode, expr: str) -> bool:
+    import re as _re
+
+    expr = expr.strip()
+    if not expr:
+        return False
+    tag: str | None = None
+    tag_m = _re.match(r"^([a-zA-Z][a-zA-Z0-9]*)", expr)
+    rest = expr
+    if tag_m:
+        tag = tag_m.group(1).lower()
+        rest = expr[len(tag_m.group(1)) :]
+        if not rest.strip():
+            return node.nodeName.lower() == tag
+    rest = rest.strip()
+    if tag is not None and not rest:
+        return node.nodeName.lower() == tag
+    attr_re = _re.compile(r'^\[([a-zA-Z0-9_-]+)(?:="([^"]*)")?\]')
+    has_attr = False
+    while rest:
+        rest = rest.strip()
+        if not rest:
+            break
+        m = attr_re.match(rest)
+        if m is None:
+            return False
+        has_attr = True
+        attr_name = m.group(1)
+        attr_value = m.group(2)
+        actual = node.getAttribute(attr_name)
+        if attr_value is None:
+            if actual is None:
+                return False
+        else:
+            if actual != attr_value:
+                return False
+        rest = rest[m.end() :]
+    if has_attr:
+        return not (tag is not None and node.nodeName.lower() != tag)
+    if tag is not None:
+        return node.nodeName.lower() == tag
+    return False
 
 
 def _serialize_node(node: DOMNode) -> str:

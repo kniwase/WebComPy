@@ -1,0 +1,175 @@
+"""Headless Toast host and item components."""
+
+from __future__ import annotations
+
+import contextlib
+from collections.abc import Callable
+from typing import Any, TypedDict
+
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import Teleport, Transition, create_element
+from webcompy.signal import use_computed
+from webcompy.signal._base import SignalBase
+from webcompy.ui.composables._toast import ToastRecord
+
+
+class ToastHostProps(TypedDict, total=False):
+    """Props for the headless ``ToastHost``."""
+
+    toasts: Any
+    on_dismiss: Callable[[str], None]
+    on_remove: Callable[[str], None]
+    transition_name: str | None
+    class_name: str
+    class_item: str
+    class_dismiss: str
+
+
+_FRAMEWORK_CLASS = "webcompy-headless-toast-host"
+_ITEM_CLASS = "webcompy-headless-toast-item"
+_DISMISS_CLASS = "webcompy-headless-toast-dismiss"
+
+
+def _compose_class(*parts: str) -> str:
+    return " ".join(part for part in parts if part)
+
+
+@define_component(custom_element_name="headless-toast-host")
+def ToastHost(context: ComponentContext[ToastHostProps]) -> Any:
+    """Render a toast queue inside a Teleport'd live region.
+
+    Each toast item is wrapped in its own ``Transition`` with
+    ``on_leave_end`` removing the record from the queue.
+
+    Args:
+        context: Component context with toast queue and handlers.
+
+    Returns:
+        The rendered host element.
+
+    """
+    props = context.props or {}
+    toasts_raw = props.get("toasts")
+    on_dismiss = props.get("on_dismiss")
+    on_remove = props.get("on_remove")
+    transition_name = props.get("transition_name") or "webcompy-headless-toast"
+    class_name = props.get("class_name", "")
+    class_item = props.get("class_item", "")
+    class_dismiss = props.get("class_dismiss", "")
+
+    if isinstance(toasts_raw, SignalBase):
+        toasts_computed = use_computed(lambda: list(toasts_raw.value))  # type: ignore[union-attr]
+        get_toasts = lambda: list(toasts_computed.value)
+    else:
+        toasts_computed = None
+        get_toasts = lambda: list(toasts_raw) if isinstance(toasts_raw, list) else []
+
+    def _build_items() -> list[Any]:
+        items: list[Any] = []
+        for rec in get_toasts():
+            if not isinstance(rec, ToastRecord):
+                continue
+            is_leaving = bool(rec.leaving)
+            item_attrs: dict[str, Any] = {
+                "class": _compose_class(_ITEM_CLASS, class_item),
+                "data-state": "hidden" if is_leaving else "visible",
+                "data-variant": rec.variant,
+                "role": "alert" if rec.variant == "error" else "status",
+            }
+            from webcompy.elements import event as _event
+
+            dismiss_btn = create_element(
+                "button",
+                {
+                    "class": _compose_class(_DISMISS_CLASS, class_dismiss),
+                    "aria-label": "Dismiss",
+                    _event("click"): (lambda _e, rid=rec.id: on_dismiss(rid) if on_dismiss else None),  # type: ignore[arg-type]
+                },
+                "x",
+            )
+            item = create_element("div", item_attrs, rec.message, dismiss_btn)  # type: ignore[arg-type]
+
+            def _make_gen(r: ToastRecord, it: Any) -> Callable[[], Any]:
+                def _gen() -> Any:
+                    # Re-read toasts to create dependency
+                    if toasts_computed is not None:
+                        _ = toasts_computed.value
+                    cur_list = get_toasts()
+                    found = next((x for x in cur_list if x.id == r.id), None)
+                    if found is None or found.leaving:
+                        # If leaving, return None to trigger leave; if not found, also None
+                        # For non-leaving, return item
+                        if found is not None and found.leaving:
+                            return None
+                        if found is None:
+                            return None
+                    # Check current rec still not leaving
+                    cur_rec = next((x for x in get_toasts() if x.id == r.id), None)
+                    if cur_rec is not None and cur_rec.leaving:
+                        return None
+                    return it
+
+                return _gen
+
+            def _on_leave(rid: str = rec.id) -> None:
+                if on_remove is not None:
+                    on_remove(rid)
+                elif on_dismiss is not None:
+                    with contextlib.suppress(Exception):
+                        if isinstance(toasts_raw, SignalBase):
+                            cur = list(toasts_raw.value)  # type: ignore[union-attr]
+                            filtered = [t for t in cur if getattr(t, "id", None) != rid]
+                            if len(filtered) != len(cur):
+                                toasts_raw.value = filtered  # type: ignore[union-attr]
+
+            # Each item gets its own Transition with on_leave_end
+            trans = Transition({"name": transition_name, "on_leave_end": _on_leave}, _make_gen(rec, item))
+            items.append(trans)
+        return items
+
+    # For non-reactive, build once
+    if toasts_computed is None:
+        items = _build_items()
+        if not items:
+            # Still need live region even when empty
+            host = create_element(
+                "div",
+                {
+                    "class": _compose_class(_FRAMEWORK_CLASS, class_name),
+                    "aria-live": "polite",
+                    "aria-atomic": "false",
+                    "role": "region",
+                },
+            )
+            return Teleport({"to": "body"}, host)
+        host_inner = create_element(
+            "div",
+            {
+                "class": _compose_class(_FRAMEWORK_CLASS, class_name),
+                "aria-live": "polite",
+                "aria-atomic": "false",
+                "role": "region",
+            },
+            *items,
+        )
+        return Teleport({"to": "body"}, host_inner)
+
+    def _teleport_child() -> Any:
+        _ = toasts_computed.value
+        its = _build_items()
+        return create_element(
+            "div",
+            {
+                "class": _compose_class(_FRAMEWORK_CLASS, class_name),
+                "aria-live": "polite",
+                "aria-atomic": "false",
+                "role": "region",
+            },
+            *its,
+        )
+
+    content: Any = Transition({"name": transition_name, "duration": 0}, _teleport_child)
+    return Teleport({"to": "body"}, content)
+
+
+ToastHost.scoped_style = {}

@@ -120,9 +120,29 @@ class FakeDOMNode(VirtualDOMNode):
                 return None
         return object.__getattribute__(self, name)
 
+    def focus(self) -> None:
+        """Simulate focusing this node by updating the containing document's active element.
+
+        The active element is tracked on the nearest ancestor that holds
+        ``__webcompy_document_root__`` (the fake document).
+
+        """
+        node: object | None = self
+        while node is not None:
+            if isinstance(node, VirtualDOMNode):
+                parent = node.parentNode
+                if getattr(node, "__webcompy_document_root__", False):
+                    object.__setattr__(node, "_fake_active_element", self)
+                    return
+                node = parent
+            else:
+                break
+
     def __getattr__(self, name: str) -> object:
         if name.startswith("_VirtualDOMNode__"):
             raise AttributeError(name)
+        if name == "isConnected":
+            return self.isConnected
         try:
             return self._dom_properties[name]
         except KeyError:
