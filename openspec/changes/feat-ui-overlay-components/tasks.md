@@ -60,12 +60,12 @@
 
 ## 10. Re-validation
 
-- [ ] 10.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 10.2 `uv run pyright` passes
-- [ ] 10.3 `uv run python -m pytest tests/ --tb=short` passes
-- [ ] 10.4 `scripts/run-browser-tests.sh` passes (probes hard gate)
-- [ ] 10.5 `scripts/run-e2e-tests.sh` full suite passes (all groups, prod + static)
-- [ ] 10.6 `openspec validate` passes; visual navbar verification via `webcompy inspect` screenshots
+- [x] 10.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 10.2 `uv run pyright` passes
+- [x] 10.3 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 10.4 `scripts/run-browser-tests.sh` passes (probes hard gate)
+- [x] 10.5 `scripts/run-e2e-tests.sh` full suite passes (all groups, prod + static)
+- [x] 10.6 `openspec validate` passes; visual navbar verification via `webcompy inspect` screenshots
 
 ## 11. Spec sync, governance and archive
 
