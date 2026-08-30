@@ -2,13 +2,13 @@
 
 ## 1. Configuration
 
-- [ ] 1.1 Add `ManifestConfig` and `PWAConfig` dataclasses to the webcompy-cli build config (`enabled`, manifest fields, `precache` mode (`"auto"` / `"none"`), `precache_runtime`, runtime rules list (pattern/strategy/max-entries/max-age), offline fallback path); defaults keep PWA off; wire into `WebComPyBuildConfig`
-- [ ] 1.2 Validate config combinations at build start (unknown strategy names, invalid patterns, fallback path existence, `precache="none"` combined with `precache_runtime`) with actionable errors
+- [x] 1.1 Add `ManifestConfig` and `PWAConfig` dataclasses to the webcompy-cli build config (`enabled`, manifest fields, `precache` mode (`"auto"` / `"none"`), `precache_runtime`, runtime rules list (pattern/strategy/max-entries/max-age), offline fallback path); defaults keep PWA off; wire into `WebComPyBuildConfig`
+- [x] 1.2 Validate config combinations at build start (unknown strategy names, invalid patterns, fallback path existence, `precache="none"` combined with `precache_runtime`) with actionable errors
 
 ## 2. Manifest pipeline
 
-- [ ] 2.1 Implement manifest serialization to `manifest.webmanifest` (start_url/scope resolved from base URL; `application/manifest+json` media type); emit into SSG output and serve at a stable path from the server
-- [ ] 2.2 Inject `<link rel="manifest">` into the document head when PWA is enabled (document builder)
+- [x] 2.1 Implement manifest serialization to `manifest.webmanifest` (start_url/scope resolved from base URL; `application/manifest+json` media type); emit into SSG output and serve at a stable path from the server
+- [x] 2.2 Inject `<link rel="manifest">` into the document head when PWA is enabled (document builder)
 
 ## 3. Service Worker generation
 
