@@ -33,19 +33,19 @@ The framework ships a Service Worker template (plain JS, maintained with the fra
 
 ### D2: Configuration embedded at build time
 
-`sw.js` is generated per build with the config serialized inline (precache list, runtime rules, fallback path, cache-name version). No runtime config fetching: the worker must work offline from its very first install. Cache storage names include the build version so each deployment gets isolated caches, and the activate step deletes caches from previous versions.
+`sw.js` is generated per build with the config serialized inline (precache list, runtime rules, fallback path, cache-name version). No runtime config fetching: the worker must work offline from its very first install. Cache storage names include the build version (plus a content hash of the embedded config, so config changes rotate caches even when the app version is static) so each deployment gets isolated caches, and the activate step deletes caches from previous versions.
 
 ### D3: Precache automation with hashed assets; runtime opt-in
 
-`precache="auto"` enumerates the build output (SSG HTML pages and emitted assets) into the precache manifest. Because lockfile-driven assets carry content hashes in their names, cache-first serving cannot silently serve stale content — a new deployment means new URLs. Precaching the Python runtime (Pyodide core, PyScript bundles) enables fully offline startup but costs tens of MB of device storage; it is opt-in (`precache_runtime`) and the build logs a size warning when enabled. Default precache covers app pages/assets only.
+`precache="auto"` enumerates the build output (SSG HTML pages and emitted assets) into the precache manifest; `precache="none"` disables enumeration entirely (empty manifest). Because lockfile-driven assets carry content hashes in their names, cache-first serving cannot silently serve stale content — a new deployment means new URLs. Precaching the Python runtime (Pyodide core, PyScript bundles) enables fully offline startup but costs tens of MB of device storage; it is opt-in (`precache_runtime`), runtime files are excluded from automatic enumeration regardless of serving mode, and the build logs a size warning when enabled. Wasm dependency wheels under `_webcompy-assets/packages/` count as app assets, not runtime. See D11 for the per-serving-mode semantics of the opt-in.
 
 ### D4: Runtime caching rules
 
-Each rule: URL pattern (prefix or glob), strategy (`cache-first`, `network-first`, `stale-while-revalidate`), optional max-entries and max-age eviction. Requests matching no rule pass through to the network untouched (no implicit caching). Rationale: explicit rules keep caching predictable; the three strategies cover the standard cases (immutable hashed assets → cache-first; API/data → network-first; semi-static content → SWR).
+Each rule: URL pattern (prefix or glob), strategy (`cache-first`, `network-first`, `stale-while-revalidate`), optional max-entries and max-age eviction. Requests matching no rule pass through to the network untouched (no implicit caching). Rationale: explicit rules keep caching predictable; the three strategies cover the standard cases (immutable hashed assets → cache-first; API/data → network-first; semi-static content → SWR). Rules apply to same-origin requests only (D14), and their stored entries live in caches isolated from the precache (D12).
 
 ### D5: Immediate activation (skipWaiting + clientsClaim)
 
-The generated worker calls `skipWaiting()` on install and `clientsClaim()` on activate: new versions take effect immediately and old caches are purged on activate. Rationale: simplest correct default for content apps; the alternative (user-prompted update via a composable listening for worker updates) is deferred — it needs client-side update detection plumbing and is a v1.x enhancement, not a blocker.
+The generated worker calls `skipWaiting()` on install and `clientsClaim()` on activate: new versions take effect immediately and old caches are purged on activate. Rationale: simplest correct default for content apps; the alternative (user-prompted update via a composable listening for worker updates) is deferred — it needs client-side update detection plumbing and is a v1.x enhancement, not a blocker. Navigation requests are served cache-first against the precache so instant activation is the only refresh path; precache install is resilient (D15).
 
 ### D6: Manifest generation and injection
 
@@ -61,7 +61,35 @@ The dev server does not generate or register the Service Worker unless explicitl
 
 ### D9: Offline fallback for navigations
 
-Navigation requests that fail (offline, no precached match) respond with a configured fallback page (default: a framework-provided minimal offline page; overridable by path). Non-navigation failures follow their runtime rule or pass through.
+Navigation requests that fail (offline, no precached match) respond with a configured fallback page (default: a framework-provided minimal offline page; overridable by path). Non-navigation failures follow their runtime rule or pass through. The default page is a minimal HTML string embedded in the generated worker, returned with status 200 and an `X-WebComPy-Offline: fallback` header (non-2xx navigation responses risk browser error-UI interference); an overridden fallback file is added to the precache manifest and preferred when present.
+
+### D10: Directory-index resolution for generated pages
+
+Static hosts resolve `/documents/foo/` to `documents/foo/index.html`, but the Cache API matches exact URLs — precaching only file paths would miss every clean-URL navigation. The build-time enumeration therefore also emits each generated page's clean URL (`/` → `./`, `documents/foo/` for `documents/foo/index.html`) as a separate precache entry, and the worker's navigation handler additionally retries a cache lookup at `<pathname>/index.html` (skipping paths whose last segment contains a dot). Both mechanisms are cheap and cover prod-mode runtime caches that were stored under file URLs.
+
+### D11: Runtime precache is per-serving-mode
+
+Automatic enumeration excludes runtime files (the local runtime asset set: PyScript `core.js`/`core.css` and the Pyodide bundle under `_webcompy-assets/`) regardless of serving mode, so the opt-in is meaningful even for local serving. `precache_runtime` with local serving includes those dist files in the precache (fully offline startup works) and the warning states the summed byte size. With CDN serving it includes only the known entry URLs (PyScript core files and the Pyodide lock file), warns that offline startup is not guaranteed (transitive interpreter files are not enumerated), and the worker fetches those cross-origin entries with `no-cors`, caching opaque responses. `precache="none"` with `precache_runtime` is rejected at validation.
+
+### D12: Cache naming and isolation
+
+The precache uses `webcompy-pwa-v-<version>-<hash>` and each runtime rule uses `webcompy-pwa-r<rule-index>-<version>-<hash>`, where `<version>` is the app build version and `<hash>` is a short digest of the embedded config, so config changes rotate caches even when the version string is static. The activate step keeps the current precache plus the current rule caches and deletes everything else under the `webcompy-pwa-` prefix. Max-entries trimming therefore cannot evict precached pages. Max-age tracking is in-memory (worker lifetime, best-effort); eviction order follows `cache.keys()` order, which is insertion-order in practice but unspecified — documented as best-effort.
+
+### D13: Precache entries are scope-relative
+
+SSG precache entries are emitted relative to the worker's scope (the base URL), e.g. `./`, `index.html`, `documents/foo/`, `_webcompy-app-package/app-0+sha.whl`; the worker resolves them against `self.location` so prefix-deployed and embedded sites cache and match the correct absolute URLs. Cross-origin CDN runtime entries are emitted as absolute URLs.
+
+### D14: Same-origin control only
+
+The generated worker passes through any cross-origin request before rule dispatch. Deterministic, testable caching of third-party origins (opaque-response handling, CORS variance) is deferred; runtime rules are documented as same-origin-only.
+
+### D15: Resilient precache install
+
+Install fetches each precache entry individually (cross-origin entries with `no-cors`, opaque responses accepted) under `Promise.allSettled`, logging failures. A single 404 or network hiccup during install must not strand the app with no installed worker.
+
+## Injection and serving topology
+
+`webcompy-server` cannot import `webcompy-cli` (dependency direction is cli → server → core), so the document builder receives only a boolean `pwa_enabled` parameter; the manifest link href and registration script derive the stable paths `manifest.webmanifest` and `sw.js` from the base URL it already knows. Generation (manifest serialization, precache enumeration, worker emission) lives in `webcompy_cli/_pwa.py`: SSG writes both files into `dist` after all other output is complete, and the prod server generates them in memory at startup and serves them via routes registered before user static-file routes so framework values win name collisions with a build-time warning. Dev mode follows the same single `enabled` flag, whose default keeps dev safe.
 
 ## Risks / Trade-offs
 

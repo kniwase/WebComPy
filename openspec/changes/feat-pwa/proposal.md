@@ -9,10 +9,10 @@ Progressive Web App support — installability and offline capability — is sta
 - `PWAConfig` dataclass under `WebComPyBuildConfig` (server/build configuration): `enabled`, manifest settings, precache mode, runtime cache rules, offline fallback path.
 - **Web App Manifest**: `ManifestConfig` (name, short_name, icons, display, theme_color, background_color, start_url defaults) serialized to `manifest.webmanifest`, emitted at build time (SSG) and served by the server, with `<link rel="manifest">` injected into the document head.
 - **Service Worker generation (ngsw-style)**: the framework ships a vanilla JS worker template; at build time the effective `PWAConfig` is embedded as JSON and `sw.js` is generated into the output. No Workbox or other JS dependency.
-- **Precache**: `precache="auto"` enumerates build output (SSG pages and hashed assets) into the precache manifest. Precaching the Python runtime (Pyodide/PyScript bundles) is opt-in with a size warning (tens of MB). Lockfile-hashed asset names make cache-first strategies safe by construction.
-- **Runtime caching rules**: URL pattern + strategy (`cache-first`, `network-first`, `stale-while-revalidate`) with optional max-entries/max-age.
+- **Precache**: `precache="auto"` enumerates build output (SSG pages and hashed assets) into the precache manifest, including each generated page's clean URL alongside its `index.html` path; `precache="none"` disables it. Precaching the Python runtime (Pyodide/PyScript bundles) is opt-in with a size warning (tens of MB): for local serving it precaches the emitted runtime files (fully offline startup), for CDN serving it precaches the known entry files with `no-cors` and warns that offline startup is not guaranteed. Lockfile-hashed asset names make cache-first strategies safe by construction.
+- **Runtime caching rules**: URL pattern + strategy (`cache-first`, `network-first`, `stale-while-revalidate`) with optional max-entries/max-age, applied to same-origin requests only; rule entries live in caches isolated from the precache.
 - **Update behavior**: generated worker uses `skipWaiting` + `clientsClaim` (immediate activation of new versions); old-version caches are cleaned on activate. A user-prompted update flow is deferred.
-- **Offline fallback**: navigation requests that fail offline serve a configurable fallback page.
+- **Offline fallback**: navigation requests that fail offline serve a fallback page — a framework-embedded minimal offline page by default (status 200, identified by an `X-WebComPy-Offline` header), overridable by path.
 - **Registration**: the document builder injects a small registration script (app-loader precedent) registering `sw.js` at the app's base URL scope.
 - **Dev mode**: PWA is disabled by default in the dev server (Service Worker caching interferes with hot reload).
 
@@ -45,3 +45,4 @@ Progressive Web App support — installability and offline capability — is sta
 - iOS-specific meta tags beyond what the manifest covers.
 - Custom Service Worker escape hatches (user-supplied sw.js fragments) — declarative config only in v1.
 - Precache size budgeting/enforcement beyond the opt-in warning for runtime assets.
+- Transitive CDN runtime enumeration (precaching the full Pyodide file set from the lockfile) and cross-origin runtime caching — same-origin control only in v1.
