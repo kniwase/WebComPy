@@ -184,6 +184,12 @@ class TestGenerateSW:
         assert '"fallback":"offline.html"' in sw
         assert "You're offline" in sw
 
+    def test_rule_cache_matches_full_url(self):
+        sw = self._sw()
+        assert sw.count("ignoreSearch") == 1
+        assert "cache.match(request, { ignoreSearch" not in sw
+        assert "cache.match(request)" in sw
+
     def test_version_embedded_in_cache_names(self):
         sw = self._sw(version="7.7.7")
         match = re.search(r'"version":"([^"]+)"', sw)

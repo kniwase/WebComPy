@@ -89,7 +89,7 @@ Each `RuntimeCachingRule` matches same-origin requests by URL `pattern` — a pa
 
 Optional `max_entries` bounds a rule's cache size (entries beyond the limit are evicted from the least-recently-stored end) and `max_age` (in seconds) treats an entry as stale after that time. Both limits are enforced best-effort: max-age is tracked for the current worker lifetime, and eviction order follows the browser's cache iteration order.
 
-Requests matching no rule pass straight through to the network — the framework never caches anything you did not ask for. Cross-origin requests are also left untouched, so runtime rules apply only to your own origin.
+Requests matching no rule pass straight through to the network — the framework never caches anything you did not ask for. Cross-origin requests are also left untouched, so runtime rules apply only to your own origin. Rule caches match by full URL, so requests with different query strings are cached and served independently; query-insensitive matching applies to navigation requests only.
 
 ## Offline fallback
 

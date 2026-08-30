@@ -41,7 +41,7 @@ The framework ships a Service Worker template (plain JS, maintained with the fra
 
 ### D4: Runtime caching rules
 
-Each rule: URL pattern (prefix or glob), strategy (`cache-first`, `network-first`, `stale-while-revalidate`), optional max-entries and max-age eviction. Requests matching no rule pass through to the network untouched (no implicit caching). Rationale: explicit rules keep caching predictable; the three strategies cover the standard cases (immutable hashed assets → cache-first; API/data → network-first; semi-static content → SWR). Rules apply to same-origin requests only (D14), and their stored entries live in caches isolated from the precache (D12).
+Each rule: URL pattern (prefix or glob), strategy (`cache-first`, `network-first`, `stale-while-revalidate`), optional max-entries and max-age eviction. Requests matching no rule pass through to the network untouched (no implicit caching). Rationale: explicit rules keep caching predictable; the three strategies cover the standard cases (immutable hashed assets → cache-first; API/data → network-first; semi-static content → SWR). Rules apply to same-origin requests only (D14), and their stored entries live in caches isolated from the precache (D12). Rule caches match by full URL (query string included), so different query variants are cached independently; search-insensitive matching applies to navigations only (D10).
 
 ### D5: Immediate activation (skipWaiting + clientsClaim)
 

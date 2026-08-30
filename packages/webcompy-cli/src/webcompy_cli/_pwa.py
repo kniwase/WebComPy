@@ -122,7 +122,7 @@ async function store(cache, request, response, rule) {
 
 async function cacheFirst(request, rule) {
   var cache = await caches.open(rule.cacheName);
-  var hit = await cache.match(request, { ignoreSearch: true });
+  var hit = await cache.match(request);
   if (hit && isFresh(request, rule)) return hit;
   try {
     var fresh = await fetch(request);
@@ -141,7 +141,7 @@ async function networkFirst(request, rule) {
     await store(cache, request, fresh, rule);
     return fresh;
   } catch (err) {
-    var hit = await cache.match(request, { ignoreSearch: true });
+    var hit = await cache.match(request);
     if (hit) return hit;
     throw err;
   }
@@ -149,7 +149,7 @@ async function networkFirst(request, rule) {
 
 async function staleWhileRevalidate(request, rule) {
   var cache = await caches.open(rule.cacheName);
-  var hit = await cache.match(request, { ignoreSearch: true });
+  var hit = await cache.match(request);
   var update = fetch(request)
     .then(function (fresh) {
       return store(cache, request, fresh, rule).then(function () {
