@@ -28,11 +28,11 @@
 
 ## 4. Unit tests (`tests/test_ui_disclosure.py`, browserless via TestRenderer)
 
-- [ ] 4.1 Tabs: ARIA wiring (tablist/tab/panel, aria-selected/controls), panel state preservation across switches (inactive panels stay mounted, hidden toggling), keyboard navigation with wrapping and automatic activation, roving tabindex, `data-state` values, distinct hydration-stable ids across two instances
-- [ ] 4.2 Collapse: trigger ARIA across toggle, `data-state` transitions, animation disable path; Accordion single-open policy closes siblings, multi-open default
-- [ ] 4.3 Alert role mapping per variant; dismiss hides root and fires callback
-- [ ] 4.4 Progress determinate ARIA values and indeterminate omission of `aria-valuenow`
-- [ ] 4.5 Badge/Skeleton/Card: Skeleton `aria-hidden`, Card region rendering, class pass-through on all (user class appended last)
+- [x] 4.1 Tabs: ARIA wiring (tablist/tab/panel, aria-selected/controls), panel state preservation across switches (inactive panels stay mounted, hidden toggling), keyboard navigation with wrapping and automatic activation, roving tabindex, `data-state` values, distinct hydration-stable ids across two instances
+- [x] 4.2 Collapse: trigger ARIA across toggle, `data-state` transitions, animation disable path; Accordion single-open policy closes siblings, multi-open default
+- [x] 4.3 Alert role mapping per variant; dismiss hides root and fires callback
+- [x] 4.4 Progress determinate ARIA values and indeterminate omission of `aria-valuenow`
+- [x] 4.5 Badge/Skeleton/Card: Skeleton `aria-hidden`, Card region rendering, class pass-through on all (user class appended last)
 
 ## 5. E2E and docs
 
