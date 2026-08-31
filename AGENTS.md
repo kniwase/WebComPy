@@ -171,6 +171,7 @@ the per-area reference.
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Overlay Instance Identity & Toggle Ownership** — `ui-overlay/spec.md`
+- **Disclosure State & Panel Persistence** — `ui-disclosure/spec.md`, `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
@@ -203,6 +204,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ui/_styles/` | `css-architecture/spec.md` |
 | `webcompy/ui/headless/`, `webcompy/ui/components/` | `ui-primitives/spec.md` |
 | `webcompy/ui/headless/_overlay_utils.py`, `webcompy/ui/headless/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/components/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/composables/_toast.py` | `ui-overlay/spec.md`, `ui-primitives/spec.md` |
+| `webcompy/ui/headless/_dom_id.py`, `_tabs.py`, `_collapse.py`, `_accordion.py`, `_alert.py`, `_progress.py`, `_badge.py`, `_skeleton.py`, `_card.py`, `webcompy/ui/components/_tabs.py`, `_collapse.py`, `_accordion.py`, `_alert.py`, `_progress.py`, `_badge.py`, `_skeleton.py`, `_card.py`, `webcompy/ui/_styles/primitives.css` | `ui-disclosure/spec.md`, `ui-primitives/spec.md`, `transition/spec.md` |
 | `webcompy/ui/code_block/` | `code-block/spec.md`, `syntax-highlight-lexers/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
@@ -433,6 +435,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `ui-primitives` | Two-layer first-party UI components: headless contract (behavior-only with structural CSS, `data-state` vocabularies, `class_name` pass-through), themed composition with token-based defaults, three import paths, stylesheet delivery through `/_webcompy-ui/`, and the Spinner pair |
 | `ui-overlay` | First-party overlay components (Modal, Drawer, Dropdown, Toast) as headless/themed pairs: dialog accessibility contract, menu button keyboard model with propagation-owned toggle and capture-phase outside close, per-instance hydration-stable DOM ids, optional `render_closed` static menu mode, trigger-anchored menu positioning (`align`, `positioning` escape hatch) with scroll/resize re-measurement, and the toast queue with live region and auto-dismiss |
+| `ui-disclosure` | Disclosure and feedback components (Tabs, Collapse/Accordion, Alert, Progress, Badge, Skeleton, Card) as headless/themed pairs: tablist contract with roving tabindex and hidden persistent panels, key-based `tabs`/`items` props, per-instance hydration-stable DOM ids, Collapse/expand animated through the Transition capability via a CSS natural-height technique, Accordion open policy, variant-to-role Alert mapping, determinate/indeterminate Progress ARIA, decorative Skeleton, structural Card |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
 ## Language Rules

@@ -78,6 +78,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "component": "docs_app.pages.document.overlay:OverlayPage",
             },
             {
+                "label": "Disclosure & Feedback",
+                "path": "/documents/disclosure",
+                "component": "docs_app.pages.document.disclosure:DisclosurePage",
+            },
+            {
                 "label": "Loading Screen",
                 "path": "/documents/loading-screen",
                 "source": "documents/loading_screen.md",
@@ -116,11 +121,6 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "label": "Progressive Web App",
                 "path": "/documents/pwa",
                 "source": "documents/pwa.md",
-            },
-            {
-                "label": "Disclosure & Feedback",
-                "path": "/documents/disclosure",
-                "component": "docs_app.pages.document.disclosure:DisclosurePage",
             },
         ],
     },

@@ -16,7 +16,7 @@
 ## 2. Collapse / Accordion
 
 - [x] 2.1 Implement headless Collapse: trigger (`aria-expanded`, `aria-controls`, `data-state="open" | "closed"`, uncontrolled default per D10), content region animated through the Transition element (content carries `data-state="open"` while mounted, removed when closed), hydration-stable ids, class pass-through (trigger/content parts)
-- [x] 2.2 Implement themed Collapse with the grid-template-rows natural-height technique (inner overflow-hidden wrapper, enter/leave rules ordered after the steady rule) and document the technique for headless users; disable-animation prop supported
+- [x] 2.2 Implement themed Collapse with the grid-template-rows natural-height technique (direct children clamped with overflow hidden, enter/leave rules ordered after the steady rule) and document the technique for headless users; disable-animation prop supported
 - [x] 2.3 Implement Accordion composing Collapse items with key-based identity and open policy (multi-open default, single-open prop closing siblings), items via `items` prop per design D11, shared open state owned by the Accordion driving controlled Collapse instances
 
 ## 3. Feedback components
@@ -38,13 +38,13 @@
 
 - [x] 5.1 E2E tests (Playwright): `/disclosure` page in `e2e/core/my_app`, `e2e/core/test_disclosure.py` registered in the `components` group of `scripts/run-e2e-tests.sh`; Tabs keyboard navigation (wrapping, automatic activation) and panel-state preservation across switches in the browser; Collapse animated expand/collapse; Accordion single-open behavior
 - [x] 5.2 docs_app demo page for the family (Tabs/Collapse/Accordion/Alert/Progress/Badge/Skeleton/Card): `documents/disclosure.md` + `pages/document/disclosure.py` showcase, manifest entry appended at the end of the Guides section; replace docs_app's ad-hoc DocsCard with the themed Card primitive preserving its surface; link from docs navigation (automatic via manifest)
-- [ ] 5.3 Update knowledge-maintenance docs: AGENTS.md File→Spec Mapping row, Current Specs row, Framework Invariants entry, `.opencode/skills/webcompy-review/SKILL.md` invariant heading; run `python3 scripts/check-doc-spec-refs.py` (if it fails on the not-yet-archived `ui-disclosure` spec, defer these edits to the archive change and report)
+- [x] 5.3 Update knowledge-maintenance docs: AGENTS.md File→Spec Mapping row, Current Specs row, Framework Invariants entry, `.opencode/skills/webcompy-review/SKILL.md` invariant heading; run `python3 scripts/check-doc-spec-refs.py` (if it fails on the not-yet-archived `ui-disclosure` spec, defer these edits to the archive change and report)
 
 ## 6. Validation
 
-- [ ] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 6.2 `uv run pyright` passes
-- [ ] 6.3 `uv run python -m pytest tests/ --tb=short` passes
-- [ ] 6.4 `uv run python -m webcompy generate` succeeds with the new docs page
-- [ ] 6.5 E2E groups affected by the change pass via `scripts/run-e2e-tests.sh`: `components`, `bootstrap-static`, `docs-documents`, `docs-home`
-- [ ] 6.6 Run the openspec-verify-change workflow and produce the verification report (do not sync or archive)
+- [x] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 6.2 `uv run pyright` passes
+- [x] 6.3 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 6.4 `uv run python -m webcompy generate` succeeds with the new docs page
+- [x] 6.5 E2E groups affected by the change pass via `scripts/run-e2e-tests.sh`: `components`, `bootstrap-static`, `docs-documents`, `docs-home`
+- [x] 6.6 Run the openspec-verify-change workflow and produce the verification report (do not sync or archive)

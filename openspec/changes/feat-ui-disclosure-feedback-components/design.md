@@ -39,7 +39,7 @@ Alternative (active-only mounting, the Radix model) rejected: it loses panel-int
 
 ### D3: Collapse animation via Transition with a CSS height technique
 
-Expand/collapse animates through the Transition protocol on the content wrapper. CSS cannot transition `height: auto`, so the themed default uses the grid-template-rows technique (`grid-template-rows: 0fr → 1fr` with an inner overflow-hidden wrapper), which animates to natural content height without measurement. The headless layer only drives classes/`data-state`; the technique lives in themed CSS and is documented so headless users can substitute their own. Alternative (JS measurement of scrollHeight) rejected: it requires frame-synced style writes and resize handling, contradicting the CSS-only stance.
+Expand/collapse animates through the Transition protocol on the content wrapper. CSS cannot transition `height: auto`, so the themed default uses the grid-template-rows technique (`grid-template-rows: 0fr → 1fr` on the content element, its direct children clamped with `overflow: hidden; min-height: 0`), which animates to natural content height without measurement. The headless layer only drives classes/`data-state`; the technique lives in themed CSS and is documented so headless users can substitute their own. Alternative (JS measurement of scrollHeight) rejected: it requires frame-synced style writes and resize handling, contradicting the CSS-only stance.
 
 Transition integration constraints (verified against the transition spec after the rebase onto the baseline that includes it):
 
