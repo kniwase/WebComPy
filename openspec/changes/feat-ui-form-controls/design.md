@@ -59,7 +59,7 @@ Bound controls expose `data-state="invalid"` when the bound field is invalid and
 
 ### D8: FormFieldContext data contract
 
-A frozen dataclass `FormFieldContext` (`control_id: str`, `error_id: str`, `label: str`) is provided under a module-private `InjectKey` in the headless package. The context carries only association ids and the label text; validation state flows from the `Field` that both FormField and the control already hold, so there is no second source of truth for touched/invalid.
+A frozen dataclass `FormFieldContext` (`control_id: str`, `error_id: str`, `label: str`) is provided under a module-private `InjectKey` in the headless package. The context carries only association ids and the label text; validation state flows from the `Field` that both FormField and the control already hold, so there is no second source of truth for touched/invalid. Because a themed wrapper produces its slot contents in the wrapper's own render pass (the established Modal/Dropdown forwarding pattern), the **themed** FormField provides the context (ids derived from its own transfer id) before rendering slots; the headless FormField reuses a context already present in scope instead of generating and providing its own, so labels, controls, and error regions always agree on the ids whichever layer the author composed.
 
 ### D9: FormField label vs group legend
 

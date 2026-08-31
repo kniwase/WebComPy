@@ -92,6 +92,7 @@ tests/test_template_markdown.py
 tests/test_template_naming.py
 tests/test_template_parser.py
 tests/test_theme.py
+tests/test_ui_form_controls.py
 tests/test_ui_overlay.py
 tests/test_use_computed.py
 tests/test_use_state.py

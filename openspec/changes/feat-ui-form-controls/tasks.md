@@ -31,9 +31,9 @@
 
 ## 5. Themed layer
 
-- [ ] 5.1 Implement themed Input/Textarea/Select (`webcompy-input`/`-textarea`/`-select`) composing the headless controls with token-based rules in `primitives.css` (borders, focus-visible ring, disabled, `data-state="invalid"` with danger token)
-- [ ] 5.2 Implement themed Checkbox/Switch/RadioGroup (switch track/thumb visuals, radio indicator) and themed FormField (label typography, error text with danger token); forward `class_name` part props to headless so user classes win at equal specificity
-- [ ] 5.3 Export: headless names from `webcompy.ui.headless`, themed from `webcompy.ui.components`, themed re-exported at `webcompy.ui`; import-path resolution tests included in unit tier
+- [x] 5.1 Implement themed Input/Textarea/Select (`webcompy-input`/`-textarea`/`-select`) composing the headless controls with token-based rules in `primitives.css` (borders, focus-visible ring, disabled, `data-state="invalid"` with danger token)
+- [x] 5.2 Implement themed Checkbox/Switch/RadioGroup (switch track/thumb visuals, radio indicator) and themed FormField (label typography, error text with danger token); forward `class_name` part props to headless so user classes win at equal specificity
+- [x] 5.3 Export: headless names from `webcompy.ui.headless`, themed from `webcompy.ui.components`, themed re-exported at `webcompy.ui`; import-path resolution tests included in unit tier
 
 ## 6. Unit tests (`tests/test_ui_form_controls.py`, browserless via TestRenderer; keep free of browser-only APIs for dual-run eligibility)
 
