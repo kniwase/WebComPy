@@ -26,8 +26,8 @@
 
 ## 4. Headless FormField
 
-- [ ] 4.1 Implement headless FormField (`headless-form-field`): required `field` prop, `label` (renders `<label for>` when non-empty; omit for group controls), control slot, error region gated on touched+invalid with errors from `field.errors`; generate `control_id`/`error_id` from transfer id (sanitized `#`); `context.provide` the FormFieldContext
-- [ ] 4.2 Wire `data-state` on the FormField root following the same touched+invalid gating
+- [x] 4.1 Implement headless FormField (`headless-form-field`): required `field` prop, `label` (renders `<label for>` when non-empty; omit for group controls), control slot, error region gated on touched+invalid with errors from `field.errors`; generate `control_id`/`error_id` from transfer id (sanitized `#`); `context.provide` the FormFieldContext
+- [x] 4.2 Wire `data-state` on the FormField root following the same touched+invalid gating
 
 ## 5. Themed layer
 
