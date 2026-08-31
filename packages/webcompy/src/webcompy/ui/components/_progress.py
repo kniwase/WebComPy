@@ -33,7 +33,9 @@ def Progress(context: ComponentContext[ThemedProgressProps]) -> Any:
     track and ``webcompy-progress-fill`` classes whose rules live in the
     shipped primitives stylesheet; the indeterminate mode animates an
     internal sweep and honors reduced motion. ARIA semantics and the
-    reactive value binding come from the headless component.
+    reactive value binding come from the headless component, whose
+    ``value``, ``min``, ``max``, and ``indeterminate`` props accept
+    signal-like objects as well as plain values.
 
     Args:
         context: Component context carrying the ``value``, ``min``,

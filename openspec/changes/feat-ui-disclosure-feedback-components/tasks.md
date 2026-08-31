@@ -64,3 +64,5 @@
 ## 8. Review follow-ups (round 3)
 
 - [x] 8.1 Normalize reversed headless Progress bounds (`min` greater than `max`) by swapping inside the bounds reader so the emitted `aria-valuemin`/`aria-valuemax`/`aria-valuenow` triple stays self-consistent; design D6 note and unit coverage added
+- [x] 8.2 Record signal-like state-prop acceptance (`active`, `open`, Progress value/bounds/indeterminate) in the themed Tabs/Collapse/Progress docstrings, and document the setup-time-only `tabs`/`items` lists and Progress clamping/signal props in `docs_app/documents/disclosure.md`
+- [x] 8.3 Re-run validation after the round-3 follow-ups: full unit suite, `ruff check`/`ruff format --check`, `pyright`, `scripts/check-docstrings.py`, `webcompy generate`, and the affected docs E2E files (`e2e/docs/test_disclosure.py`, `e2e/docs/test_home.py`) via the canonical entry point

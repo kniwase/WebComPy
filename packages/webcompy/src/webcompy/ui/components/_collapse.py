@@ -38,6 +38,8 @@ def Collapse(context: ComponentContext[ThemedCollapseProps]) -> Any:
     ``animated=False`` for instant expansion. Behavior and accessibility
     are inherited from the headless component; user classes are appended
     after the themed defaults so user rules win at equal specificity.
+    The ``open`` prop accepts a signal-like object as well as a plain
+    boolean (forwarded to the headless component unchanged).
 
     Args:
         context: Component context carrying the ``open``, ``on_toggle``,

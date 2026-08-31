@@ -40,6 +40,8 @@ def Tabs(context: ComponentContext[ThemedTabsProps]) -> Any:
     class hooks. Behavior, accessibility, and class pass-through are
     inherited from the headless component; user classes are appended
     after the themed defaults so user rules win at equal specificity.
+    The ``active`` prop accepts a signal-like object as well as a plain
+    string (forwarded to the headless component unchanged).
 
     Args:
         context: Component context carrying the ``tabs``, ``active``,
