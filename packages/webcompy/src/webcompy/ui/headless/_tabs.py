@@ -224,6 +224,7 @@ def Tabs(context: ComponentContext[TabsProps]) -> Any:
         key = str(item.get("key", ""))
         label_attrs: dict[str, Any] = {
             "id": _tab_id(key),
+            "type": "button",
             "role": "tab",
             "aria-controls": _panel_id(key),
             "aria-selected": use_computed(lambda k=key: "true" if _is_active(k) else "false"),

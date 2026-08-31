@@ -103,6 +103,7 @@ def Collapse(context: ComponentContext[CollapseProps]) -> Any:
 
     trigger_attrs: dict[str, Any] = {
         "id": trigger_id,
+        "type": "button",
         "aria-expanded": use_computed(lambda: "true" if bool(open_computed.value) else "false"),
         "aria-controls": content_id,
         "data-state": use_computed(lambda: "open" if bool(open_computed.value) else "closed"),
