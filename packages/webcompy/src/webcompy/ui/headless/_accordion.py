@@ -46,12 +46,13 @@ def Accordion(context: ComponentContext[AccordionProps]) -> Any:
     view of the accordion's shared set of open keys, so composition keeps
     Collapse independently useful while the policies apply across items.
     Multi-open is the default; ``single_open=True`` closes the other items
-    whenever one opens. Item identity is key-based. ``on_toggle`` receives
-    ``(key, is_open)`` after the shared state updates. Only one level of
-    items is supported; nesting accordions deeper is untested and
-    documented as unsupported. The ``items`` list is read once at setup;
-    a different item set requires remounting. No visual styling is
-    emitted.
+    whenever one opens. Item identity is key-based. ``on_toggle`` is
+    invoked with ``(key, is_open)`` for every item whose open state
+    changed, including siblings closed by the single-open policy (closures
+    first, then openings). Only one level of items is supported; nesting
+    accordions deeper is untested and documented as unsupported. The
+    ``items`` list is read once at setup; a different item set requires
+    remounting. No visual styling is emitted.
 
     Args:
         context: Component context carrying the ``items``, ``single_open``,
@@ -87,11 +88,18 @@ def Accordion(context: ComponentContext[AccordionProps]) -> Any:
             current = {key} if single_open else current | {key}
         else:
             current.discard(key)
+        old_state = open_state.value
         new_state = tuple(k for k in keys if k in current)
-        if new_state != open_state.value:
-            open_state.value = new_state
+        if new_state == old_state:
+            if on_toggle is not None:
+                on_toggle(key, want_open)
+            return
+        open_state.value = new_state
         if on_toggle is not None:
-            on_toggle(key, want_open)
+            for closed_key in (k for k in old_state if k not in new_state):
+                on_toggle(closed_key, False)
+            for opened_key in (k for k in new_state if k not in old_state):
+                on_toggle(opened_key, True)
 
     children: list[Any] = []
     for item in items:
