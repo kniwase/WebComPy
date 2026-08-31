@@ -248,6 +248,40 @@ class TestTabs:
         finally:
             _active_app_context.reset(token)
 
+    def test_themed_tabs_uncontrolled_when_active_omitted(self) -> None:
+        @define_component(custom_element_name="test-themed-tabs-uncontrolled")
+        def Page(ctx):
+            from webcompy.ui import Tabs
+
+            return Tabs({"tabs": _make_tabs()})
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            tab_btns = _by_role(root, "tab")
+            _click(tab_btns[1])
+            assert tab_btns[1].getAttribute("aria-selected") == "true"
+            assert tab_btns[0].getAttribute("aria-selected") == "false"
+
+    def test_themed_tabs_empty_active_stays_controlled(self) -> None:
+        selected: list = []
+
+        @define_component(custom_element_name="test-themed-tabs-empty")
+        def Page(ctx):
+            from webcompy.ui import Tabs
+
+            return Tabs({"tabs": _make_tabs(), "active": "", "on_select": lambda key: selected.append(key)})
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            tab_btns = _by_role(root, "tab")
+            _click(tab_btns[1])
+            # An explicit empty string is a supplied value: the themed layer
+            # forwards it and the parent stays in control (falls back to the
+            # first tab until the parent writes a matching key).
+            assert selected == ["b"]
+            assert tab_btns[0].getAttribute("aria-selected") == "true"
+            assert tab_btns[1].getAttribute("aria-selected") == "false"
+
 
 class TestCollapse:
     """Collapse: trigger ARIA across toggle, data-state, animation paths."""

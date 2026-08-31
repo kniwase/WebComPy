@@ -52,7 +52,6 @@ def Tabs(context: ComponentContext[ThemedTabsProps]) -> Any:
     props = context.props or {}
     headless_props: HeadlessTabsProps = {
         "tabs": props.get("tabs", []),  # type: ignore[typeddict-item]
-        "active": props.get("active", ""),
         "on_select": props.get("on_select"),  # type: ignore[typeddict-item]
         "aria_label": props.get("aria_label", ""),
         "class_name": _compose_class("webcompy-tabs", props.get("class_name", "")),
@@ -60,6 +59,9 @@ def Tabs(context: ComponentContext[ThemedTabsProps]) -> Any:
         "class_tab": _compose_class("webcompy-tabs-tab", props.get("class_tab", "")),
         "class_panel": _compose_class("webcompy-tabs-panel", props.get("class_panel", "")),
     }
-    if not props.get("active"):
-        headless_props.pop("active")
+    # Omit the key entirely when not supplied so the headless component
+    # can enter its uncontrolled mode.
+    active_prop = props.get("active")
+    if active_prop is not None:
+        headless_props["active"] = active_prop
     return HeadlessTabs(headless_props)
