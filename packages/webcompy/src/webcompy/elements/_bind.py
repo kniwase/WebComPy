@@ -13,7 +13,7 @@ from webcompy.forms._field import Field
 from webcompy.signal import Computed, Signal, SignalBase
 
 _TEXT_TYPES = {"text", "email", "password", "search", "tel", "url"}
-_SUPPORTED_ELEMENTS = "input[type=text|email|password|search|tel|url|number|checkbox|radio] and textarea"
+_SUPPORTED_ELEMENTS = "input[type=text|email|password|search|tel|url|number|checkbox|radio], textarea, and select"
 
 
 def is_bind_target(value: Any) -> bool:
@@ -188,6 +188,27 @@ def _expand_radio_bind(
     _register_write_back(events, "change", write_back)
 
 
+def _expand_select_bind(
+    signal: Signal[Any],
+    attrs: dict[str, AttrValue],
+    events: dict[str, EventHandler],
+    dirty: Signal[bool] | None = None,
+) -> None:
+    if not isinstance(signal.value, str):
+        raise WebComPyException(f":bind on a select requires a str-valued Signal (got {type(signal.value).__name__})")
+    if "value" in attrs:
+        raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
+    attrs["value"] = signal
+
+    def write_back(ev: DOMEvent) -> None:
+        if (target := ev.target) is not None:
+            if dirty is not None:
+                dirty.value = True
+            signal.value = target.value
+
+    _register_write_back(events, "change", write_back)
+
+
 def expand_bind_attr(
     tag_name: str,
     attrs: dict[str, AttrValue],
@@ -209,7 +230,8 @@ def expand_bind_attr(
       in the children list, not attrs).
 
     Raises WebComPyException for: unsupported tag, non-Signal value, read-only
-    signal kind, type-discipline violation, bound-attr conflict, dynamic type attr.
+    signal kind, type-discipline violation, bound-attr conflict, dynamic type
+    attr, and ``:bind`` on a multiple select.
     """
     bind_value = attrs.pop(":bind")
     field: Field[Any] | None
@@ -234,6 +256,12 @@ def expand_bind_attr(
         _expand_textarea_bind(signal, attrs, events, children, dirty)
         _register_field_touched(events, field)
         return set(), [(signal, "value")]
+    if tag_name == "select":
+        if attrs.get("multiple"):
+            raise WebComPyException(":bind does not support multiple selects")
+        _expand_select_bind(signal, attrs, events, dirty)
+        _register_field_touched(events, field)
+        return {"value"}, []
     if tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES):
         _expand_text_bind(signal, attrs, events, dirty)
         _register_field_touched(events, field)

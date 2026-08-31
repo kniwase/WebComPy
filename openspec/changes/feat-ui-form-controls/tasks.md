@@ -7,8 +7,8 @@
 
 ## 1. `:bind` select extension (`elements`)
 
-- [ ] 1.1 Add `_expand_select_bind` to `webcompy/elements/_bind.py`: str-valued Signal requirement (mirror `_expand_text_bind` error), `attrs["value"] = signal`, write-back on `change` (`signal.value = target.value`, dirty first), `blur` marks Field touched, raise on `multiple` attr (single selection only); wire the `select` tag path in `expand_bind_attr` returning `{"value"}` property attrs; update `_SUPPORTED_ELEMENTS` message to include `select`
-- [ ] 1.2 Extend existing `:bind` unit tests (locate via `grep -rl "expand_bind_attr\|:bind" tests/`): select two-way binding, non-str rejection, explicit `value` conflict rejection, dirty/touched wiring through the Field path
+- [x] 1.1 Add `_expand_select_bind` to `webcompy/elements/_bind.py`: str-valued Signal requirement (mirror `_expand_text_bind` error), `attrs["value"] = signal`, write-back on `change` (`signal.value = target.value`, dirty first), `blur` marks Field touched, raise on `multiple` attr (single selection only); wire the `select` tag path in `expand_bind_attr` returning `{"value"}` property attrs; update `_SUPPORTED_ELEMENTS` message to include `select`
+- [x] 1.2 Extend existing `:bind` unit tests (locate via `grep -rl "expand_bind_attr\|:bind" tests/`): select two-way binding, non-str rejection, explicit `value` conflict rejection, dirty/touched wiring through the Field path
 
 ## 2. Headless text controls
 
