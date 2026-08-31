@@ -72,6 +72,21 @@ def test_collapse_expand_and_collapse(page_on):
     expect(trigger).to_have_attribute("data-state", "closed")
 
 
+def test_collapse_reopen_during_leave(page_on):
+    page = page_on("/disclosure")
+    trigger = page.locator("[data-testid='disclosure-page'] button").filter(has_text="Toggle details")
+    body = page.locator("[data-testid='collapse-body']")
+    trigger.click()
+    expect(trigger).to_have_attribute("aria-expanded", "true")
+    trigger.click()
+    # Re-open within the 240ms leave window (also valid after it completes:
+    # only the final state is asserted, so the test is timing-tolerant).
+    trigger.click()
+    expect(body).to_be_visible()
+    expect(body).to_have_count(1)
+    expect(trigger).to_have_attribute("aria-expanded", "true")
+
+
 def test_accordion_single_open(page_on):
     page = page_on("/disclosure")
     page.locator("[data-testid='disclosure-page'] button").filter(has_text="First").click()

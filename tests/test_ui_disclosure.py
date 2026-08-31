@@ -97,6 +97,9 @@ class TestTabs:
             assert panels[0].getAttribute("aria-labelledby") == tab_btns[0].getAttribute("id")
             assert tab_btns[0].getAttribute("tabindex") == "0"
             assert tab_btns[1].getAttribute("tabindex") == "-1"
+            # Tab buttons never submit an enclosing form.
+            assert tab_btns[0].getAttribute("type") == "button"
+            assert tab_btns[1].getAttribute("type") == "button"
 
     def test_panel_state_preservation(self) -> None:
         captured: dict = {}
@@ -263,7 +266,8 @@ class TestCollapse:
             trigger = _find_all(root, lambda n: n.getAttribute("aria-expanded") is not None)[0]
             assert trigger.getAttribute("aria-expanded") == "false"
             assert trigger.getAttribute("data-state") == "closed"
-            assert trigger.getAttribute("aria-controls") == trigger.getAttribute("aria-controls")
+            # The trigger never submits an enclosing form.
+            assert trigger.getAttribute("type") == "button"
             _click(trigger)
             contents = _by_role(root, "region")
             assert len(contents) == 1
@@ -275,6 +279,30 @@ class TestCollapse:
             result.transition_port.flush_frame()
             assert _by_role(root, "region") == []
             assert trigger.getAttribute("data-state") == "closed"
+
+    def test_reopen_after_close_remounts_single_region(self) -> None:
+        # The content element instance is re-yielded across open/close/open
+        # cycles; the Transition must remount exactly one node per cycle.
+        @define_component(custom_element_name="test-collapse-reopen")
+        def Page(ctx):
+            from webcompy.ui import Collapse
+
+            return Collapse({"transition_name": None}, slots={"default": lambda: html.P({}, "BODY")})
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            trigger = _find_all(root, lambda n: n.getAttribute("aria-expanded") is not None)[0]
+            _click(trigger)
+            first_id = _by_role(root, "region")[0].getAttribute("id")
+            _click(trigger)
+            result.transition_port.flush_frame()
+            assert _by_role(root, "region") == []
+            _click(trigger)
+            regions = _by_role(root, "region")
+            assert len(regions) == 1
+            assert regions[0].getAttribute("data-state") == "open"
+            assert regions[0].getAttribute("aria-labelledby") == trigger.getAttribute("id")
+            assert regions[0].getAttribute("id") == first_id
 
     def test_signal_control_writes_through(self) -> None:
         captured: dict = {}
@@ -323,11 +351,15 @@ class TestAccordion:
         ]
 
     def test_single_open_policy_closes_siblings(self) -> None:
+        toggles: list = []
+
         @define_component(custom_element_name="test-accordion-single")
         def Page(ctx):
             from webcompy.ui import Accordion
 
-            return Accordion({"items": self._items(), "single_open": True})
+            return Accordion(
+                {"items": self._items(), "single_open": True, "on_toggle": lambda k, v: toggles.append((k, v))}
+            )
 
         with TestRenderer.render(Page) as result:
             root = result.body_node
@@ -342,6 +374,8 @@ class TestAccordion:
             assert regions[0].getAttribute("aria-labelledby") == triggers[1].getAttribute("id")
             assert triggers[0].getAttribute("data-state") == "closed"
             assert triggers[1].getAttribute("data-state") == "open"
+            # The sibling closed by the policy is announced too (closures first).
+            assert toggles == [("i1", True), ("i1", False), ("i2", True)]
 
     def test_multi_open_default(self) -> None:
         @define_component(custom_element_name="test-accordion-multi")
