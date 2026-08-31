@@ -53,3 +53,10 @@
 - [x] 8.4 `docs_app/documents/i18n.md`: update the resolution/persistence and SSR sections to the cookie-only model and note the deferred negotiation
 - [x] 8.5 Add `e2e/docs/test_i18n.py` (guide renders; demo switch en→ja updates text) and register it in the `docs-documents` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`; update `test_readonly_signal.py` pager expectation for the inserted guide
 - [x] 8.6 Re-run validation: static checks, full `pytest tests/`, SSG generate, E2E `docs-documents` (both modes) then the full suite
+
+## 9. Review fixes
+
+- [x] 9.1 `i18n/_adapters/_babel.py`: register `Locale.parse(id).plural_form` (a callable `PluralRule` returning the CLDR tag) instead of the non-existent `plural_forms`/`.order`/`plural_form()` surface; rewrite the unit-test mock to mirror the real Babel API shape
+- [x] 9.2 Locale normalization determinism: extract shared `language_part`/`match_supported` helpers (sorted candidate order for same-language ties), use them in `I18nManager._normalize`, `resolve_locale`, and the plural registry; drop the unused duplicate in `_catalog.py`; add determinism/parity tests and a delta-spec scenario; fold the inline `hi` lambda into the shared `one`/`0..1` rule
+- [x] 9.3 `docs_app/documents/i18n.md`: fix the `use_i18n` import example to `from webcompy.i18n import use_i18n` (the top-level package does not re-export it) and terminate the file with a newline
+- [x] 9.4 Re-run validation: static checks and full `pytest tests/`
