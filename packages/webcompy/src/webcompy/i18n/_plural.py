@@ -12,14 +12,12 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable
 
+from webcompy.i18n._types import language_part
+
 PluralRule = Callable[[int | float], str]
 """Selector mapping a count to its CLDR plural category name."""
 
 _PLURAL_RULES: dict[str, PluralRule] = {}
-
-
-def _language_part(locale: str) -> str:
-    return locale.split("-", 1)[0] if "-" in locale else locale
 
 
 def _integer_digits(count: int | float) -> int:
@@ -157,14 +155,12 @@ def _arabic() -> PluralRule:
 def _register_builtin(table: dict[str, PluralRule]) -> None:
     for locale in ("en", "de", "nl", "sv", "da", "no", "fi", "hu", "it", "es", "el"):
         table[locale] = _one_other_single()
-    for locale in ("fr",):
+    for locale in ("fr", "hi"):
         table[locale] = _one_zero_or_single()
     for locale in ("pt",):
         table[locale] = _one_zero_to_single()
     for locale in ("tr",):
         table[locale] = _one_zero_or_one_integer()
-    for locale in ("hi",):
-        table[locale] = lambda count: "one" if count == 1 or count == 0 else "other"
     for locale in ("ja", "zh", "ko", "th", "vi", "id"):
         table[locale] = _other_only()
     table["ru"] = _russian()
@@ -197,7 +193,7 @@ def register_plural_rule(locale: str, rule: PluralRule, *, override: bool = Fals
             is ``False``.
 
     """
-    key = _language_part(locale).lower()
+    key = language_part(locale).lower()
     if key in _PLURAL_RULES and not override:
         raise ValueError(
             f"Plural rules for locale {key!r} are already registered. "
@@ -220,7 +216,7 @@ def get_plural_category(locale: str, count: int | float) -> str:
         The CLDR category name (e.g. ``"one"``, ``"few"``, ``"many"``).
 
     """
-    language = _language_part(locale).lower()
+    language = language_part(locale).lower()
     rule = _PLURAL_RULES.get(language)
     if rule is None:
         warnings.warn(

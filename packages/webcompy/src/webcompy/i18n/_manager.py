@@ -7,11 +7,8 @@ from typing import Any
 
 from webcompy.i18n._catalog import translate_message
 from webcompy.i18n._cookie import read_locale_cookie_value, write_locale_cookie_value
+from webcompy.i18n._types import language_part, match_supported
 from webcompy.signal import Signal
-
-
-def _language_part(locale: str) -> str:
-    return locale.split("-", 1)[0] if "-" in locale else locale
 
 
 def _dedupe(chain: tuple[str, ...]) -> tuple[str, ...]:
@@ -75,15 +72,8 @@ class I18nManager:
         return self._default_locale
 
     def _normalize(self, locale: str) -> str:
-        lowered = locale.strip().lower()
-        for candidate in self._supported:
-            if candidate.lower() == lowered:
-                return candidate
-        language = lowered.split("-", 1)[0]
-        for candidate in self._supported:
-            if candidate.lower().split("-", 1)[0] == language:
-                return candidate
-        return self._default_locale
+        matched = match_supported(locale, self._supported)
+        return self._default_locale if matched is None else matched
 
     @property
     def locale(self) -> Signal[str]:
@@ -123,7 +113,7 @@ class I18nManager:
 
         """
         locale = self._signal.value
-        language = _language_part(locale)
+        language = language_part(locale)
         chain = _dedupe((locale, language, self._fallback_locale))
         return translate_message(self._catalogs, chain, key, count=count, params=params)
 

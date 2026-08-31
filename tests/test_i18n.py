@@ -304,3 +304,63 @@ class TestResolutionAndPersistence:
         with scope:
             manager = _manager()
         assert resolve_locale(headers, ["en", "ja"], "en") == manager.value == "ja"
+
+
+class TestNormalizationDeterminism:
+    def test_exact_match_wins_over_language_part(self) -> None:
+        manager = I18nManager(
+            {},
+            default_locale="en-GB",
+            supported_locales={"en-GB", "en-US"},
+            initial_locale="en-US",
+        )
+        assert manager.value == "en-US"
+
+    def test_language_part_tie_breaks_on_sorted_order(self) -> None:
+        manager = I18nManager(
+            {},
+            default_locale="en-GB",
+            supported_locales={"en-US", "en-GB"},
+            initial_locale="en-CA",
+        )
+        assert manager.value == "en-GB"
+
+    def test_set_iteration_order_does_not_affect_resolution(self) -> None:
+        for _ in range(20):
+            supported = {"en-US", "en-GB", "en-AU"}
+            manager = I18nManager(
+                {},
+                default_locale="en-US",
+                supported_locales=supported,
+                initial_locale="en-ZZ",
+            )
+            assert manager.value == "en-AU"
+
+    def test_manager_normalization_matches_resolve_locale(self) -> None:
+        supported = ["en-US", "en-GB"]
+        for cookie_value, expected in (("en-CA", "en-GB"), ("en-US", "en-US"), ("en-gb", "en-GB")):
+            headers = {"cookie": f"{I18N_COOKIE_NAME}={cookie_value}"}
+            resolved = resolve_locale(headers, supported, "en-US")
+            manager = I18nManager(
+                {},
+                default_locale="en-US",
+                supported_locales=set(supported),
+                initial_locale=resolved,
+            )
+            assert manager.value == expected
+            normalized = I18nManager(
+                {},
+                default_locale="en-US",
+                supported_locales=set(supported),
+                initial_locale=cookie_value,
+            )
+            assert normalized.value == expected
+
+    def test_unsupported_language_falls_back_to_default(self) -> None:
+        manager = I18nManager(
+            {},
+            default_locale="en-GB",
+            supported_locales={"en-GB", "en-US"},
+            initial_locale="fr-FR",
+        )
+        assert manager.value == "en-GB"

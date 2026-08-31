@@ -11,10 +11,6 @@ from webcompy.i18n._plural import get_plural_category
 _INTERP_RE = re.compile(r"\{(\w+)\}")
 
 
-def _language_part(locale: str) -> str:
-    return locale.split("-", 1)[0] if "-" in locale else locale
-
-
 def _interpolate(template: str, params: Mapping[str, Any]) -> str:
     def _sub(match: re.Match[str]) -> str:
         name = match.group(1)

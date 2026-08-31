@@ -74,7 +74,7 @@ Key resolution SHALL try the exact locale (e.g. `de-AT`), then its language (`de
 
 ### Requirement: Locale shall persist via cookie and resolve on SSR from the request cookie
 
-In the browser, the initial locale SHALL be read from a locale cookie via the cookie port, falling back to the configured default when the cookie is absent, and switching locales SHALL write the cookie. During SSR, the manager's initial locale SHALL resolve from the request's Cookie header (surfaced through the cookie port), falling back to the configured default. Both sides SHALL apply the same normalization so first render and hydration agree, and neither side SHALL consult `Accept-Language` or `navigator.language`.
+In the browser, the initial locale SHALL be read from a locale cookie via the cookie port, falling back to the configured default when the cookie is absent, and switching locales SHALL write the cookie. During SSR, the manager's initial locale SHALL resolve from the request's Cookie header (surfaced through the cookie port), falling back to the configured default. Both sides SHALL apply the same normalization so first render and hydration agree, and neither side SHALL consult `Accept-Language` or `navigator.language`. When several supported locales match a value at the same specificity (exact tag, then language part), normalization SHALL select the first candidate in sorted order so the result is deterministic regardless of iteration order.
 
 #### Scenario: Repeat visit honors the cookie on both sides
 
@@ -90,3 +90,8 @@ In the browser, the initial locale SHALL be read from a locale cookie via the co
 
 - **WHEN** the locale cookie holds a value not among the supported locales and no language match exists
 - **THEN** resolution SHALL fall back to the configured default locale identically on both sides
+
+#### Scenario: Same-language supported locales resolve deterministically
+
+- **WHEN** the supported locales include several tags sharing one language (e.g. `en-GB`, `en-US`) and a locale value matches only on the language part (e.g. `en-CA`)
+- **THEN** normalization SHALL select the first matching candidate in sorted order (here `en-GB`), giving the server and the browser the same result for the same inputs

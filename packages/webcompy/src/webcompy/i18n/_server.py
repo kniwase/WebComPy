@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from urllib.parse import unquote
 
-from webcompy.i18n._types import I18N_COOKIE_NAME
+from webcompy.i18n._types import I18N_COOKIE_NAME, match_supported
 
 
 def _header_value(
@@ -54,16 +54,6 @@ def read_locale_from_cookie(
     return None
 
 
-def _match_supported(locale: str, supported: set[str]) -> str | None:
-    lowered = locale.strip().lower()
-    exact = sorted(c for c in supported if c.lower() == lowered)
-    if exact:
-        return exact[0]
-    language = lowered.split("-", 1)[0]
-    matches = sorted(c for c in supported if c.lower().split("-", 1)[0] == language)
-    return matches[0] if matches else None
-
-
 def resolve_locale(
     headers: Mapping[str, str] | Sequence[tuple[str, str]] | None,
     supported_locales: Iterable[str],
@@ -72,10 +62,11 @@ def resolve_locale(
     """Resolve the locale for a request from its headers.
 
     Resolution order: the locale cookie if it matches a supported locale
-    (exact tag or language part), otherwise ``default_locale``. The
-    ``Accept-Language`` header is deliberately not consulted: server-side
-    negotiation without an app-scoped transfer of the resolved value
-    breaks first-render/hydration agreement with the browser.
+    (exact tag or language part, selected deterministically in sorted
+    candidate order), otherwise ``default_locale``. The ``Accept-Language``
+    header is deliberately not consulted: server-side negotiation without
+    an app-scoped transfer of the resolved value breaks first-render/
+    hydration agreement with the browser.
 
     Args:
         headers: Request headers as a mapping or a sequence of
@@ -88,9 +79,8 @@ def resolve_locale(
         ``default_locale``.
 
     """
-    supported = {loc.strip().lower() for loc in supported_locales if loc and loc.strip()}
     cookie_locale = read_locale_from_cookie(headers)
-    matched = _match_supported(cookie_locale, supported) if cookie_locale is not None else None
+    matched = match_supported(cookie_locale, supported_locales) if cookie_locale is not None else None
     if matched is not None:
         return matched
     return default_locale
