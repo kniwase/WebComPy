@@ -335,10 +335,12 @@ def build_precache_entries(
 ) -> list[str]:
     """Resolve the precache URL list for a PWA-enabled build or server start.
 
-    With ``precache="none"`` the result is empty and the output directory
-    is not enumerated. With ``"auto"`` and a ``dist_dir``, build output is
-    enumerated as scope-relative paths, each generated page additionally
-    contributes its clean URL, and the PWA output files are excluded.
+    With ``precache="none"`` the output directory is not enumerated and no
+    build output is included; only a configured ``fallback_path`` remains
+    in the manifest so an overridden offline page is still served offline.
+    With ``"auto"`` and a ``dist_dir``, build output is enumerated as
+    scope-relative paths, each generated page additionally contributes its
+    clean URL, and the PWA output files are excluded.
     Runtime files are excluded regardless of serving mode unless
     ``precache_runtime`` is enabled, in which case the included set is
     extended with the local runtime URLs and/or the given CDN runtime
@@ -359,7 +361,7 @@ def build_precache_entries(
 
     """
     if pwa.precache == "none":
-        return []
+        return [pwa.fallback_path] if pwa.fallback_path is not None else []
 
     runtime_rels = frozenset(f"{RUNTIME_ASSET_PREFIX}{rel}" for rel in runtime_asset_files or {})
     entries: set[str] = set()

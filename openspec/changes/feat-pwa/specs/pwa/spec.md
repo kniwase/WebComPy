@@ -32,7 +32,7 @@ The framework SHALL ship a Service Worker template implementing precaching, stra
 
 ### Requirement: Precache shall enumerate build output automatically with runtime precache opt-in
 
-The `precache` setting SHALL accept `"auto"` (the default) and `"none"`. `precache="auto"` SHALL enumerate the build output (generated pages and emitted assets) into the precache manifest, and SHALL include each generated page's clean URL alongside its `index.html` file path so navigation requests match cached entries. `precache="none"` SHALL produce an empty precache manifest without enumerating build output. Precaching the Python runtime (interpreter/PyScript bundles) SHALL be opt-in via `precache_runtime`: runtime files SHALL be excluded from automatic enumeration regardless of how the runtime is served, and enabling the option SHALL log a build-time warning stating the approximate storage cost. For local runtime serving, enabling `precache_runtime` SHALL include the runtime files in the precache manifest and the warning SHALL state the summed size of those files. For CDN runtime serving, enabling `precache_runtime` SHALL include the known runtime entry file URLs (PyScript core and the Pyodide lock file) with a warning that offline startup is not guaranteed; transitive CDN runtime enumeration is out of scope. Combining `precache="none"` with `precache_runtime` SHALL be rejected as an invalid configuration. Assets with content-hashed names SHALL be considered cache-first safe by construction.
+The `precache` setting SHALL accept `"auto"` (the default) and `"none"`. `precache="auto"` SHALL enumerate the build output (generated pages and emitted assets) into the precache manifest, and SHALL include each generated page's clean URL alongside its `index.html` file path so navigation requests match cached entries. `precache="none"` SHALL produce a precache manifest that includes no build output (the output directory SHALL NOT be enumerated); when an offline fallback override is configured, its file SHALL still be the manifest's sole entry so the custom offline page remains served offline. Precaching the Python runtime (interpreter/PyScript bundles) SHALL be opt-in via `precache_runtime`: runtime files SHALL be excluded from automatic enumeration regardless of how the runtime is served, and enabling the option SHALL log a build-time warning stating the approximate storage cost. For local runtime serving, enabling `precache_runtime` SHALL include the runtime files in the precache manifest and the warning SHALL state the summed size of those files. For CDN runtime serving, enabling `precache_runtime` SHALL include the known runtime entry file URLs (PyScript core and the Pyodide lock file) with a warning that offline startup is not guaranteed; transitive CDN runtime enumeration is out of scope. Combining `precache="none"` with `precache_runtime` SHALL be rejected as an invalid configuration. Assets with content-hashed names SHALL be considered cache-first safe by construction.
 
 #### Scenario: Auto precache covers build output
 
@@ -43,8 +43,9 @@ The `precache` setting SHALL accept `"auto"` (the default) and `"none"`. `precac
 #### Scenario: Precache disabled
 
 - **WHEN** a PWA-enabled build sets `precache="none"`
-- **THEN** the precache manifest SHALL be empty
+- **THEN** the precache manifest SHALL contain no build-output entries
 - **AND** the build SHALL NOT enumerate the output directory
+- **AND** a configured offline fallback override file SHALL still be included in the manifest
 
 #### Scenario: Offline navigation to a generated page serves its cached index
 

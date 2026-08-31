@@ -46,3 +46,4 @@
 - [x] 9.1 Match runtime cache rule entries by full URL: drop query-insensitive matching from the three rule strategies (keep it for navigation matching) and cover the worker template with a generator assertion
 - [x] 9.2 Normalize runtime rule patterns to a leading slash at worker generation time (scope-relative pathnames keep the leading slash), with generator tests and config docstring updates
 - [x] 9.3 Document the CDN runtime precache serving limitation, the rule pattern and full-URL matching semantics, and the purpose of the prefixed static-file routes (docs guide and design notes)
+- [x] 9.4 Precache the configured offline fallback override even with `precache="none"` (the manifest stays free of build-output entries, but the override file remains the sole entry so the custom offline page is served offline), with spec scenario, design, docs guide, and generator test updates

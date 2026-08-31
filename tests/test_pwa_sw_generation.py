@@ -58,6 +58,11 @@ class TestBuildPrecacheEntries:
         dist = _make_dist(tmp_path)
         assert build_precache_entries(_pwa(precache="none"), dist_dir=dist) == []
 
+    def test_none_mode_keeps_only_fallback(self, tmp_path):
+        dist = _make_dist(tmp_path)
+        entries = build_precache_entries(_pwa(precache="none", fallback_path="offline.html"), dist_dir=dist)
+        assert entries == ["offline.html"]
+
     def test_auto_enumerates_pages_and_assets(self, tmp_path):
         dist = _make_dist(tmp_path)
         entries = build_precache_entries(_pwa(), dist_dir=dist)

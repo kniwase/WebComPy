@@ -63,7 +63,7 @@ When enabled, the framework serializes `ManifestConfig` to `manifest.webmanifest
 
 Because lockfile-driven assets carry a content hash in their name, a new deployment means new URLs, and cache-first serving cannot return stale content for them.
 
-Use `precache="none"` to ship an empty precache manifest (for example, when every route is dynamic and you only want runtime caching and the offline fallback):
+Use `precache="none"` to ship a precache manifest that contains no build output (for example, when every route is dynamic and you only want runtime caching and the offline fallback). The output directory is not enumerated; a configured `fallback_path` is still precached as the manifest's only entry, so the custom offline page keeps working offline:
 
 ```python
 pwa=PWAConfig(enabled=True, manifest=..., precache="none")
