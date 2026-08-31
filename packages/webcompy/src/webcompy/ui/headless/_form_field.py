@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.di import inject
 from webcompy.elements import create_element, repeat
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
@@ -25,6 +24,8 @@ class FormFieldProps(TypedDict, total=False):
 
     field: Field[Any]
     label: str
+    control_id: str
+    error_id: str
     class_name: str
     class_label: str
     class_control: str
@@ -36,18 +37,19 @@ def FormField(context: ComponentContext[FormFieldProps]) -> Any:
     """Compose a caption, a bound control, and an accessible error region.
 
     The field's association ids are generated from the instance's
-    hydration-stable transfer id and provided through the component DI
-    scope, unless an enclosing wrapper (the themed layer) already
-    provided them, in which case they are reused. Bound controls
-    rendered in the default slot adopt the ids: the native control
-    receives the ``id`` referenced by the caption's ``<label for>``, and,
-    while the field is touched and invalid, ``aria-invalid="true"`` plus
-    an ``aria-describedby`` link to the error region. Error messages
-    render only in the touched-invalid state, so an invalid-but-untouched
-    form shows nothing on load. Group controls (``RadioGroup``) self-label
-    with a ``legend``; pass no ``label`` here for those. The root carries
-    ``data-state`` following the same gating. A standalone ``field`` prop
-    is required; raw value mode controls are used without a FormField.
+    hydration-stable transfer id (or taken from the ``control_id``/
+    ``error_id`` props when a themed wrapper supplies them) and provided
+    through the component DI scope. Bound controls rendered in the
+    default slot adopt the ids: the native control receives the ``id``
+    referenced by the caption's ``<label for>``, and, while the field is
+    touched and invalid, ``aria-invalid="true"`` plus an
+    ``aria-describedby`` link to the error region. Error messages render
+    only in the touched-invalid state, so an invalid-but-untouched form
+    shows nothing on load. Group controls (``RadioGroup``) self-label
+    with a ``legend``; pass no ``label`` here for those. The root
+    carries ``data-state`` following the same gating. A standalone
+    ``field`` prop is required; raw value mode controls are used without
+    a FormField.
 
     Args:
         context: Component context with the field props and the control
@@ -67,17 +69,11 @@ def FormField(context: ComponentContext[FormFieldProps]) -> Any:
     if field is None:
         raise WebComPyException("FormField requires a 'field' prop")
 
-    ctx = inject(FORM_FIELD_CONTEXT_KEY, default=None)
-    if ctx is None:
-        base = context.transfer_id
-        ctx = FormFieldContext(
-            control_id=instance_dom_id("form-field-control", base),
-            error_id=instance_dom_id("form-field-error", base),
-            label=props.get("label", ""),
-        )
-        context.provide(FORM_FIELD_CONTEXT_KEY, ctx)
-    control_id = ctx.control_id
-    error_id = ctx.error_id
+    base = context.transfer_id
+    control_id = props.get("control_id") or instance_dom_id("form-field-control", base)
+    error_id = props.get("error_id") or instance_dom_id("form-field-error", base)
+    ctx = FormFieldContext(control_id=control_id, error_id=error_id, label=props.get("label", ""))
+    context.provide(FORM_FIELD_CONTEXT_KEY, ctx)
 
     gated = use_computed(lambda: bool(field.touched.value and field.invalid.value))
     data_state = use_computed(lambda: "invalid" if gated.value else "valid")

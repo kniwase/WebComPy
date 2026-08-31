@@ -37,11 +37,11 @@
 
 ## 6. Unit tests (`tests/test_ui_form_controls.py`, browserless via TestRenderer; keep free of browser-only APIs for dual-run eligibility)
 
-- [ ] 6.1 Binding contract: Field-bound input syncs value and sets dirty/touched per forms rules; raw value mode invokes change callback; both-modes error case
-- [ ] 6.2 Select options rendering and selection binding; Checkbox checked binding; Switch `role="switch"`/`aria-checked`
-- [ ] 6.3 RadioGroup: fieldset/legend structure, options expansion, generated shared name distinct across instances, group value binding updates
-- [ ] 6.4 FormField: DI wiring end to end (label `for` equals control native id via injected context), error gating (no flash when untouched; errors + `aria-invalid` + `aria-describedby` after blur), id stability across re-renders, standalone control without context
-- [ ] 6.5 `data-state="valid|invalid"` follows touched+invalid gating on all bound controls; raw-mode controls report `valid`
+- [x] 6.1 Binding contract: Field-bound input syncs value and sets dirty/touched per forms rules; raw value mode invokes change callback; both-modes error case
+- [x] 6.2 Select options rendering and selection binding; Checkbox checked binding; Switch `role="switch"`/`aria-checked`
+- [x] 6.3 RadioGroup: fieldset/legend structure, options expansion, generated shared name distinct across instances, group value binding updates
+- [x] 6.4 FormField: DI wiring end to end (label `for` equals control native id via injected context), error gating (no flash when untouched; errors + `aria-invalid` + `aria-describedby` after blur), id stability across re-renders, standalone control without context
+- [x] 6.5 `data-state="valid|invalid"` follows touched+invalid gating on all bound controls; raw-mode controls report `valid`
 
 ## 7. E2E and docs
 

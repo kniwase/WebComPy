@@ -17,6 +17,8 @@ class FormFieldProps(TypedDict, total=False):
 
     field: Field[Any]
     label: str
+    control_id: str
+    error_id: str
     class_name: str
     class_label: str
     class_control: str
@@ -29,11 +31,11 @@ def FormField(context: ComponentContext[FormFieldProps]) -> Any:
 
     Composes the headless ``FormField`` and supplies token-based default
     classes for the label, control wrapper, and error region; the error
-    gating behavior is inherited. The association-id context is provided
-    from this component's scope before slot contents are produced, so
-    controls created through the themed wrapper resolve the ids, and the
-    headless wrapper reuses the provided context instead of generating
-    its own.
+    gating behavior is inherited. Because slot content evaluates eagerly
+    in this wrapper's pass, the association ids are generated here from
+    the instance's transfer id, provided to the DI scope before the slot
+    renders, and forwarded to the headless wrapper as ``control_id`` /
+    ``error_id`` props so caption, control, and error region agree.
 
     Args:
         context: Component context with the field props and the control
@@ -44,20 +46,18 @@ def FormField(context: ComponentContext[FormFieldProps]) -> Any:
 
     """
     props = context.props or {}
-    label_text = props.get("label", "")
     base = context.transfer_id
+    control_id = props.get("control_id", "") or instance_dom_id("form-field-control", base)
+    error_id = props.get("error_id", "") or instance_dom_id("form-field-error", base)
     context.provide(
-        FORM_FIELD_CONTEXT_KEY,
-        FormFieldContext(
-            control_id=instance_dom_id("form-field-control", base),
-            error_id=instance_dom_id("form-field-error", base),
-            label=label_text,
-        ),
+        FORM_FIELD_CONTEXT_KEY, FormFieldContext(control_id=control_id, error_id=error_id, label=props.get("label", ""))
     )
     slot_content = context.slots("default", fallback=lambda: None)
     headless_props: HeadlessFormFieldProps = {
         "field": props.get("field"),  # type: ignore[typeddict-item]
-        "label": label_text,
+        "label": props.get("label", ""),
+        "control_id": control_id,
+        "error_id": error_id,
         "class_name": join_classes("webcompy-form-field", props.get("class_name", "")),
         "class_label": join_classes("webcompy-form-field-label", props.get("class_label", "")),
         "class_control": join_classes("webcompy-form-field-control", props.get("class_control", "")),
