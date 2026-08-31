@@ -20,9 +20,9 @@
 
 ## 3. Headless choice controls
 
-- [ ] 3.1 Implement headless Checkbox (`headless-checkbox`): native checkbox with checked binding (Field bool or raw value/change), optional `label` prop rendered as implicit wrapping label, FormFieldContext consumption, `data-state` hook, class pass-through
-- [ ] 3.2 Implement headless Switch (`headless-switch`): checkbox base with `role="switch"` and computed `aria-checked`, same binding path
-- [ ] 3.3 Implement headless Radio (`headless-radio`) and RadioGroup (`headless-radio-group`): Radio is a standalone native radio (caller supplies `name`); RadioGroup renders `fieldset`/`legend` with `options` prop items sharing a `name` generated from the group's transfer id, group value binding (Field string or raw), `data-state` on the fieldset
+- [x] 3.1 Implement headless Checkbox (`headless-checkbox`): native checkbox with checked binding (Field bool or raw value/change), optional `label` prop rendered as implicit wrapping label, FormFieldContext consumption, `data-state` hook, class pass-through
+- [x] 3.2 Implement headless Switch (`headless-switch`): checkbox base with `role="switch"` and computed `aria-checked`, same binding path
+- [x] 3.3 Implement headless Radio (`headless-radio`) and RadioGroup (`headless-radio-group`): Radio is a standalone native radio (caller supplies `name`); RadioGroup renders `fieldset`/`legend` with `options` prop items sharing a `name` generated from the group's transfer id, group value binding (Field string or raw), `data-state` on the fieldset
 
 ## 4. Headless FormField
 
