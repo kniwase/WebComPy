@@ -165,6 +165,26 @@ class TestBindingContract:
             input_node.dispatchEvent(VirtualDOMEvent("input"))
             assert changes == ["typed"]
 
+    def test_raw_signal_value_synchronizes_both_directions(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        signal = Signal("seed")
+        changes: list[str] = []
+
+        @define_component(custom_element_name="test-bind-raw-signal")
+        def Page(ctx: ComponentContext) -> Any:
+            return Input({"value": signal, "on_change": changes.append})
+
+        with TestRenderer.render(Page) as result:
+            input_node = _find_tag(result.body_node, "INPUT")
+            assert input_node.getAttribute("value") == "seed"
+            input_node.value = "typed"
+            input_node.dispatchEvent(VirtualDOMEvent("input"))
+            assert signal.value == "typed"
+            assert changes == ["typed"]
+            signal.value = "programmatic"
+            assert input_node.getAttribute("value") == "programmatic"
+
     def test_both_modes_rejected(self) -> None:
         field = _required_field()
 

@@ -4,7 +4,7 @@
 
 ### Requirement: Form controls shall support Field binding and raw value binding
 
-Each form control (Input, Textarea, Select, Checkbox, Switch, RadioGroup) SHALL accept either a `field` prop carrying a forms-module `Field` instance, or `value` plus change-callback props. With a `field`, the control SHALL bind through the framework's `:bind` mechanism so that value synchronization, `dirty` on write-back, and `touched` on blur follow the forms capability's rules. With raw props, the control SHALL behave as a plain controlled element whose change callback is invoked after write-back to the control's internal signal. Supplying both modes on one instance SHALL be an error.
+Each form control (Input, Textarea, Select, Checkbox, Switch, RadioGroup) SHALL accept either a `field` prop carrying a forms-module `Field` instance, or `value` plus change-callback props. With a `field`, the control SHALL bind through the framework's `:bind` mechanism so that value synchronization, `dirty` on write-back, and `touched` on blur follow the forms capability's rules. With raw props, the control SHALL behave as a plain controlled element whose change callback is invoked after write-back to the control's internal signal. A plain (non-`Signal`) `value` SHALL seed the control's internal signal at construction; later external updates to it SHALL NOT be observed — callers needing live programmatic synchronization SHALL pass a `Signal`, whose value changes SHALL update the control and whose write-backs from user interaction SHALL flow back into the same `Signal`. Supplying both modes on one instance SHALL be an error.
 
 #### Scenario: Field-bound input updates validation state
 
@@ -15,6 +15,12 @@ Each form control (Input, Textarea, Select, Checkbox, Switch, RadioGroup) SHALL 
 
 - **WHEN** an Input is given a value prop and a change callback without a Field
 - **THEN** user edits SHALL invoke the change callback with the new value and no forms-module state SHALL be involved
+
+#### Scenario: Raw Signal value synchronizes in both directions
+
+- **WHEN** an Input is given a `Signal` as its value prop and the Signal's value is later changed programmatically
+- **THEN** the rendered control's value SHALL reflect the new Signal value
+- **AND** user edits SHALL write back into the same Signal
 
 #### Scenario: Both binding modes rejected
 

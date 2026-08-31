@@ -31,7 +31,7 @@ Grounded facts (verified in codebase):
 
 ### D1: Binding contract — Field instance or raw value props
 
-Every control accepts either a `field` prop (a `Field` instance) or `value` + `on_change` props. With `field`, the control binds via the existing `:bind` mechanism (value sync, dirty/touched wiring comes for free). With raw props, the control is a plain controlled element (an internal signal seeded from `value`, write-back chained to `on_change`). Rationale: `field` covers the dominant validated-form case with zero wiring; raw props keep the controls usable outside the forms module (search boxes, filters) without forcing Field adoption. The two modes are mutually exclusive per instance; passing both is an error.
+Every control accepts either a `field` prop (a `Field` instance) or `value` + `on_change` props. With `field`, the control binds via the existing `:bind` mechanism (value sync, dirty/touched wiring comes for free). With raw props, the control is a plain controlled element (an internal signal seeded from `value`, write-back chained to `on_change`). A plain (non-`Signal`) `value` is an initial seed only: component setup runs once, so later external changes to a plain value are unobservable and only the control's internal state moves; live programmatic sync requires passing a `Signal`, which the control binds through `:bind` in both directions. Rationale: `field` covers the dominant validated-form case with zero wiring; raw props keep the controls usable outside the forms module (search boxes, filters) without forcing Field adoption. The two modes are mutually exclusive per instance; passing both is an error.
 
 ### D2: Native elements as the base
 

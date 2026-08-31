@@ -67,3 +67,11 @@
 - [x] 9.5 Regression tests: standalone control after a FormField (headless and themed) carries no foreign id/describedby; template-path slotted group wired and sibling group isolated; unbound RadioGroup and plain-value Radio errors; existing gating assertions preserved
 - [x] 9.6 Re-run validation: `openspec validate feat-ui-form-controls`, ruff, pyright, docstring checker, browser-import checker, full unit tier, and E2E groups `ui-form-controls`, `docs-demos`, `components`, `interaction`
 - [x] 9.7 Update design.md (D8, Risks) and the delta spec FormField requirement (confinement sentence + sibling-control scenario)
+
+## 10. Review follow-up: clarify the raw value binding contract
+
+- [x] 10.1 Delta spec (`ui-form-controls` binding requirement): a plain (non-`Signal`) `value` seeds the control's internal signal at construction only; later external changes are not observed and live programmatic sync requires a `Signal` bound in both directions; add the raw-Signal two-way sync scenario
+- [x] 10.2 design.md D1: record the plain-value seed semantics and the Signal requirement for live sync
+- [x] 10.3 `resolve_bind_target` docstring: state the seed distinction
+- [x] 10.4 Unit test: a `Signal` passed as `value` updates the DOM on programmatic change and user write-back flows into the same Signal (chained `on_change` still fires)
+- [x] 10.5 Re-run validation: `openspec validate feat-ui-form-controls`, ruff check/format, docstring checker, unit tests for the form control and `:bind` tiers

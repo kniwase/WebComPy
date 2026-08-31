@@ -39,8 +39,10 @@ def resolve_bind_target(props: Mapping[str, Any], control: str) -> BindSpec:
 
     A ``field`` prop selects field mode; a ``value`` prop (plain value or
     a ``Signal``) selects raw mode, seeding a component-scoped signal for
-    plain values. Supplying both modes raises; supplying neither yields an
-    unbound control.
+    plain values. A plain ``value`` is only the initial seed: later
+    external changes to it are not observed, so live two-way
+    synchronization requires passing a ``Signal``. Supplying both modes
+    raises; supplying neither yields an unbound control.
 
     Args:
         props: The control's component props.
