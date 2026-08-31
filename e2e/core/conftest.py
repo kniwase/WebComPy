@@ -118,6 +118,9 @@ def pytest_generate_tests(metafunc):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
+    config.addinivalue_line(
+        "markers", "pwa_transient_asset_errors: tolerate asset console errors caused by deliberate PWA test scenarios"
+    )
 
 
 def _check_asset_errors(messages: list[ConsoleMessage]):

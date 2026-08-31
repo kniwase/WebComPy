@@ -8,6 +8,7 @@ from webcompy.components._generator import define_component
 from webcompy_cli._build import BuildArtifacts
 from webcompy_cli._utils import generate_app_version
 from webcompy_cli.config._build_config import WebComPyBuildConfig
+from webcompy_cli.config._pwa_config import PWAConfig
 from webcompy_cli.config._server_config import WebComPyServerConfig
 from webcompy_server import configure_server_context
 
@@ -72,6 +73,7 @@ class TestCreateAsgiAppMode:
         server_config = WebComPyServerConfig(dev=True)
         build_config = MagicMock(spec=WebComPyBuildConfig)
         build_config.server = server_config
+        build_config.pwa = PWAConfig()
         build_config.wasm_serving = None
         build_config.runtime_serving = None
         build_config.standalone = False

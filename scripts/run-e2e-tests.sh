@@ -52,12 +52,13 @@ declare -A E2E_GROUPS=(
   ["plugin-script"]="e2e/core/test_eruda.py"
   ["template"]="e2e/core/test_template.py e2e/core/test_template_components.py e2e/core/test_template_control_flow.py e2e/core/test_template_expressions.py e2e/core/test_markdown_for.py e2e/core/test_html_parser_parity.py"
   ["error-handling"]="e2e/core/test_error_handling.py"
+  ["pwa"]="e2e/core/test_pwa.py"
 )
 
 # Docs groups are static-only in CI, except docs-documents (prod + static)
 declare -A DOCS_GROUPS=(
   ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_helloworld.py"
-  ["docs-documents"]="e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py"
+  ["docs-documents"]="e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py"
   ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py e2e/docs/test_demo_navigation.py"
   ["docs-matplotlib"]="e2e/docs/test_matplotlib.py"
   ["docs-fetch"]="e2e/docs/test_fetch.py"

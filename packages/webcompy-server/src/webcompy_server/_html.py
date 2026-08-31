@@ -501,6 +501,7 @@ async def generate_html(
     runtime_serving: str = "cdn",
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
+    pwa_enabled: bool = False,
 ):
     """Generate the full HTML document for the application.
 
@@ -516,6 +517,7 @@ async def generate_html(
         runtime_serving: How the PyScript runtime is served.
         extra_wheel_filenames: Additional wheel filenames to preload.
         app_package_path: Filesystem path of the app package for template resolution.
+        pwa_enabled: Whether to inject PWA manifest and worker registration.
 
     Returns:
         Rendered HTML string for the document.
@@ -536,6 +538,7 @@ async def generate_html(
             runtime_serving,
             extra_wheel_filenames,
             app_package_path,
+            pwa_enabled,
         )
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         await scheduler.await_pending()
@@ -582,6 +585,7 @@ async def _generate_html_impl(
     runtime_serving: str = "cdn",
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
+    pwa_enabled: bool = False,
 ):
     app = ctx._app
     base_url = ctx.config.base_url
@@ -670,6 +674,17 @@ async def _generate_html_impl(
                 ),
             )
         )
+    if pwa_enabled:
+        sw_url = f"{base_url}sw.js"
+        registration_script = " ".join(
+            (
+                'if ("serviceWorker" in navigator) {',
+                'window.addEventListener("load", function () {',
+                f"navigator.serviceWorker.register({json.dumps(sw_url)}, {{ scope: {json.dumps(base_url)} }});",
+                "});}",
+            )
+        )
+        scripts_body.append(({"type": "text/javascript"}, registration_script))
 
     assert ctx._root is not None
     custom_template = _resolve_loading_template(loading_config["template"], app_package_path)
@@ -690,6 +705,10 @@ async def _generate_html_impl(
             ),
         ]
 
+    pwa_head_links: list[_HtmlElement] = []
+    if pwa_enabled:
+        pwa_head_links.append(_HtmlElement("link", {"rel": "manifest", "href": f"{base_url}manifest.webmanifest"}))
+
     document = _HtmlElement(
         "html",
         ctx._root.html_attrs,
@@ -706,6 +725,7 @@ async def _generate_html_impl(
                 "link",
                 {"rel": "stylesheet", "href": core_css_url},
             ),
+            *pwa_head_links,
             *_load_scripts(scripts_head),
             *plugin_head_scripts,
         ),

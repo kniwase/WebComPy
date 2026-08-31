@@ -122,6 +122,10 @@ def resolve_build_artifacts(
     dev_mode: bool = False,
     dist_dir: pathlib.Path | None = None,
 ) -> BuildArtifacts:
+    build_config.pwa.validate(
+        app_package_path=build_config.app_package_path,
+        static_files_dir=build_config.static_files_dir,
+    )
     resource_allow_list = _detect_resources(
         build_config.app_package_path,
         build_config.resources,

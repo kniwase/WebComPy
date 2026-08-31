@@ -27,6 +27,16 @@ from webcompy.rpc._registry import ProcedureRegistry
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
 from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
+from webcompy_cli._pwa import (
+    MANIFEST_FILENAME,
+    MANIFEST_MEDIA_TYPE,
+    PWA_OUTPUT_NAMES,
+    SW_FILENAME,
+    SW_MEDIA_TYPE,
+    generate_sw,
+    precache_entries_for_artifacts,
+    serialize_manifest,
+)
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
@@ -189,7 +199,9 @@ def create_asgi_app(
 
     static_file_routes: list[Route] = []
     static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
-    for relative_path in get_static_files(static_files_dir):
+    static_relative_paths = get_static_files(static_files_dir)
+    static_url_prefix = "/" + base_url.strip("/") if base_url.strip("/") else ""
+    for relative_path in static_relative_paths:
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
             media_type = "application/octet-stream"
@@ -200,6 +212,8 @@ def create_asgi_app(
             return Response(content, media_type=_media_type)
 
         static_file_routes.append(Route("/" + relative_path, send_file))
+        if static_url_prefix:
+            static_file_routes.append(Route(static_url_prefix + "/" + relative_path, send_file))
 
     resource_routes: list[Route] = []
     resource_allow_list = artifacts.resource_allow_list
@@ -242,6 +256,33 @@ def create_asgi_app(
         Route("/_webcompy-ui/{filename:path}", send_framework_ui_css),
     ]
 
+    pwa_enabled = build_config.pwa.enabled
+    pwa_routes: list[Route] = []
+    if pwa_enabled:
+        manifest_content = serialize_manifest(build_config.pwa, base_url).encode("utf-8")
+        precache = precache_entries_for_artifacts(build_config.pwa, artifacts)
+        sw_content = generate_sw(build_config.pwa, artifacts.app_version, precache).encode("utf-8")
+        base_url_prefix = "/" + base_url.strip("/") if base_url.strip("/") else ""
+
+        async def send_manifest(request: Request):
+            return Response(manifest_content, media_type=MANIFEST_MEDIA_TYPE)
+
+        async def send_service_worker(request: Request):
+            return Response(sw_content, media_type=SW_MEDIA_TYPE, headers={"Cache-Control": "no-cache"})
+
+        pwa_routes.append(Route(f"/{MANIFEST_FILENAME}", send_manifest))
+        pwa_routes.append(Route(f"/{SW_FILENAME}", send_service_worker))
+        if base_url_prefix:
+            pwa_routes.append(Route(f"{base_url_prefix}/{MANIFEST_FILENAME}", send_manifest))
+            pwa_routes.append(Route(f"{base_url_prefix}/{SW_FILENAME}", send_service_worker))
+        collisions = sorted(PWA_OUTPUT_NAMES.intersection(static_relative_paths))
+        if collisions:
+            print(
+                f"Warning: static files {collisions} are shadowed by framework-generated PWA files",
+                file=sys.stderr,
+                flush=True,
+            )
+
     html_generator = partial(
         generate_html,
         app_package_name=build_config.app_package_path.name,
@@ -254,6 +295,7 @@ def create_asgi_app(
         runtime_serving=artifacts.runtime_serving,
         extra_wheel_filenames=artifacts.extra_wheel_filenames,
         app_package_path=build_config.app_package_path,
+        pwa_enabled=pwa_enabled,
     )
 
     # Mutable cache for hash-mode pre-rendered HTML
@@ -348,6 +390,7 @@ def create_asgi_app(
         *runtime_asset_routes,
         *framework_ui_routes,
         *resource_routes,
+        *pwa_routes,
         *static_file_routes,
         *mount_routes,
         *rpc_routes,

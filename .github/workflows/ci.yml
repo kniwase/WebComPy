@@ -276,6 +276,8 @@ jobs:
             files: e2e/core/test_template.py e2e/core/test_template_components.py e2e/core/test_template_control_flow.py e2e/core/test_template_expressions.py e2e/core/test_markdown_for.py e2e/core/test_html_parser_parity.py
           - name: error-handling
             files: e2e/core/test_error_handling.py
+          - name: pwa
+            files: e2e/core/test_pwa.py
         serving_mode: [prod, static]
     steps:
       - uses: actions/checkout@v5
@@ -329,11 +331,11 @@ jobs:
             serving_mode: static
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py
             serving_mode: prod
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py
             serving_mode: static
           - group:
               name: docs-demos

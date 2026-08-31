@@ -107,6 +107,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
             },
+            {
+                "label": "Progressive Web App",
+                "path": "/documents/pwa",
+                "source": "documents/pwa.md",
+            },
         ],
     },
 ]

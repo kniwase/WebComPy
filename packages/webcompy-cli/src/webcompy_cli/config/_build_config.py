@@ -7,6 +7,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Literal
 
+from webcompy_cli.config._pwa_config import PWAConfig
 from webcompy_cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
 
 
@@ -53,6 +54,7 @@ class WebComPyBuildConfig:
             app package path.
         lockfile_sync_config: Configuration for lock file synchronization.
         server: Server configuration.
+        pwa: Progressive Web App build configuration.
 
     Attributes:
         app_module: Python module containing the application instance.
@@ -81,6 +83,7 @@ class WebComPyBuildConfig:
         static_files_dir: Directory housing static files.
         lockfile_sync_config: Configuration for lock file synchronization.
         server: Server configuration.
+        pwa: Progressive Web App build configuration.
 
     """
 
@@ -102,6 +105,7 @@ class WebComPyBuildConfig:
     static_files_dir: str = "static"
     lockfile_sync_config: LockfileSyncConfig | None = None
     server: WebComPyServerConfig = field(default_factory=WebComPyServerConfig)
+    pwa: PWAConfig = field(default_factory=PWAConfig)
 
     def __post_init__(self):
         if self.resource_transfer not in ("used", "all-text"):

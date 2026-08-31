@@ -187,6 +187,7 @@ the per-area reference.
 - **PyExec Harness Confinement** — `inspect-pyexec/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
+- **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
 
 ## File → Spec Mapping
 
@@ -236,7 +237,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
-| `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md` |
+| `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md`, `pwa/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
 | `webcompy_server/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md` |
 | `webcompy_server/rpc/_dispatcher.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md` |
@@ -251,7 +252,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ajax/_sse.py` | `sse-parser/spec.md` |
 | `webcompy/ports/_fetch.py`, `webcompy/ports/_browser/_fetch.py` | `port-abstraction/spec.md` |
 | `webcompy_server/ports/_fetch.py` | `port-abstraction/spec.md` |
-| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md`, `loading-screen/spec.md` |
+| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md`, `loading-screen/spec.md`, `pwa/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | `tests/browser/`, `webcompy_testing/browser_runner/` | `browser-test-harness/spec.md`, `test-execution-paths/spec.md` |
@@ -418,6 +419,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
+| `pwa` | Declarative Progressive Web App support: Web App Manifest generation/serving/injection, build-time framework-owned Service Worker template (no user JS, no third-party libraries), precache enumeration of build output with clean-URL index resolution and opt-in runtime precache, same-origin runtime caching rules (cache-first/network-first/stale-while-revalidate) with isolated caches and eviction, immediate activation with old-cache cleanup, offline navigation fallback, base-URL-scoped registration injection, and dev-mode-off-by-default |
 | `test-execution-paths` | Physical separation between unit (`tests/`), browser (`tests/browser/`), and E2E (`e2e/`) tiers; opt-in `WEBCOMPY_RUN_E2E=1` / `WEBCOMPY_RUN_BROWSER=1` gates; `scripts/run-e2e-tests.sh` and `scripts/run-browser-tests.sh` canonical entry points |
 | `browser-dualrun` | Classification of `tests/` modules for PyScript dual-run eligibility (read-only AST pass with pragma overrides), in-page execution of the eligible subset via the harness mount, and bucketed CPython-vs-PyScript divergence reporting (`artifacts/browser-dualrun.json`, informational) |
 | `browser-probes` | Environment probe battery under `tests/browser/probes/` codifying PyScript-only contracts as a hard-gate suite, plus a manually-triggered version-bump sweep diffing probe outcomes across the pinned and a candidate PyScript version |
