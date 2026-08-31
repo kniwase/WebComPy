@@ -64,12 +64,17 @@ The headless Alert SHALL render inline feedback with variant semantics: error an
 
 ### Requirement: Progress shall expose determinate and indeterminate states with correct ARIA
 
-The headless Progress SHALL render `role="progressbar"` with an accessible label. In determinate mode it SHALL set `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` from value props; in indeterminate mode it SHALL omit `aria-valuenow` and expose `data-state="indeterminate"`. Determinate mode SHALL expose `data-state="determinate"`.
+The headless Progress SHALL render `role="progressbar"` with an accessible label. In determinate mode it SHALL set `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` from the value and bounds props, with `aria-valuenow` clamped to the configured bounds so it never falls outside `[min, max]`; the value, bounds, and indeterminate props SHALL be reactive to signal-like values. In indeterminate mode it SHALL omit `aria-valuenow` and expose `data-state="indeterminate"`. Determinate mode SHALL expose `data-state="determinate"`.
 
 #### Scenario: Determinate values are exposed
 
 - **WHEN** a Progress renders with value 40 of 100
 - **THEN** `aria-valuenow` SHALL be 40 with `aria-valuemin` 0 and `aria-valuemax` 100 (or the configured bounds)
+
+#### Scenario: Out-of-range values are clamped
+
+- **WHEN** a Progress renders with value 150 of bounds 0 to 100
+- **THEN** `aria-valuenow` SHALL be 100
 
 ### Requirement: Badge, Skeleton, and Card shall provide themed structural primitives
 

@@ -13,8 +13,8 @@ from webcompy.signal._base import SignalBase
 class ProgressProps(TypedDict, total=False):
     """Props accepted by the headless ``Progress`` component.
 
-    ``value`` and ``indeterminate`` may be plain values or signal-like
-    objects for reactive updates.
+    ``value``, ``min``, ``max`` and ``indeterminate`` may be plain values
+    or signal-like objects for reactive updates.
     """
 
     value: float
@@ -49,9 +49,10 @@ def _fmt(number: float) -> str:
 def Progress(context: ComponentContext[ProgressProps]) -> Any:
     """Render a progressbar with determinate or indeterminate semantics.
 
-    The root carries ``role="progressbar"`` with ``aria-valuemin`` and
-    ``aria-valuemax`` from the bounds props. In determinate mode it sets
-    ``aria-valuenow`` from the clamped value and exposes
+    The root carries ``role="progressbar"`` with reactive
+    ``aria-valuemin`` and ``aria-valuemax`` from the bounds props. In
+    determinate mode it sets ``aria-valuenow`` from the value clamped to
+    the bounds and exposes
     ``data-state="determinate"``; in indeterminate mode ``aria-valuenow``
     is omitted (an ARIA progressbar without a current value is
     indeterminate) and ``data-state="indeterminate"`` is exposed. Supply
@@ -73,13 +74,17 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
     props = context.props or {}
     value_raw = props.get("value")
     indeterminate_raw = props.get("indeterminate", False)
-    lower = float(_read(props.get("min"), 0))
-    upper = float(_read(props.get("max"), 100))
+
+    def _bounds() -> tuple[float, float]:
+        lower = float(_read(props.get("min"), 0))
+        upper = float(_read(props.get("max"), 100))
+        return lower, upper
 
     def _indeterminate() -> bool:
         return bool(_read(indeterminate_raw, False))
 
     def _percent() -> float:
+        lower, upper = _bounds()
         raw = float(_read(value_raw, 0))
         span = upper - lower if upper > lower else 1.0
         return max(0.0, min(1.0, (raw - lower) / span)) * 100.0
@@ -87,14 +92,16 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
     def _value_now() -> Any:
         if _indeterminate():
             return False
-        return _fmt(float(_read(value_raw, 0)))
+        lower, upper = _bounds()
+        raw = float(_read(value_raw, 0))
+        return _fmt(max(lower, min(upper, raw)))
 
     state_computed = use_computed(lambda: "indeterminate" if _indeterminate() else "determinate")
 
     attrs: dict[str, Any] = {
         "role": "progressbar",
-        "aria-valuemin": _fmt(lower),
-        "aria-valuemax": _fmt(upper),
+        "aria-valuemin": use_computed(lambda: _fmt(_bounds()[0])),
+        "aria-valuemax": use_computed(lambda: _fmt(_bounds()[1])),
         "aria-valuenow": use_computed(_value_now),
         "data-state": state_computed,
         "class": _compose_class(_FRAMEWORK_CLASS, props.get("class_name", "")),

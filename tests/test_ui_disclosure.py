@@ -493,6 +493,56 @@ class TestProgress:
             fill = _by_class(root, "webcompy-progress-fill")[0]
             assert "width: 75.0000%" in (fill.getAttribute("style") or "")
 
+    def test_valuenow_clamped_to_bounds(self) -> None:
+        @define_component(custom_element_name="test-progress-clamp")
+        def Page(ctx):
+            from webcompy.ui import Progress
+
+            return html.DIV(
+                {},
+                Progress({"value": 150, "min": 0, "max": 100, "aria_label": "Over"}),
+                Progress({"value": -10, "min": 0, "max": 100, "aria_label": "Under"}),
+            )
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            bars = _by_role(root, "progressbar")
+            assert bars[0].getAttribute("aria-valuenow") == "100"
+            assert bars[1].getAttribute("aria-valuenow") == "0"
+            fills = _by_class(root, "webcompy-progress-fill")
+            assert "width: 100.0000%" in (fills[0].getAttribute("style") or "")
+            assert "width: 0.0000%" in (fills[1].getAttribute("style") or "")
+
+    def test_reactive_bounds_update(self) -> None:
+        captured: dict = {}
+
+        @define_component(custom_element_name="test-progress-bounds")
+        def Page(ctx):
+            from webcompy.ui import Progress
+
+            lower = use_state(lambda: 0)
+            upper = use_state(lambda: 100)
+            captured["lower"] = lower
+            captured["upper"] = upper
+            return Progress({"value": 40, "min": lower, "max": upper, "aria_label": "B"})
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            bar = _by_role(root, "progressbar")[0]
+            assert bar.getAttribute("aria-valuemin") == "0"
+            assert bar.getAttribute("aria-valuemax") == "100"
+            captured["upper"].value = 50
+            assert bar.getAttribute("aria-valuemax") == "50"
+            assert bar.getAttribute("aria-valuenow") == "40"
+            fill = _by_class(root, "webcompy-progress-fill")[0]
+            assert "width: 80.0000%" in (fill.getAttribute("style") or "")
+            captured["upper"].value = 30
+            # Out-of-range value reports the clamped bound.
+            assert bar.getAttribute("aria-valuenow") == "30"
+            captured["lower"].value = 20
+            assert bar.getAttribute("aria-valuemin") == "20"
+            assert "width: 100.0000%" in (fill.getAttribute("style") or "")
+
 
 class TestBadgeSkeletonCard:
     """Badge variants, Skeleton decoration, Card regions, class pass-through."""
