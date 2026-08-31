@@ -45,9 +45,9 @@
 
 ## 7. E2E and docs
 
-- [ ] 7.1 docs_app demo page (`docs_app/pages/demo/ui_form_controls.py`, route `/sample/ui-form-controls`): full form (Input/Textarea/Select/Checkbox/Switch/RadioGroup in FormFields with validators, submit gated by Form, reset); link from docs navigation
-- [ ] 7.2 E2E test `e2e/core/test_ui_form_controls.py`: typed input triggers validation on blur, error display with `aria-invalid`/`aria-describedby` wiring verified in the browser, submit gating via Form, reset restores initial state; register new `ui-form-controls` group in `scripts/run-e2e-tests.sh` `E2E_GROUPS`
-- [ ] 7.3 Docs E2E: add a page test for the demo under `e2e/docs/` (pattern: `test_transition.py`) and register it in the `docs-demos` group
+- [x] 7.1 docs_app demo page (`docs_app/pages/demo/ui_form_controls.py`, route `/sample/ui-form-controls`): full form (Input/Textarea/Select/Checkbox/Switch/RadioGroup in FormFields with validators, submit gated by Form, reset); link from docs navigation
+- [x] 7.2 E2E test `e2e/core/test_ui_form_controls.py`: typed input triggers validation on blur, error display with `aria-invalid`/`aria-describedby` wiring verified in the browser, submit gating via Form, reset restores initial state; register new `ui-form-controls` group in `scripts/run-e2e-tests.sh` `E2E_GROUPS`
+- [x] 7.3 Docs E2E: add a page test for the demo under `e2e/docs/` (pattern: `test_transition.py`) and register it in the `docs-demos` group
 
 ## 8. Validation
 

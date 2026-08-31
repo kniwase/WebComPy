@@ -46,6 +46,7 @@ declare -A E2E_GROUPS=(
   ["dynamic-control"]="e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py e2e/core/test_transition.py"
   ["router"]="e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py e2e/core/test_route_guards.py e2e/core/test_scroll_restoration.py"
   ["interaction"]="e2e/core/test_event.py e2e/core/test_event_source.py e2e/core/test_event_source_post.py e2e/core/test_websocket.py e2e/core/test_rpc_ws.py e2e/core/test_rpc_stream.py e2e/core/test_rpc_mock.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py"
+  ["ui-form-controls"]="e2e/core/test_ui_form_controls.py"
   ["bundled-deps"]="e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py"
   ["runtime-local"]="e2e/core/test_runtime_local.py"
   ["standalone"]="e2e/core/test_standalone.py"
@@ -59,7 +60,7 @@ declare -A E2E_GROUPS=(
 declare -A DOCS_GROUPS=(
   ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_helloworld.py"
   ["docs-documents"]="e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py"
-  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py e2e/docs/test_demo_navigation.py"
+  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py e2e/docs/test_ui_form_controls.py e2e/docs/test_demo_navigation.py"
   ["docs-matplotlib"]="e2e/docs/test_matplotlib.py"
   ["docs-fetch"]="e2e/docs/test_fetch.py"
 )

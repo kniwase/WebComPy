@@ -47,6 +47,7 @@ from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
 from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
+from .pages.ui_form_controls import UiFormControlsPage
 from .pages.websocket import WebSocketPage
 from .pages.window_events import WindowEventsPage
 
@@ -101,6 +102,7 @@ router = Router(
     {"path": "/transition", "component": TransitionPage},
     {"path": "/overlay", "component": OverlayPage},
     {"path": "/form-fields", "component": FormFieldsPage},
+    {"path": "/ui-form-controls", "component": UiFormControlsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},
     {"path": "/error-boundary", "component": ErrorBoundaryPage},
