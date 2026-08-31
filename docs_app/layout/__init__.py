@@ -67,6 +67,10 @@ def DocsRoot(_: ComponentContext[None]):
                     "title": "Transition",
                     "to": "/sample/transition",
                 },
+                {
+                    "title": "i18n",
+                    "to": "/sample/i18n",
+                },
             ],
         },
     ]

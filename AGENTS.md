@@ -188,6 +188,7 @@ the per-area reference.
 - **No Overview Gap List** — `overview/spec.md`
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 - **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
+- **I18n Cookie-Only Locale Parity** — `i18n/spec.md`
 
 ## File → Spec Mapping
 
@@ -221,6 +222,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_teleport.py` | `teleport/spec.md`, `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/elements/types/_transition.py`, `webcompy/ports/_transition.py`, `webcompy/ports/_browser/_transition.py`, `webcompy/ports/_media_query.py`, `webcompy_server/ports/_transition.py` | `transition/spec.md`, `port-abstraction/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
+| `webcompy/i18n/` | `i18n/spec.md`, `di-scope/spec.md`, `port-abstraction/spec.md`, `reactive/spec.md`, `template-engine/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
@@ -343,6 +345,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
 | `custom-element-components` | Named Light DOM custom elements: wrapper boundaries, multiple roots, document-connection hooks, observed attributes, registration/hydration ordering |
 | `composables` | Reusable stateful logic functions for function-style component setup |
+| `i18n` | Reactive internationalization core: DI-managed `I18nManager` with locale Signal and `use_i18n` controller, dot-path catalogs with `{param}` interpolation, CLDR plurals via a built-in table with pipe shorthand and opt-in Babel adapter, fallback chain, and cookie-only locale persistence with deterministic SSR/hydration parity |
 | `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
 | `markdown-document` | Markdown frontmatter parsing, `load_markdown_document`, TOC extraction, opt-in `prose.css` typography preset |
 | `markdown-conformance` | Byte-exact cmark-gfm compatibility of `DefaultMarkdownParser` HTML output, strict-xfail suite |

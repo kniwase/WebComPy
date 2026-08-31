@@ -91,6 +91,30 @@ class TestTextInterpolation:
         assert result._children[2]._text == "!"
 
 
+class TestFunctionCallInterpolationTracking:
+    def test_function_call_reading_signal_is_reactive(self):
+        sig = Signal("en")
+
+        def translate(key):
+            return {"nav.home": {"en": "Home", "ja": "ホーム"}}[key][sig.value]
+
+        roots = parse_template('<p>{{ t("nav.home") }}</p>')
+        result = bind_element(roots[0], {"t": translate})
+        text_el = result._children[0]
+        assert isinstance(text_el, TextElement)
+        assert isinstance(text_el._text, Computed)
+        assert text_el._text.value == "Home"
+        sig.value = "ja"
+        assert text_el._text.value == "ホーム"
+
+    def test_function_call_without_signal_is_static(self):
+        roots = parse_template("<p>{{ compute() }}</p>")
+        result = bind_element(roots[0], {"compute": lambda: "static-value"})
+        text_el = result._children[0]
+        assert isinstance(text_el, TextElement)
+        assert text_el._text == "static-value"
+
+
 class TestDotNotation:
     def test_dict_access(self):
         roots = parse_template("<p>{{ user.name }}</p>")
