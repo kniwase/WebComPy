@@ -41,12 +41,17 @@ The headless Collapse SHALL render a trigger with `aria-expanded` and `aria-cont
 
 ### Requirement: Accordion shall compose Collapse items with an open policy
 
-The Accordion SHALL compose multiple Collapse items under a shared open-state and SHALL support a single-open policy (opening one item closes the others) as well as multi-open (default). Item identity SHALL be key-based.
+The Accordion SHALL compose multiple Collapse items under a shared open-state and SHALL support a single-open policy (opening one item closes the others) as well as multi-open (default). Item identity SHALL be key-based. A change callback SHALL report every item whose open state changed, including items closed by the single-open policy.
 
 #### Scenario: Single-open policy closes siblings
 
 - **WHEN** an Accordion with the single-open policy has item A open and the user opens item B
 - **THEN** item A SHALL close and item B SHALL be the only open item
+
+#### Scenario: Policy-driven closures reach the change callback
+
+- **WHEN** an Accordion with the single-open policy and a change callback has item A open and the user opens item B
+- **THEN** the callback SHALL be invoked for item A with a closed state and for item B with an open state
 
 ### Requirement: Alert shall map variants to announcement roles
 

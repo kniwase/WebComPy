@@ -48,3 +48,10 @@
 - [x] 6.4 `uv run python -m webcompy generate` succeeds with the new docs page
 - [x] 6.5 E2E groups affected by the change pass via `scripts/run-e2e-tests.sh`: `components`, `bootstrap-static`, `docs-documents`, `docs-home`
 - [x] 6.6 Run the openspec-verify-change workflow and produce the verification report (do not sync or archive)
+
+## 7. Review follow-ups
+
+- [x] 7.1 Accordion `on_toggle` reports every item whose open state changed, including siblings closed by the single-open policy (closures first, then openings); docstring and the Accordion spec requirement/scenarios updated to match
+- [x] 7.2 Headless Tabs tab buttons and Collapse trigger carry `type="button"` so they never submit an enclosing form; unit assertions added
+- [x] 7.3 Collapse reopen coverage: unit test for an open/close/open cycle remounting a single region, and a timing-tolerant E2E re-opening during the leave window; tautological `aria-controls` assertion dropped
+- [x] 7.4 Re-run validation: `ruff check`, `ruff format --check`, `pyright`, disclosure unit tests, and `e2e/core/test_disclosure.py` via the canonical entry point
