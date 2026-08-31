@@ -50,9 +50,10 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
     """Render a progressbar with determinate or indeterminate semantics.
 
     The root carries ``role="progressbar"`` with reactive
-    ``aria-valuemin`` and ``aria-valuemax`` from the bounds props. In
-    determinate mode it sets ``aria-valuenow`` from the value clamped to
-    the bounds and exposes
+    ``aria-valuemin`` and ``aria-valuemax`` from the bounds props; reversed
+    bounds (``min`` greater than ``max``) are normalized by swapping so the
+    emitted ARIA stays self-consistent. In determinate mode it sets
+    ``aria-valuenow`` from the value clamped to the bounds and exposes
     ``data-state="determinate"``; in indeterminate mode ``aria-valuenow``
     is omitted (an ARIA progressbar without a current value is
     indeterminate) and ``data-state="indeterminate"`` is exposed. Supply
@@ -78,6 +79,8 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
     def _bounds() -> tuple[float, float]:
         lower = float(_read(props.get("min"), 0))
         upper = float(_read(props.get("max"), 100))
+        if upper < lower:
+            lower, upper = upper, lower
         return lower, upper
 
     def _indeterminate() -> bool:

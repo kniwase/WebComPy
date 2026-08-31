@@ -60,3 +60,7 @@
 - [x] 7.7 Make Progress bounds reactive: `aria-valuemin`/`aria-valuemax` become computed like the fill percentage, and the props docstring records that `min`/`max` accept signal-like values; unit coverage for signal-driven bounds
 - [x] 7.8 Align themed Tabs state-prop forwarding with the themed Collapse rule: the `active` prop is forwarded when not None instead of dropped when falsy, so explicit values (including `""`) keep the component parent-controlled; unit coverage for the uncontrolled default and the empty-string controlled case
 - [x] 7.9 Re-run validation after the follow-ups: unit tests, `ruff check`/`ruff format --check`, `pyright`, `webcompy generate`, docs spec-reference checker, and the affected E2E files via the canonical entry point
+
+## 8. Review follow-ups (round 3)
+
+- [x] 8.1 Normalize reversed headless Progress bounds (`min` greater than `max`) by swapping inside the bounds reader so the emitted `aria-valuemin`/`aria-valuemax`/`aria-valuenow` triple stays self-consistent; design D6 note and unit coverage added

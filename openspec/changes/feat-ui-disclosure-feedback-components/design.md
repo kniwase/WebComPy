@@ -59,7 +59,7 @@ Error and warning variants render `role="alert"` (assertive announcement); info 
 
 ### D6: Progress determinate/indeterminate ARIA
 
-Determinate progress renders `role="progressbar"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` from the value and bounds props, all read reactively (plain values or signals). `aria-valuenow` is clamped to `[min, max]` so the ARIA state never goes out of range. Indeterminate mode omits `aria-valuenow` (per ARIA, a progressbar without valuenow is indeterminate) and exposes `data-state="indeterminate"`. An accessible label prop is required (aria-label/labelled-by).
+Determinate progress renders `role="progressbar"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` from the value and bounds props, all read reactively (plain values or signals). `aria-valuenow` is clamped to `[min, max]` so the ARIA state never goes out of range. Reversed bounds (`min` greater than `max`) are normalized by swapping before emission, keeping the emitted `aria-valuemin`/`aria-valuemax`/`aria-valuenow` triple self-consistent for any input. Indeterminate mode omits `aria-valuenow` (per ARIA, a progressbar without valuenow is indeterminate) and exposes `data-state="indeterminate"`. An accessible label prop is required (aria-label/labelled-by).
 
 ### D7: Skeleton is decorative
 

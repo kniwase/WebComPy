@@ -577,6 +577,22 @@ class TestProgress:
             assert bar.getAttribute("aria-valuemin") == "20"
             assert "width: 100.0000%" in (fill.getAttribute("style") or "")
 
+    def test_reversed_bounds_normalized(self) -> None:
+        @define_component(custom_element_name="test-progress-reversed")
+        def Page(ctx):
+            from webcompy.ui import Progress
+
+            return Progress({"value": 150, "min": 100, "max": 0, "aria_label": "R"})
+
+        with TestRenderer.render(Page) as result:
+            root = result.body_node
+            bar = _by_role(root, "progressbar")[0]
+            assert bar.getAttribute("aria-valuemin") == "0"
+            assert bar.getAttribute("aria-valuemax") == "100"
+            assert bar.getAttribute("aria-valuenow") == "100"
+            fill = _by_class(root, "webcompy-progress-fill")[0]
+            assert "width: 100.0000%" in (fill.getAttribute("style") or "")
+
 
 class TestBadgeSkeletonCard:
     """Badge variants, Skeleton decoration, Card regions, class pass-through."""
