@@ -51,9 +51,9 @@
 
 ## 8. Validation
 
-- [ ] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 8.2 `uv run pyright` passes
-- [ ] 8.3 `python3 scripts/check-docstrings.py` passes (all new public interfaces carry Google-style docstrings; no OpenSpec references in docstrings/comments)
-- [ ] 8.4 `uv run python scripts/check-browser-imports.py` passes
-- [ ] 8.5 `uv run python -m pytest tests/ --tb=short` passes
-- [ ] 8.6 E2E for all affected groups pass: `scripts/run-e2e-tests.sh ui-form-controls`, `docs-demos`, `components`, `interaction`
+- [x] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 8.2 `uv run pyright` passes
+- [x] 8.3 `python3 scripts/check-docstrings.py` passes (all new public interfaces carry Google-style docstrings; no OpenSpec references in docstrings/comments)
+- [x] 8.4 `uv run python scripts/check-browser-imports.py` passes
+- [x] 8.5 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 8.6 E2E for all affected groups pass: `scripts/run-e2e-tests.sh ui-form-controls`, `docs-demos`, `components`, `interaction`
