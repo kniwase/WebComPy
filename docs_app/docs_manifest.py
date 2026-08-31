@@ -117,6 +117,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/pwa",
                 "source": "documents/pwa.md",
             },
+            {
+                "label": "Disclosure & Feedback",
+                "path": "/documents/disclosure",
+                "component": "docs_app.pages.document.disclosure:DisclosurePage",
+            },
         ],
     },
 ]
