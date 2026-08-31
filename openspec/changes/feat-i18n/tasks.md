@@ -60,3 +60,5 @@
 - [x] 9.2 Locale normalization determinism: extract shared `language_part`/`match_supported` helpers (sorted candidate order for same-language ties), use them in `I18nManager._normalize`, `resolve_locale`, and the plural registry; drop the unused duplicate in `_catalog.py`; add determinism/parity tests and a delta-spec scenario; fold the inline `hi` lambda into the shared `one`/`0..1` rule
 - [x] 9.3 `docs_app/documents/i18n.md`: fix the `use_i18n` import example to `from webcompy.i18n import use_i18n` (the top-level package does not re-export it) and terminate the file with a newline
 - [x] 9.4 Re-run validation: static checks and full `pytest tests/`
+- [x] 9.5 `template/_expression.py`: make the probe teardown in `evaluate()` symmetric by calling `consumer_destroy` unconditionally (a no-op when no producer edges were created); behavior unchanged
+- [x] 9.6 Re-run validation: static checks and full `pytest tests/`

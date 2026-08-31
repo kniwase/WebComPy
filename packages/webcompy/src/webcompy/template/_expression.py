@@ -177,7 +177,7 @@ def evaluate(
     try:
         try:
             result = _eval_node(plan.node.body, scope, state)
-            if probe is not None and state is not None and probe.producers is not None:
+            if state is not None and probe is not None and probe.producers is not None:
                 state.saw_signal = True
             return result
         except WebComPyException:
@@ -189,8 +189,7 @@ def evaluate(
     finally:
         if probe is not None:
             set_active_consumer(prev_consumer)
-            if probe.producers is not None:
-                consumer_destroy(probe)
+            consumer_destroy(probe)
 
 
 def _unwrap(v: Any, state: _EvalState | None) -> Any:
