@@ -78,6 +78,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "component": "docs_app.pages.document.overlay:OverlayPage",
             },
             {
+                "label": "Disclosure & Feedback",
+                "path": "/documents/disclosure",
+                "component": "docs_app.pages.document.disclosure:DisclosurePage",
+            },
+            {
                 "label": "Loading Screen",
                 "path": "/documents/loading-screen",
                 "source": "documents/loading_screen.md",

@@ -255,7 +255,7 @@ jobs:
           - name: bootstrap-static
             files: e2e/core/test_bootstrap.py e2e/core/test_static_site.py e2e/core/test_signal_value_transfer.py e2e/core/test_loading_screen.py e2e/core/test_profiling.py
           - name: components
-            files: e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_custom_element.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py e2e/core/test_teleport.py
+            files: e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_custom_element.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py e2e/core/test_teleport.py e2e/core/test_disclosure.py
           - name: reactive-lists
             files: e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py
           - name: dynamic-control
@@ -331,11 +331,11 @@ jobs:
             serving_mode: static
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py e2e/docs/test_i18n.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py e2e/docs/test_i18n.py e2e/docs/test_disclosure.py
             serving_mode: prod
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py e2e/docs/test_i18n.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc.py e2e/docs/test_rpc_websocket.py e2e/docs/test_resource_transfer.py e2e/docs/test_pwa.py e2e/docs/test_i18n.py e2e/docs/test_disclosure.py
             serving_mode: static
           - group:
               name: docs-demos

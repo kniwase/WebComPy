@@ -73,6 +73,15 @@ def test_home_page_title(docs_app_page, assert_no_console_errors):
 
 
 @pytest.mark.e2e
+def test_documents_index_card_scoped_margin(docs_page_on, assert_no_console_errors):
+    page = docs_page_on("/documents")
+    card = page.locator(".ui-card").first
+    expect(card).to_be_visible()
+    margin_top = card.evaluate("el => parseFloat(getComputedStyle(el).marginTop)")
+    assert margin_top > 0
+
+
+@pytest.mark.e2e
 def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_errors):
     dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
     dropdown_toggle.click()
