@@ -588,8 +588,11 @@ Supported elements and rules:
 | `input[type=number]` | `value` | `input` | converted per the number-conversion requirement below |
 | `input[type=checkbox]` | `checked` | `change` | `signal.value = bool(ev.target.checked)` |
 | `input[type=radio]` | `checked` | `change` | if `ev.target.checked`, set the Signal to the element's static `value` attribute |
+| `select` | `value` | `change` | `signal.value = ev.target.value` |
 
 For `textarea`, the Signal→DOM direction binds the element's text content via a child `TextElement` (HTML textareas expose no `value` attribute); the write-back direction is unchanged.
+
+For `select`, the bound `value` attribute SHALL be kept in sync so programmatic Signal changes update the selection, and the write-back SHALL fire on the `change` event (select's native commit event), setting the Signal to `ev.target.value` without coercion (option values are strings). Single selection only; `:bind` on a `select` with a `multiple` attribute SHALL raise `WebComPyException`.
 
 For radio, the Signal→DOM direction SHALL use a `Computed` that compares the Signal value with the element's static `value` attribute (`checked` is true when equal), so a group of radios sharing one Signal stays in sync. The comparison SHALL be a plain Python `==` on the resolved values. In templates, HTML attribute values are always strings, so the static `value` attribute is compared as a string; a template radio bound to a non-string-valued Signal (e.g. `<input type="radio" value="1" :bind="choice">` with an int-valued Signal) SHALL NOT be rendered checked. The element API (`html.INPUT({"type": "radio", "value": 1, ":bind": choice})`) preserves non-string values and SHALL compare them without coercion. Template users SHALL bind radio groups to string-valued Signals.
 
@@ -618,6 +621,16 @@ The `:bind` key SHALL NOT be emitted as a DOM attribute.
 - **AND** the radio SHALL NOT be rendered checked
 - **AND** template users SHALL bind radio groups to string-valued Signals; the element API (`html.INPUT({"value": 1, ":bind": choice})`) SHALL compare non-string values without coercion
 
+#### Scenario: Select two-way binding
+- **WHEN** `html.SELECT({":bind": choice_signal}, option_a, option_b)` is used with `Signal("a")`
+- **THEN** the select's `value` attribute SHALL render as `"a"`
+- **AND** when the user picks the second option, the `change` event handler SHALL set `choice_signal.value` to `"b"`
+- **AND** setting `choice_signal.value = "a"` programmatically SHALL update the DOM selection
+
+#### Scenario: Multiple select rejected
+- **WHEN** `html.SELECT({"multiple": True, ":bind": choice_signal})` is used
+- **THEN** `WebComPyException` SHALL be raised stating `:bind` does not support multiple selects
+
 #### Scenario: No :bind attribute reaches the DOM
 - **WHEN** any element is created with `:bind`
 - **THEN** the rendered DOM node SHALL NOT have a `:bind` attribute
@@ -645,7 +658,7 @@ For `input[type=number]`, the write-back handler SHALL convert `ev.target.value`
 
 ### Requirement: `:bind` shall validate the Signal kind and value type at construction time
 
-The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySignal` (`readonly()`), `ReactiveList`, `ReactiveDict`, and non-Signal values SHALL raise `WebComPyException` naming the received type. Value-type discipline SHALL be enforced from the Signal's current value: text-like/textarea requires `str`, number requires `int`/`float` (excluding `bool`), checkbox requires `bool`. Radio requires a static `value` attribute on the element. An `input` whose `type` attribute is dynamic (`SignalBase`) combined with `:bind` SHALL raise (binding semantics cannot be determined).
+The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySignal` (`readonly()`), `ReactiveList`, `ReactiveDict`, and non-Signal values SHALL raise `WebComPyException` naming the received type. Value-type discipline SHALL be enforced from the Signal's current value: text-like/textarea/select requires `str`, number requires `int`/`float` (excluding `bool`), checkbox requires `bool`. Radio requires a static `value` attribute on the element. An `input` whose `type` attribute is dynamic (`SignalBase`) combined with `:bind` SHALL raise (binding semantics cannot be determined).
 
 #### Scenario: Computed rejected
 - **WHEN** `html.INPUT({":bind": some_computed})` is used
@@ -655,6 +668,10 @@ The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySi
 - **WHEN** `html.INPUT({"type": "checkbox", ":bind": Signal("text")})` is used
 - **THEN** `WebComPyException` SHALL be raised naming the required type (`bool`)
 
+#### Scenario: Select with non-string Signal rejected
+- **WHEN** `html.SELECT({":bind": Signal(True)})` is used
+- **THEN** `WebComPyException` SHALL be raised naming the required type (`str`)
+
 #### Scenario: Radio without static value rejected
 - **WHEN** `html.INPUT({"type": "radio", ":bind": choice})` lacks a `value` attribute
 - **THEN** `WebComPyException` SHALL be raised stating radio `:bind` requires a static `value` attribute
@@ -663,12 +680,12 @@ The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySi
 - **WHEN** `html.INPUT({"type": some_signal, ":bind": text_signal})` is used
 - **THEN** `WebComPyException` SHALL be raised stating `:bind` requires a static `type` attribute
 
-### Requirement: `:bind` shall reject unsupported elements and conflicting attributes
+### Requirement: `:bind` shall reject invalid target elements and conflicting attributes
 
-`:bind` on elements other than the supported set (including `select` and `option`) SHALL raise `WebComPyException` naming the supported elements. An explicit attribute duplicating the bound one (`value` for text-like/number, `checked` for checkbox/radio) SHALL raise `WebComPyException`. For `textarea`, the bound target is the text content; a non-empty children list combined with `:bind` SHALL raise `WebComPyException`. An explicit user handler for the binding event SHALL be chained: the binding write-back SHALL run first, then the user handler. An explicit static `value` attribute on a radio is REQUIRED and is NOT a conflict.
+`:bind` on elements other than the supported set (including `option`) SHALL raise `WebComPyException` naming the supported elements. An explicit attribute duplicating the bound one (`value` for text-like/number/select, `checked` for checkbox/radio) SHALL raise `WebComPyException`. For `textarea`, the bound target is the text content; a non-empty children list combined with `:bind` SHALL raise `WebComPyException`. An explicit user handler for the binding event SHALL be chained: the binding write-back SHALL run first, then the user handler. An explicit static `value` attribute on a radio is REQUIRED and is NOT a conflict.
 
-#### Scenario: select rejected
-- **WHEN** `html.SELECT({":bind": sig})` is used
+#### Scenario: Option rejected
+- **WHEN** `html.OPTION({":bind": sig})` is used
 - **THEN** `WebComPyException` SHALL be raised naming the supported elements
 
 #### Scenario: Conflicting value attribute rejected
