@@ -136,16 +136,57 @@ def Tabs(context: ComponentContext[TabsProps]) -> Any:
         if on_select is not None:
             on_select(new_key)
 
-    def _focus_tab_at(index: int) -> None:
+    def _tab_nodes_from(tablist_el: Any) -> list[Any]:
+        """Collect ``role="tab"`` element nodes under ``tablist_el`` in document order."""
+        found: list[Any] = []
+        stack = [tablist_el]
+        while stack:
+            node = stack.pop()
+            try:
+                if node.getAttribute("role") == "tab":
+                    found.append(node)
+            except Exception:
+                pass
+            children = getattr(node, "childNodes", None)
+            if children is None:
+                continue
+            try:
+                count = children.length
+            except Exception:
+                count = len(children)
+            for i in reversed(range(count)):
+                child = children[i]
+                if child is not None:
+                    stack.append(child)
+        return found
+
+    def _resolve_tablist(evt_target: Any) -> Any:
+        """Find the tablist DOM node for the keydown, port lookup then target walk."""
         try:
             dom = inject(DOM_PORT_KEY, default=None)
-            if dom is None:
-                return
-            tablist_el = dom.get_element_by_id(tablist_id)
+            if dom is not None:
+                tablist_el = dom.get_element_by_id(tablist_id)
+                if tablist_el is not None:
+                    return tablist_el
+        except Exception:
+            pass
+        node = evt_target
+        while node is not None:
+            try:
+                if node.getAttribute("role") == "tablist":
+                    return node
+                node = node.parentNode
+            except Exception:
+                return None
+        return None
+
+    def _focus_tab_at(evt_target: Any, index: int) -> None:
+        try:
+            tablist_el = _resolve_tablist(evt_target)
             if tablist_el is None:
                 return
-            tab_els = dom.query_selector_all('[role="tab"]', root=tablist_el)
-            if index < len(tab_els):
+            tab_els = _tab_nodes_from(tablist_el)
+            if 0 <= index < len(tab_els):
                 tab_els[index].focus()
         except Exception:
             pass
@@ -167,7 +208,10 @@ def Tabs(context: ComponentContext[TabsProps]) -> Any:
         else:
             nxt = len(keys) - 1
         _activate(keys[nxt])
-        _focus_tab_at(nxt)
+        target = getattr(evt, "target", None)
+        if target is None and isinstance(evt, dict):
+            target = evt.get("target")
+        _focus_tab_at(target, nxt)
         if hasattr(evt, "preventDefault"):
             evt.preventDefault()
 

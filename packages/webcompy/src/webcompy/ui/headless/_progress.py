@@ -41,6 +41,10 @@ def _read(raw: Any, default: Any) -> Any:
     return default if raw is None else raw
 
 
+def _fmt(number: float) -> str:
+    return str(int(number)) if number.is_integer() else str(number)
+
+
 @define_component(custom_element_name="headless-progress")
 def Progress(context: ComponentContext[ProgressProps]) -> Any:
     """Render a progressbar with determinate or indeterminate semantics.
@@ -80,17 +84,17 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
         span = upper - lower if upper > lower else 1.0
         return max(0.0, min(1.0, (raw - lower) / span)) * 100.0
 
-    def _value_now() -> str | None:
+    def _value_now() -> Any:
         if _indeterminate():
-            return None
-        return str(float(_read(value_raw, 0)))
+            return False
+        return _fmt(float(_read(value_raw, 0)))
 
     state_computed = use_computed(lambda: "indeterminate" if _indeterminate() else "determinate")
 
     attrs: dict[str, Any] = {
         "role": "progressbar",
-        "aria-valuemin": str(lower),
-        "aria-valuemax": str(upper),
+        "aria-valuemin": _fmt(lower),
+        "aria-valuemax": _fmt(upper),
         "aria-valuenow": use_computed(_value_now),
         "data-state": state_computed,
         "class": _compose_class(_FRAMEWORK_CLASS, props.get("class_name", "")),
@@ -102,7 +106,7 @@ def Progress(context: ComponentContext[ProgressProps]) -> Any:
     fill_attrs: dict[str, Any] = {
         "class": _compose_class(_FILL_CLASS, props.get("class_fill", "")),
         "aria-hidden": "true",
-        "style": use_computed(lambda: None if _indeterminate() else f"width: {_percent():.4f}%"),
+        "style": use_computed(lambda: False if _indeterminate() else f"width: {_percent():.4f}%"),
     }
 
     return create_element("div", attrs, create_element("div", fill_attrs))
