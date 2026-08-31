@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, cast
 
+from webcompy.components import ComponentContext
 from webcompy.di import inject
+from webcompy.di._scope import _active_di_scope
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
 from webcompy.signal import Computed, Signal, SignalBase, use_computed, use_state
@@ -69,14 +72,38 @@ def form_field_context() -> FormFieldContext | None:
     """Return the surrounding ``FormFieldContext`` when one is provided.
 
     Returns:
-        The injected context, or ``None`` outside a ``FormField`` or on
-        environments without an active DI scope.
+        The injected context, or ``None`` outside a ``FormField``'s slot
+        subtree (or when no active DI scope is present).
 
     """
+    return inject(FORM_FIELD_CONTEXT_KEY, default=None)
+
+
+@contextmanager
+def providing_form_field_context(context: ComponentContext[Any], ctx: FormFieldContext) -> Iterator[None]:
+    """Provide a ``FormFieldContext`` for the duration of the provider's render pass.
+
+    Registers ``ctx`` in the provider's component-scoped DI context and
+    keeps the association visible only to controls constructed while the
+    wrapped body runs (slot content evaluates eagerly inside it). The
+    previously active scope is restored on exit so controls rendered
+    afterwards as siblings of the provider never resolve this context.
+
+    Args:
+        context: The provider component's context, used to register the
+            value in the component-scoped DI context.
+        ctx: The association context to expose to slotted controls.
+
+    Yields:
+        None; the active DI scope is confined to the ``with`` block.
+
+    """
+    previous = _active_di_scope.get(None)
+    context.provide(FORM_FIELD_CONTEXT_KEY, ctx)
     try:
-        return inject(FORM_FIELD_CONTEXT_KEY, default=None)
-    except Exception:
-        return None
+        yield
+    finally:
+        _active_di_scope.set(previous)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True)

@@ -198,6 +198,24 @@ class TestBindingContract:
             input_node.dispatchEvent(VirtualDOMEvent("input"))
             assert field.value.value == 42
 
+    def test_unbound_radio_group_rejected(self) -> None:
+        @define_component(custom_element_name="test-group-unbound")
+        def Page(ctx: ComponentContext) -> Any:
+            return RadioGroup({"options": [{"value": "a"}]})
+
+        with pytest.raises(WebComPyException, match="requires a 'field' or 'value'"), TestRenderer.render(Page):
+            pass
+
+    def test_radio_rejects_plain_value(self) -> None:
+        from webcompy.ui.headless import Radio
+
+        @define_component(custom_element_name="test-radio-plain-value")
+        def Page(ctx: ComponentContext) -> Any:
+            return Radio({"value": "a", "option_value": "a", "name": "g"})
+
+        with pytest.raises(WebComPyException, match="shared group Signal"), TestRenderer.render(Page):
+            pass
+
 
 class TestSelectControl:
     """6.2: options rendering and selection binding."""
@@ -445,6 +463,107 @@ class TestFormFieldWrapper:
         with TestRenderer.render(Page) as result:
             assert _find_tag(result.body_node, "LABEL") is not None  # radio option label
             assert _find_tag(result.body_node, "LEGEND") is not None
+
+
+class TestContextConfinement:
+    """FormField association ids stay confined to its slot render pass."""
+
+    def test_standalone_control_after_form_field_not_wired(self) -> None:
+        field_a = _required_field()
+        field_b = _required_field()
+
+        @define_component(custom_element_name="test-ff-confinement")
+        def Page(ctx: ComponentContext) -> Any:
+            return html.DIV(
+                {},
+                FormField({"field": field_a, "label": "A"}, slots={"default": lambda: Input({"field": field_a})}),  # type: ignore[arg-type]
+                Input({"field": field_b}),
+            )
+
+        var, token = _set_app_ctx()
+        try:
+            with TestRenderer.render(Page) as result:
+                inputs = _find_all(result.body_node, lambda n: n.nodeName == "INPUT")
+                assert len(inputs) == 2
+                field_a.touched.value = True
+                field_b.touched.value = True
+                error_region = next(n for n in _find_all(result.body_node, lambda n: n.getAttribute("role") == "alert"))
+                assert inputs[0].getAttribute("id") is not None
+                assert inputs[0].getAttribute("aria-describedby") == error_region.getAttribute("id")
+                assert inputs[1].getAttribute("id") is None
+                assert inputs[1].getAttribute("aria-describedby") is None
+                assert inputs[1].getAttribute("data-state") == "invalid"
+        finally:
+            var.reset(token)
+
+    def test_themed_standalone_after_form_field_not_wired(self) -> None:
+        from webcompy.ui.components import FormField as ThemedFormField
+        from webcompy.ui.components import Input as ThemedInput
+
+        field_a = _required_field()
+        field_b = _required_field()
+
+        @define_component(custom_element_name="test-ff-confinement-themed")
+        def Page(ctx: ComponentContext) -> Any:
+            return html.DIV(
+                {},
+                ThemedFormField(  # type: ignore[call-arg]
+                    {"field": field_a, "label": "A"},
+                    slots={"default": lambda: ThemedInput({"field": field_a})},  # type: ignore[arg-type]
+                ),
+                ThemedInput({"field": field_b}),  # type: ignore[call-arg]
+            )
+
+        var, token = _set_app_ctx()
+        try:
+            with TestRenderer.render(Page) as result:
+                inputs = _find_all(result.body_node, lambda n: n.nodeName == "INPUT")
+                assert len(inputs) == 2
+                field_a.touched.value = True
+                field_b.touched.value = True
+                assert inputs[0].getAttribute("id") is not None
+                assert inputs[1].getAttribute("id") is None
+                assert inputs[1].getAttribute("aria-describedby") is None
+        finally:
+            var.reset(token)
+
+    def test_template_path_slotted_control_wired_sibling_isolated(self) -> None:
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.template import render_template
+
+        field = use_field(Signal(""), validators=[lambda v: None if v else "pick"])
+        options = [{"value": "a", "label": "A"}]
+
+        @define_component(custom_element_name="test-ff-confinement-template")
+        def Page(ctx: ComponentContext) -> Any:
+            store = inject(_COMPONENT_STORE_KEY, default=None)
+            if store is not None:
+                for name, generator in (("FormField", FormField), ("RadioGroup", RadioGroup)):
+                    if name not in store.components:
+                        store.add_component(name, generator)
+            return render_template(
+                """
+                <div>
+                    <form-field :field="field">
+                        <radio-group :field="field" :options="options" legend="One" />
+                    </form-field>
+                    <radio-group :field="field" :options="options" legend="Two" />
+                </div>
+                """,
+                {"field": field, "options": options},
+            )
+
+        var, token = _set_app_ctx()
+        try:
+            with TestRenderer.render(Page) as result:
+                fieldsets = _find_all(result.body_node, lambda n: n.nodeName == "FIELDSET")
+                assert len(fieldsets) == 2
+                field.touched.value = True
+                assert fieldsets[0].getAttribute("aria-describedby") is not None
+                assert fieldsets[1].getAttribute("aria-describedby") is None
+        finally:
+            var.reset(token)
 
 
 class TestDataStateGating:

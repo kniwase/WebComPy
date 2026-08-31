@@ -9,6 +9,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import create_element
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
+from webcompy.signal import SignalBase
 from webcompy.ui.headless._form_utils import (
     bound_value,
     compose_attrs,
@@ -52,8 +53,8 @@ def Radio(context: ComponentContext[RadioProps]) -> Any:
     ``Field`` or raw ``Signal`` in the ``value`` prop) with the static
     ``option_value`` prop, and selecting it writes ``option_value`` back
     through the framework ``:bind`` mechanism. A plain (non-Signal)
-    ``value`` is not meaningful for radios because the group signal must
-    be shared; bind a ``Field`` or pass a ``Signal``. The caller supplies
+    ``value`` is rejected: the group signal must be shared across the
+    radios, so bind a ``Field`` or pass a ``Signal``. The caller supplies
     the shared ``name`` so native arrow-key navigation applies;
     ``RadioGroup`` is the intended default for grouped radios.
 
@@ -65,13 +66,16 @@ def Radio(context: ComponentContext[RadioProps]) -> Any:
 
     Raises:
         WebComPyException: When both binding modes are supplied, no
-            binding is given, or ``option_value``/``name`` are missing.
+            binding is given, ``value`` carries a plain non-Signal value,
+            or ``option_value``/``name`` are missing.
 
     """
     props = context.props or {}
     bind = resolve_bind_target(props, "Radio")
     if bind.target is None:
         raise WebComPyException("Radio requires a 'field' or a shared group 'value' Signal")
+    if (value := props.get("value")) is not None and not isinstance(value, SignalBase):
+        raise WebComPyException("Radio 'value' must be a shared group Signal (bind a 'field' or pass a Signal)")
     option_value = props.get("option_value", "")
     name = props.get("name", "")
     if not option_value or not name:
@@ -145,18 +149,18 @@ def RadioGroup(context: ComponentContext[RadioGroupProps]) -> Any:
         The rendered ``<fieldset>`` element.
 
     Raises:
-        WebComPyException: When both binding modes are supplied or
-            ``on_change`` is given without a bound value.
+        WebComPyException: When both binding modes are supplied or no
+            binding is given.
 
     """
     props = context.props or {}
     options = props.get("options") or []
     ctx = form_field_context()
     bind = resolve_bind_target(props, "RadioGroup")
+    if bind.target is None:
+        raise WebComPyException("RadioGroup requires a 'field' or 'value' binding")
     state = control_state(bind.field, ctx)
     on_change = props.get("on_change")
-    if on_change is not None and bind.target is None:
-        raise WebComPyException("RadioGroup 'on_change' requires a bound 'field' or 'value'")
 
     group_name = instance_dom_id("radio-group", context.transfer_id)
 
