@@ -12,11 +12,11 @@
 
 ## 2. Headless text controls
 
-- [ ] 2.1 Create `webcompy/ui/headless/_form_field_context.py`: frozen dataclass `FormFieldContext` (control_id, error_id, label) and module-private `InjectKey`
-- [ ] 2.2 Implement headless Input (`headless-input`): native `<input>` via `create_element` with `":bind"` in attrs; `field` xor `value`+`on_change` props (both → error); inject FormFieldContext (default None) to set native `id` and conditional `aria-describedby`; `aria-invalid` computed on touched+invalid; `data-state="valid|invalid"` via Computed; `input_type` static prop (text/email/password/search/tel/url/number); `class_name` pass-through
-- [ ] 2.3 Implement headless Textarea (`headless-textarea`): same contract on native `<textarea>` with `rows` prop
-- [ ] 2.4 Implement headless Select (`headless-select`): native `<select>` with `options` prop (value/label TypedDict), same binding contract via the select `:bind` path
-- [ ] 2.5 Verify the DI provide/inject path with a minimal unit test: a child component rendered inside a parent slot resolves a value provided by the parent context
+- [x] 2.1 Create `webcompy/ui/headless/_form_field_context.py`: frozen dataclass `FormFieldContext` (control_id, error_id, label) and module-private `InjectKey`
+- [x] 2.2 Implement headless Input (`headless-input`): native `<input>` via `create_element` with `":bind"` in attrs; `field` xor `value`+`on_change` props (both → error); inject FormFieldContext (default None) to set native `id` and conditional `aria-describedby`; `aria-invalid` computed on touched+invalid; `data-state="valid|invalid"` via Computed; `input_type` static prop (text/email/password/search/tel/url/number); `class_name` pass-through
+- [x] 2.3 Implement headless Textarea (`headless-textarea`): same contract on native `<textarea>` with `rows` prop
+- [x] 2.4 Implement headless Select (`headless-select`): native `<select>` with `options` prop (value/label TypedDict), same binding contract via the select `:bind` path
+- [x] 2.5 Verify the DI provide/inject path with a minimal unit test: a child component rendered inside a parent slot resolves a value provided by the parent context
 
 ## 3. Headless choice controls
 
