@@ -164,6 +164,57 @@ class TestPluralization:
         assert result == "2 items"
         assert any("zz-fake" in str(w.message) for w in captured)
 
+    def test_babel_adapter_replaces_the_rule_source(self, monkeypatch) -> None:
+        import sys
+        import types
+
+        from webcompy.i18n._adapters._babel import register_babel_plural_rules
+        from webcompy.i18n._plural import _PLURAL_RULES
+
+        categories = ("one", "few", "many", "other")
+
+        def ru_form(count: int) -> int:
+            if count == 1:
+                return 0
+            if 2 <= count <= 4:
+                return 1
+            if count == 5 or 11 <= count <= 14:
+                return 2
+            return 3
+
+        class _Forms:
+            order = categories
+
+            def plural_form(self, count: int) -> int:
+                return ru_form(count)
+
+        class _Locale:
+            plural_forms = _Forms()
+
+            @classmethod
+            def parse(cls, identifier: str) -> _Locale:
+                assert identifier == "ru"
+                return cls()
+
+        babel_mod = types.ModuleType("babel")
+        babel_mod.Locale = _Locale
+        localedata_mod = types.ModuleType("babel.localedata")
+        localedata_mod.locale_identifiers = lambda: ["ru"]
+        monkeypatch.setitem(sys.modules, "babel", babel_mod)
+        monkeypatch.setitem(sys.modules, "babel.localedata", localedata_mod)
+
+        original = _PLURAL_RULES["ru"]
+        try:
+            register_babel_plural_rules(["ru"])
+            assert _PLURAL_RULES["ru"] is not original
+            assert get_plural_category("ru", 1) == "one"
+            assert get_plural_category("ru", 3) == "few"
+            assert get_plural_category("ru", 12) == "many"
+        finally:
+            from webcompy.i18n._plural import register_plural_rule
+
+            register_plural_rule("ru", original, override=True)
+
 
 class TestReactivity:
     def test_locale_switch_updates_rendered_translation(self) -> None:
