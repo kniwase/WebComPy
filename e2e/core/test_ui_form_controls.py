@@ -31,7 +31,8 @@ def test_errors_hidden_until_touched(page_on):
 
     name_input.click()
     name_input.blur()
-    expect(error_region).to_have_text("This field is required")
+    expect(error_region).to_contain_text("This field is required")
+    expect(error_region).to_contain_text("Must be at least 2 characters")
     assert name_input.get_attribute("aria-invalid") == "true"
     assert name_input.get_attribute("aria-describedby") == error_region.get_attribute("id")
     assert name_input.get_attribute("data-state") == "invalid"
@@ -76,11 +77,14 @@ def test_checkbox_error_gating(page_on):
     page = _wait_page(page_on)
     checkbox = page.locator(".ufc-agree-field input[type='checkbox']")
     checkbox.click()
+    checkbox.click()
     checkbox.blur()
     expect(page.locator(".ufc-agree-field [role='alert']")).to_have_text("agree")
     assert checkbox.get_attribute("data-state") == "invalid"
+    assert checkbox.get_attribute("aria-invalid") == "true"
     checkbox.click()
     expect(page.locator(".ufc-agree-field [role='alert']")).to_have_text("")
+    assert checkbox.get_attribute("data-state") == "valid"
 
 
 def test_radio_group_shared_name(page_on):
@@ -98,7 +102,7 @@ def test_submit_gating_and_reset(page_on):
     page = _wait_page(page_on)
     page.locator("[data-testid='ufc-submit']").click()
     expect(page.locator("[data-testid='ufc-status']")).to_have_text("idle")
-    expect(page.locator(".ufc-name-field [role='alert']")).to_have_text("This field is required")
+    expect(page.locator(".ufc-name-field [role='alert']")).to_contain_text("This field is required")
 
     page.locator(".ufc-name-field input").fill("alice")
     page.locator(".ufc-country-field select").select_option("us")

@@ -41,7 +41,7 @@ def test_ui_form_controls_demo_switch_and_submit(docs_page_on, assert_no_console
     name_input.fill("alice")
     email_input.fill("alice@example.com")
     frame.locator(".webcompy-form-field select").select_option("jp")
-    frame.locator("input[type='checkbox']").last.check()
+    frame.locator("input.webcompy-checkbox").check()
     switch = frame.locator("input[role='switch']").first
     expect(switch).to_have_attribute("aria-checked", "true")
     switch.click()
