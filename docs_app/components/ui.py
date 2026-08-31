@@ -28,7 +28,7 @@ def DocsCard(context: ComponentContext[CardProps]):
     slots: dict = {"default": lambda: body}
     if title:
         slots["header"] = lambda: title
-    return Card({"class_name": "ui-card"}, slots=slots)
+    return html.DIV({"class": "ui-card"}, Card({}, slots=slots))
 
 
 class SectionProps(TypedDict, total=False):

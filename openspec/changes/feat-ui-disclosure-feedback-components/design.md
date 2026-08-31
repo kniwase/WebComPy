@@ -69,6 +69,8 @@ Skeleton placeholders render `aria-hidden="true"` (they are visual loading decor
 
 Card becomes a structural headless component (header/body/footer regions via children props) with themed token styling; docs_app's ad-hoc Card is replaced. No behavior beyond structure — Card exists so layout containers share tokens and class hooks instead of each app re-deriving them.
 
+The docs_app replacement wraps the themed Card in a `div.ui-card` rather than passing `class_name` through. Scoped-style selectors are qualified with the owning component's id attribute, which lands on the Card element itself, not on the headless root div the class reaches inside the composed child; passing `class_name` would therefore leave the docs page's own `.ui-card` rule unable to match. The wrapper div carries the scoping attribute and the margin, so the layout rule continues to apply.
+
 ### D9: data-state vocabularies
 
 - Tabs: `data-state="active" | "inactive"` on both tab and panel elements; inactive panels stay mounted and hidden.
