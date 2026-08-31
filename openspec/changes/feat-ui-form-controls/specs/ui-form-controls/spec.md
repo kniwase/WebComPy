@@ -60,7 +60,7 @@ RadioGroup SHALL render a `fieldset` with a `legend` and one native radio per en
 
 ### Requirement: FormField shall compose label, control, and error region with correct ARIA
 
-FormField SHALL render a `<label for>` associated with its control when a non-empty label text is given (group controls such as RadioGroup self-label with a `legend` and are used without a FormField label), a slot for the control, and an error message region. FormField SHALL provide its association ids — a control id and an error region id derived from its hydration-stable transfer id — through a component-scoped dependency-injection context; bound controls SHALL consume that context to set their native element's `id` and the error linkage, and SHALL remain fully functional standalone when no context is provided. When the bound field is touched and invalid, the control SHALL carry `aria-invalid="true"` and the error region SHALL be associated with the control via `aria-describedby`; otherwise the association SHALL be absent. Error text SHALL display only when the field is touched and invalid. Association ids SHALL be stable across re-renders of the FormField instance and identical between server-rendered markup and the hydrated client tree.
+FormField SHALL render a `<label for>` associated with its control when a non-empty label text is given (group controls such as RadioGroup self-label with a `legend` and are used without a FormField label), a slot for the control, and an error message region. FormField SHALL provide its association ids — a control id and an error region id derived from its hydration-stable transfer id — through a component-scoped dependency-injection context, confining the provision to the render pass that evaluates its slots so that controls rendered outside its slot subtree never observe it; bound controls SHALL consume that context to set their native element's `id` and the error linkage, and SHALL remain fully functional standalone when no context is provided. When the bound field is touched and invalid, the control SHALL carry `aria-invalid="true"` and the error region SHALL be associated with the control via `aria-describedby`; otherwise the association SHALL be absent. Error text SHALL display only when the field is touched and invalid. Association ids SHALL be stable across re-renders of the FormField instance and identical between server-rendered markup and the hydrated client tree.
 
 #### Scenario: Errors appear after blur, wired accessibly
 
@@ -76,6 +76,13 @@ FormField SHALL render a `<label for>` associated with its control when a non-em
 
 - **WHEN** a FormField and its control are server-rendered and then hydrated
 - **THEN** the control's `id` and the error region's `id` in the hydrated tree SHALL equal those present in the server-rendered markup
+
+#### Scenario: Sibling controls do not observe the provided ids
+
+- **WHEN** a FormField and a separate bound control are rendered as siblings in one parent (the control is not in the FormField's slot)
+- **THEN** the standalone control SHALL NOT carry the FormField's control id
+- **AND** when its own field becomes touched and invalid its `aria-describedby` SHALL NOT reference the FormField's error region
+- **AND** its own `data-state` SHALL still follow its own field's gating
 
 ### Requirement: Bound controls shall expose validation state via data-state
 

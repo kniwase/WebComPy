@@ -57,3 +57,13 @@
 - [x] 8.4 `uv run python scripts/check-browser-imports.py` passes
 - [x] 8.5 `uv run python -m pytest tests/ --tb=short` passes
 - [x] 8.6 E2E for all affected groups pass: `scripts/run-e2e-tests.sh ui-form-controls`, `docs-demos`, `components`, `interaction`
+
+## 9. Review follow-up: confine the FormField context provision
+
+- [x] 9.1 Verify the template slot form: template component tags bind slot children lazily via `context.slots()` inside the provider body, so provide-before-slot-evaluation holds for the template form too (empirically confirmed; the forward leak of `provide` also reached sibling controls in this form)
+- [x] 9.2 Add `providing_form_field_context` helper in `webcompy/ui/headless/_form_utils.py`: provides the `FormFieldContext` and restores the previously active DI scope on exit; wrap both headless and themed FormField bodies in it
+- [x] 9.3 Remove the dead broad `except Exception` in `form_field_context()` (inject with a default never raises on the supported paths)
+- [x] 9.4 Raise an explicit error for an unbound `RadioGroup` (instead of a `:bind`-internal `got NoneType` message) and reject a plain non-Signal `value` on the standalone `Radio`
+- [x] 9.5 Regression tests: standalone control after a FormField (headless and themed) carries no foreign id/describedby; template-path slotted group wired and sibling group isolated; unbound RadioGroup and plain-value Radio errors; existing gating assertions preserved
+- [x] 9.6 Re-run validation: `openspec validate feat-ui-form-controls`, ruff, pyright, docstring checker, browser-import checker, full unit tier, and E2E groups `ui-form-controls`, `docs-demos`, `components`, `interaction`
+- [x] 9.7 Update design.md (D8, Risks) and the delta spec FormField requirement (confinement sentence + sibling-control scenario)
