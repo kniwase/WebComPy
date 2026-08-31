@@ -171,30 +171,23 @@ class TestPluralization:
         from webcompy.i18n._adapters._babel import register_babel_plural_rules
         from webcompy.i18n._plural import _PLURAL_RULES
 
-        categories = ("one", "few", "many", "other")
-
-        def ru_form(count: int) -> int:
+        def ru_plural_rule(count: int) -> str:
             if count == 1:
-                return 0
+                return "one"
             if 2 <= count <= 4:
-                return 1
+                return "few"
             if count == 5 or 11 <= count <= 14:
-                return 2
-            return 3
-
-        class _Forms:
-            order = categories
-
-            def plural_form(self, count: int) -> int:
-                return ru_form(count)
+                return "many"
+            return "other"
 
         class _Locale:
-            plural_forms = _Forms()
+            def __init__(self, plural_form) -> None:
+                self.plural_form = plural_form
 
             @classmethod
             def parse(cls, identifier: str) -> _Locale:
                 assert identifier == "ru"
-                return cls()
+                return cls(ru_plural_rule)
 
         babel_mod = types.ModuleType("babel")
         babel_mod.Locale = _Locale

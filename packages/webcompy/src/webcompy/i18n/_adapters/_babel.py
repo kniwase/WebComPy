@@ -40,15 +40,7 @@ def register_babel_plural_rules(locales: Iterable[str] | None = None) -> None:
     targets = tuple(locales) if locales is not None else tuple(locale_identifiers())
     for identifier in targets:
         try:
-            locale = Locale.parse(identifier)
+            rule = Locale.parse(identifier).plural_form
         except Exception:
             continue
-        forms = locale.plural_forms
-        categories = forms.order
-        if not categories:
-            continue
-
-        def _selector(count: int | float, forms=forms, categories=categories) -> str:
-            return categories[forms.plural_form(count)]
-
-        register_plural_rule(identifier, _selector, override=True)
+        register_plural_rule(identifier, rule, override=True)
