@@ -9,8 +9,9 @@ from webcompy.elements import create_element, repeat
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
 from webcompy.signal import use_computed
+from webcompy.ui.headless._dom_id import component_dom_id
 from webcompy.ui.headless._form_field_context import FormFieldContext
-from webcompy.ui.headless._form_utils import instance_dom_id, join_classes, providing_form_field_context
+from webcompy.ui.headless._form_utils import join_classes, providing_form_field_context
 
 _FRAMEWORK_CLASS = "webcompy-headless-form-field"
 _LABEL_CLASS = "webcompy-headless-form-field-label"
@@ -70,9 +71,8 @@ def FormField(context: ComponentContext[FormFieldProps]) -> Any:
     if field is None:
         raise WebComPyException("FormField requires a 'field' prop")
 
-    base = context.transfer_id
-    control_id = props.get("control_id") or instance_dom_id("form-field-control", base)
-    error_id = props.get("error_id") or instance_dom_id("form-field-error", base)
+    control_id = props.get("control_id") or component_dom_id("form-field-control", context)
+    error_id = props.get("error_id") or component_dom_id("form-field-error", context)
     ctx = FormFieldContext(control_id=control_id, error_id=error_id, label=props.get("label", ""))
 
     with providing_form_field_context(context, ctx):

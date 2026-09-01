@@ -33,6 +33,7 @@ tests/test_frontmatter.py
 tests/test_graph.py
 tests/test_hooks.py
 tests/test_hydration_payload_lifecycle.py
+tests/test_i18n.py
 tests/test_list_mutation.py
 tests/test_markdown_adversarial.py
 tests/test_markdown_blocks.py
@@ -92,6 +93,7 @@ tests/test_template_markdown.py
 tests/test_template_naming.py
 tests/test_template_parser.py
 tests/test_theme.py
+tests/test_ui_disclosure.py
 tests/test_ui_form_controls.py
 tests/test_ui_overlay.py
 tests/test_use_computed.py

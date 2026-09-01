@@ -2,6 +2,7 @@ from typing import TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
+from webcompy.ui import Card
 
 
 class InlineCodeProps(TypedDict, total=False):
@@ -24,16 +25,10 @@ class CardProps(TypedDict, total=False):
 def DocsCard(context: ComponentContext[CardProps]):
     body = context.slots("default")
     title = context.props.get("title")
+    slots: dict = {"default": lambda: body}
     if title:
-        return html.DIV(
-            {"class": "ui-card"},
-            html.DIV({"class": "ui-card-header"}, title),
-            html.DIV({"class": "ui-card-body"}, body),
-        )
-    return html.DIV(
-        {"class": "ui-card"},
-        html.DIV({"class": "ui-card-body"}, body),
-    )
+        slots["header"] = lambda: title
+    return html.DIV({"class": "ui-card"}, Card({}, slots=slots))
 
 
 class SectionProps(TypedDict, total=False):
@@ -119,23 +114,7 @@ InlineCode.scoped_style = {
 
 DocsCard.scoped_style = {
     ".ui-card": {
-        "background-color": "var(--color-bg-card)",
-        "border": "1px solid var(--color-border)",
-        "border-radius": "var(--radius-md)",
-        "box-shadow": "var(--shadow-sm)",
-        "overflow": "hidden",
         "margin": "var(--space-5) 0",
-    },
-    ".ui-card-header": {
-        "padding": "var(--space-3) var(--space-4)",
-        "border-bottom": "1px solid var(--color-border)",
-        "background-color": "var(--color-bg-elevated)",
-        "font-weight": "600",
-        "color": "var(--color-fg)",
-    },
-    ".ui-card-body": {
-        "padding": "var(--space-4)",
-        "color": "var(--color-fg)",
     },
 }
 

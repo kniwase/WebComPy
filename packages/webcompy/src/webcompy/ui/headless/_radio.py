@@ -10,12 +10,12 @@ from webcompy.elements import create_element
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
 from webcompy.signal import SignalBase
+from webcompy.ui.headless._dom_id import component_dom_id
 from webcompy.ui.headless._form_utils import (
     bound_value,
     compose_attrs,
     control_state,
     form_field_context,
-    instance_dom_id,
     join_classes,
     optional_text_attrs,
     resolve_bind_target,
@@ -162,7 +162,7 @@ def RadioGroup(context: ComponentContext[RadioGroupProps]) -> Any:
     state = control_state(bind.field, ctx)
     on_change = props.get("on_change")
 
-    group_name = instance_dom_id("radio-group", context.transfer_id)
+    group_name = component_dom_id("radio-group", context)
 
     fieldset_attrs = compose_attrs(
         {**optional_text_attrs(props, ("disabled",))},

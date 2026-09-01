@@ -8,6 +8,7 @@ from .pages.component import FunctionStylePage
 from .pages.custom_element import CustomElementPage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
+from .pages.disclosure import DisclosurePage
 from .pages.error_handling import CatchEventsPage, ErrorBoundaryPage, NestedCrashPage
 from .pages.event import EventPage
 from .pages.event_source import EventSourcePage
@@ -101,6 +102,7 @@ router = Router(
     {"path": "/teleport", "component": TeleportPage},
     {"path": "/transition", "component": TransitionPage},
     {"path": "/overlay", "component": OverlayPage},
+    {"path": "/disclosure", "component": DisclosurePage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/ui-form-controls", "component": UiFormControlsPage},
     {"path": "/storage", "component": StoragePage},

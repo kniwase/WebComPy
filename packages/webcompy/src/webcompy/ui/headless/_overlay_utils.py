@@ -12,16 +12,14 @@ from webcompy.di import inject
 from webcompy.ports._dom import DOMNode, DOMPort
 from webcompy.ports._host import HostPort
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
+from webcompy.ui.headless._dom_id import component_dom_id
 
 
 def overlay_dom_id(kind: str, context: Any) -> str:
     """Return a per-instance DOM id for an overlay element.
 
-    The id is derived from the component instance's hydration-stable
-    transfer id, so ids are unique among the instances on a page and
-    identical between the server-rendered output and the hydrated
-    client tree. The ``#`` ordinal separator of the transfer id is
-    replaced with ``-`` to keep the value usable in CSS selectors.
+    Delegates to :func:`component_dom_id`, the shared hydration-stable
+    id helper for all UI primitives.
 
     Args:
         kind: Element kind used as the id prefix (e.g. ``modal-panel``).
@@ -31,9 +29,7 @@ def overlay_dom_id(kind: str, context: Any) -> str:
         The generated DOM id string.
 
     """
-    raw = getattr(context, "transfer_id", "") or ""
-    safe = raw.replace("#", "-")
-    return f"webcompy-{kind}-{safe}"
+    return component_dom_id(kind, context)
 
 
 def _get_document_active_element() -> DOMNode | None:

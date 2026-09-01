@@ -249,23 +249,3 @@ def join_classes(*parts: str) -> str:
 
     """
     return " ".join(part for part in parts if part)
-
-
-def instance_dom_id(kind: str, transfer_id: str) -> str:
-    """Derive a per-instance, hydration-stable DOM id string.
-
-    The id comes from the component instance's hydration-stable transfer
-    id so server-rendered and hydrated markup carry identical values; the
-    ``#`` ordinal separator is replaced with ``-`` to stay usable in CSS
-    selectors and attribute values.
-
-    Args:
-        kind: Element kind used as the id prefix (e.g. ``radio-group``).
-        transfer_id: The component context's ``transfer_id``.
-
-    Returns:
-        The generated id string.
-
-    """
-    safe = transfer_id.replace("#", "-")
-    return f"webcompy-{kind}-{safe}"

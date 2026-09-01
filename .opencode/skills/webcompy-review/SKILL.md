@@ -108,6 +108,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Overlay Instance Identity & Toggle Ownership** — `ui-overlay/spec.md`
 - **Form Control Binding & FormField Context Confinement** — `ui-form-controls/spec.md`
+- **Disclosure State & Panel Persistence** — `ui-disclosure/spec.md`, `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **FragmentElement** — `elements/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
@@ -115,6 +116,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Head VDOM** — `head-vdom/spec.md`
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
+- **I18n Cookie-Only Locale Parity** — `i18n/spec.md`
 - **Testing Module** — `testing-module/spec.md`
 - **Inspect CLI Independence** — `inspect-cli/spec.md`
 - **Template Engine** — `template-engine/spec.md`

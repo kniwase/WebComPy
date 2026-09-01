@@ -172,6 +172,7 @@ the per-area reference.
 - **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Overlay Instance Identity & Toggle Ownership** — `ui-overlay/spec.md`
 - **Form Control Binding & FormField Context Confinement** — `ui-form-controls/spec.md`
+- **Disclosure State & Panel Persistence** — `ui-disclosure/spec.md`, `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
@@ -189,6 +190,7 @@ the per-area reference.
 - **No Overview Gap List** — `overview/spec.md`
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 - **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
+- **I18n Cookie-Only Locale Parity** — `i18n/spec.md`
 
 ## File → Spec Mapping
 
@@ -204,6 +206,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ui/headless/`, `webcompy/ui/components/` | `ui-primitives/spec.md` |
 | `webcompy/ui/headless/_overlay_utils.py`, `webcompy/ui/headless/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/components/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/composables/_toast.py` | `ui-overlay/spec.md`, `ui-primitives/spec.md` |
 | `webcompy/ui/headless/_input.py`, `_textarea.py`, `_select.py`, `_checkbox.py`, `_switch.py`, `_radio.py`, `_form_field.py`, `_form_field_context.py`, `_form_utils.py`, `webcompy/ui/components/_input.py`, `_textarea.py`, `_select.py`, `_checkbox.py`, `_switch.py`, `_radio.py`, `_form_field.py` | `ui-form-controls/spec.md`, `ui-primitives/spec.md`, `forms/spec.md`, `elements/spec.md` |
+| `webcompy/ui/headless/_dom_id.py`, `_tabs.py`, `_collapse.py`, `_accordion.py`, `_alert.py`, `_progress.py`, `_badge.py`, `_skeleton.py`, `_card.py`, `webcompy/ui/components/_tabs.py`, `_collapse.py`, `_accordion.py`, `_alert.py`, `_progress.py`, `_badge.py`, `_skeleton.py`, `_card.py`, `webcompy/ui/_styles/primitives.css` | `ui-disclosure/spec.md`, `ui-primitives/spec.md`, `transition/spec.md` |
 | `webcompy/ui/code_block/` | `code-block/spec.md`, `syntax-highlight-lexers/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
@@ -223,6 +226,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_teleport.py` | `teleport/spec.md`, `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/elements/types/_transition.py`, `webcompy/ports/_transition.py`, `webcompy/ports/_browser/_transition.py`, `webcompy/ports/_media_query.py`, `webcompy_server/ports/_transition.py` | `transition/spec.md`, `port-abstraction/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
+| `webcompy/i18n/` | `i18n/spec.md`, `di-scope/spec.md`, `port-abstraction/spec.md`, `reactive/spec.md`, `template-engine/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
@@ -345,6 +349,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
 | `custom-element-components` | Named Light DOM custom elements: wrapper boundaries, multiple roots, document-connection hooks, observed attributes, registration/hydration ordering |
 | `composables` | Reusable stateful logic functions for function-style component setup |
+| `i18n` | Reactive internationalization core: DI-managed `I18nManager` with locale Signal and `use_i18n` controller, dot-path catalogs with `{param}` interpolation, CLDR plurals via a built-in table with pipe shorthand and opt-in Babel adapter, fallback chain, and cookie-only locale persistence with deterministic SSR/hydration parity |
 | `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
 | `markdown-document` | Markdown frontmatter parsing, `load_markdown_document`, TOC extraction, opt-in `prose.css` typography preset |
 | `markdown-conformance` | Byte-exact cmark-gfm compatibility of `DefaultMarkdownParser` HTML output, strict-xfail suite |
@@ -433,6 +438,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `ui-primitives` | Two-layer first-party UI components: headless contract (behavior-only with structural CSS, `data-state` vocabularies, `class_name` pass-through), themed composition with token-based defaults, three import paths, stylesheet delivery through `/_webcompy-ui/`, and the Spinner pair |
 | `ui-form-controls` | First-party form controls (Input, Textarea, Select, Checkbox, Switch, Radio/RadioGroup, FormField) as headless/themed pairs: Field/raw binding via `:bind` (including select support), native elements in custom-element wrappers, Switch ARIA pattern, RadioGroup shared generated name, FormField DI-confined association ids with `aria-invalid`/`aria-describedby`/`data-state` touched-invalid gating, and themed defaults in the primitives stylesheet |
 | `ui-overlay` | First-party overlay components (Modal, Drawer, Dropdown, Toast) as headless/themed pairs: dialog accessibility contract, menu button keyboard model with propagation-owned toggle and capture-phase outside close, per-instance hydration-stable DOM ids, optional `render_closed` static menu mode, trigger-anchored menu positioning (`align`, `positioning` escape hatch) with scroll/resize re-measurement, and the toast queue with live region and auto-dismiss |
+| `ui-disclosure` | Disclosure and feedback components (Tabs, Collapse/Accordion, Alert, Progress, Badge, Skeleton, Card) as headless/themed pairs: tablist contract with roving tabindex and hidden persistent panels, key-based `tabs`/`items` props, per-instance hydration-stable DOM ids, Collapse/expand animated through the Transition capability via a CSS natural-height technique, Accordion open policy, variant-to-role Alert mapping, determinate/indeterminate Progress ARIA, decorative Skeleton, structural Card |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
 ## Language Rules
