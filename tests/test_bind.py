@@ -246,6 +246,57 @@ class TestRadioBinding:
             expand_bind_attr("input", {"type": "radio", ":bind": Signal("a"), "value": Signal("x")}, {})
 
 
+class TestSelectBinding:
+    def test_expansion(self):
+        sig = Signal("a")
+        attrs = {":bind": sig}
+        events: dict = {}
+        prop_attrs, callbacks = expand_bind_attr("select", attrs, events)
+        assert attrs["value"] is sig
+        assert prop_attrs == {"value"}
+        assert callbacks == []
+        assert "change" in events
+        assert "blur" not in events
+
+    def test_write_back_sets_signal(self):
+        sig = Signal("a")
+        events: dict = {}
+        expand_bind_attr("select", {":bind": sig}, events)
+        events["change"](_ev(value="b"))
+        assert sig.value == "b"
+
+    def test_non_str_valued_rejected(self):
+        with pytest.raises(WebComPyException, match="str-valued"):
+            expand_bind_attr("select", {":bind": Signal(True)}, {})
+
+    def test_value_conflict_rejected(self):
+        with pytest.raises(WebComPyException, match="'value'"):
+            expand_bind_attr("select", {":bind": Signal("x"), "value": "y"}, {})
+
+    def test_multiple_rejected(self):
+        with pytest.raises(WebComPyException, match="multiple"):
+            expand_bind_attr("select", {":bind": Signal("x"), "multiple": True}, {})
+
+    def test_field_write_back_marks_dirty_and_blur_marks_touched(self):
+        field = use_field(Signal("a"))
+        events: dict = {}
+        expand_bind_attr("select", {":bind": field}, events)
+        events["change"](_ev(value="b"))
+        assert field.value.value == "b"
+        assert field.dirty.value is True
+        events["blur"](_ev())
+        assert field.touched.value is True
+
+    def test_user_change_handler_chained_after_binding(self):
+        sig = Signal("a")
+        calls: list[str] = []
+        events = {"change": lambda ev: calls.append(sig.value)}
+        expand_bind_attr("select", {":bind": sig}, events)
+        events["change"](_ev(value="b"))
+        assert sig.value == "b"
+        assert calls == ["b"]
+
+
 class TestConflicts:
     def test_text_value_conflict(self):
         with pytest.raises(WebComPyException, match="'value'"):
@@ -359,7 +410,6 @@ class TestUnsupportedElements:
     @pytest.mark.parametrize(
         "tag,extra",
         [
-            ("select", {}),
             ("option", {}),
             ("div", {}),
             ("input", {"type": "color"}),
@@ -372,8 +422,8 @@ class TestUnsupportedElements:
             expand_bind_attr(tag, attrs, {})
 
     def test_message_names_supported_elements(self):
-        with pytest.raises(WebComPyException, match="input"):
-            expand_bind_attr("select", {":bind": Signal("x")}, {})
+        with pytest.raises(WebComPyException, match="select"):
+            expand_bind_attr("option", {":bind": Signal("x")}, {})
 
 
 class TestHandlerChaining:
@@ -598,3 +648,39 @@ class TestElementIntegration:
         node = await _render_with_server(el)
         html = ServerDOMPort().render_html(node)
         assert "<textarea>initial</textarea>" in html
+
+    @pytest.mark.asyncio
+    async def test_select_write_back_on_change(self):
+        sig = Signal("a")
+        el = Element(
+            "select",
+            {":bind": sig},
+            {},
+            None,
+            [
+                Element("option", {"value": "a"}, {}, None, None),
+                Element("option", {"value": "b"}, {}, None, None),
+            ],
+        )
+        node = await _render_with_fake_browser(el)
+        assert node.getAttribute("value") == "a"
+        node.value = "b"
+        node.dispatchEvent(VirtualDOMEvent("change"))
+        assert sig.value == "b"
+
+    @pytest.mark.asyncio
+    async def test_select_signal_update_syncs_property(self):
+        sig = Signal("a")
+        el = Element("select", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        node.value = "b"
+        sig.value = "c"
+        assert node.value == "c"
+
+    @pytest.mark.asyncio
+    async def test_select_ssr_renders_bound_attr(self):
+        el = Element("select", {":bind": Signal("a")}, {}, None, None)
+        node = await _render_with_server(el)
+        html = ServerDOMPort().render_html(node)
+        assert 'value="a"' in html
+        assert ":bind" not in html

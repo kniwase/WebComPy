@@ -107,6 +107,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`, `port-abstraction/spec.md`, `port-provisioning/spec.md`
 - **UI Primitives Two-Layer Contract** — `ui-primitives/spec.md`
 - **Overlay Instance Identity & Toggle Ownership** — `ui-overlay/spec.md`
+- **Form Control Binding & FormField Context Confinement** — `ui-form-controls/spec.md`
 - **Disclosure State & Panel Persistence** — `ui-disclosure/spec.md`, `ui-primitives/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **FragmentElement** — `elements/spec.md`

@@ -1,0 +1,77 @@
+# Tasks: feat-ui-form-controls
+
+## 0. Artifact refresh (post-rebase alignment)
+
+- [x] 0.1 Update proposal/design/specs/tasks for: `:bind` select extension (elements modified), DI-based FormField wiring, `data-state` vocabulary, options-prop RadioGroup, named custom elements, transfer_id-derived hydration-stable ids, docstring/E2E-group validation requirements
+- [x] 0.2 `openspec validate feat-ui-form-controls` passes
+
+## 1. `:bind` select extension (`elements`)
+
+- [x] 1.1 Add `_expand_select_bind` to `webcompy/elements/_bind.py`: str-valued Signal requirement (mirror `_expand_text_bind` error), `attrs["value"] = signal`, write-back on `change` (`signal.value = target.value`, dirty first), `blur` marks Field touched, raise on `multiple` attr (single selection only); wire the `select` tag path in `expand_bind_attr` returning `{"value"}` property attrs; update `_SUPPORTED_ELEMENTS` message to include `select`
+- [x] 1.2 Extend existing `:bind` unit tests (locate via `grep -rl "expand_bind_attr\|:bind" tests/`): select two-way binding, non-str rejection, explicit `value` conflict rejection, dirty/touched wiring through the Field path
+
+## 2. Headless text controls
+
+- [x] 2.1 Create `webcompy/ui/headless/_form_field_context.py`: frozen dataclass `FormFieldContext` (control_id, error_id, label) and module-private `InjectKey`
+- [x] 2.2 Implement headless Input (`headless-input`): native `<input>` via `create_element` with `":bind"` in attrs; `field` xor `value`+`on_change` props (both → error); inject FormFieldContext (default None) to set native `id` and conditional `aria-describedby`; `aria-invalid` computed on touched+invalid; `data-state="valid|invalid"` via Computed; `input_type` static prop (text/email/password/search/tel/url/number); `class_name` pass-through
+- [x] 2.3 Implement headless Textarea (`headless-textarea`): same contract on native `<textarea>` with `rows` prop
+- [x] 2.4 Implement headless Select (`headless-select`): native `<select>` with `options` prop (value/label TypedDict), same binding contract via the select `:bind` path
+- [x] 2.5 Verify the DI provide/inject path with a minimal unit test: a child component rendered inside a parent slot resolves a value provided by the parent context
+
+## 3. Headless choice controls
+
+- [x] 3.1 Implement headless Checkbox (`headless-checkbox`): native checkbox with checked binding (Field bool or raw value/change), optional `label` prop rendered as implicit wrapping label, FormFieldContext consumption, `data-state` hook, class pass-through
+- [x] 3.2 Implement headless Switch (`headless-switch`): checkbox base with `role="switch"` and computed `aria-checked`, same binding path
+- [x] 3.3 Implement headless Radio (`headless-radio`) and RadioGroup (`headless-radio-group`): Radio is a standalone native radio (caller supplies `name`); RadioGroup renders `fieldset`/`legend` with `options` prop items sharing a `name` generated from the group's transfer id, group value binding (Field string or raw), `data-state` on the fieldset
+
+## 4. Headless FormField
+
+- [x] 4.1 Implement headless FormField (`headless-form-field`): required `field` prop, `label` (renders `<label for>` when non-empty; omit for group controls), control slot, error region gated on touched+invalid with errors from `field.errors`; generate `control_id`/`error_id` from transfer id (sanitized `#`); `context.provide` the FormFieldContext
+- [x] 4.2 Wire `data-state` on the FormField root following the same touched+invalid gating
+
+## 5. Themed layer
+
+- [x] 5.1 Implement themed Input/Textarea/Select (`webcompy-input`/`-textarea`/`-select`) composing the headless controls with token-based rules in `primitives.css` (borders, focus-visible ring, disabled, `data-state="invalid"` with danger token)
+- [x] 5.2 Implement themed Checkbox/Switch/RadioGroup (switch track/thumb visuals, radio indicator) and themed FormField (label typography, error text with danger token); forward `class_name` part props to headless so user classes win at equal specificity
+- [x] 5.3 Export: headless names from `webcompy.ui.headless`, themed from `webcompy.ui.components`, themed re-exported at `webcompy.ui`; import-path resolution tests included in unit tier
+
+## 6. Unit tests (`tests/test_ui_form_controls.py`, browserless via TestRenderer; keep free of browser-only APIs for dual-run eligibility)
+
+- [x] 6.1 Binding contract: Field-bound input syncs value and sets dirty/touched per forms rules; raw value mode invokes change callback; both-modes error case
+- [x] 6.2 Select options rendering and selection binding; Checkbox checked binding; Switch `role="switch"`/`aria-checked`
+- [x] 6.3 RadioGroup: fieldset/legend structure, options expansion, generated shared name distinct across instances, group value binding updates
+- [x] 6.4 FormField: DI wiring end to end (label `for` equals control native id via injected context), error gating (no flash when untouched; errors + `aria-invalid` + `aria-describedby` after blur), id stability across re-renders, standalone control without context
+- [x] 6.5 `data-state="valid|invalid"` follows touched+invalid gating on all bound controls; raw-mode controls report `valid`
+
+## 7. E2E and docs
+
+- [x] 7.1 docs_app demo page (`docs_app/pages/demo/ui_form_controls.py`, route `/sample/ui-form-controls`): full form (Input/Textarea/Select/Checkbox/Switch/RadioGroup in FormFields with validators, submit gated by Form, reset); link from docs navigation
+- [x] 7.2 E2E test `e2e/core/test_ui_form_controls.py`: typed input triggers validation on blur, error display with `aria-invalid`/`aria-describedby` wiring verified in the browser, submit gating via Form, reset restores initial state; register new `ui-form-controls` group in `scripts/run-e2e-tests.sh` `E2E_GROUPS`
+- [x] 7.3 Docs E2E: add a page test for the demo under `e2e/docs/` (pattern: `test_transition.py`) and register it in the `docs-demos` group
+
+## 8. Validation
+
+- [x] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 8.2 `uv run pyright` passes
+- [x] 8.3 `python3 scripts/check-docstrings.py` passes (all new public interfaces carry Google-style docstrings; no OpenSpec references in docstrings/comments)
+- [x] 8.4 `uv run python scripts/check-browser-imports.py` passes
+- [x] 8.5 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 8.6 E2E for all affected groups pass: `scripts/run-e2e-tests.sh ui-form-controls`, `docs-demos`, `components`, `interaction`
+
+## 9. Review follow-up: confine the FormField context provision
+
+- [x] 9.1 Verify the template slot form: template component tags bind slot children lazily via `context.slots()` inside the provider body, so provide-before-slot-evaluation holds for the template form too (empirically confirmed; the forward leak of `provide` also reached sibling controls in this form)
+- [x] 9.2 Add `providing_form_field_context` helper in `webcompy/ui/headless/_form_utils.py`: provides the `FormFieldContext` and restores the previously active DI scope on exit; wrap both headless and themed FormField bodies in it
+- [x] 9.3 Remove the dead broad `except Exception` in `form_field_context()` (inject with a default never raises on the supported paths)
+- [x] 9.4 Raise an explicit error for an unbound `RadioGroup` (instead of a `:bind`-internal `got NoneType` message) and reject a plain non-Signal `value` on the standalone `Radio`
+- [x] 9.5 Regression tests: standalone control after a FormField (headless and themed) carries no foreign id/describedby; template-path slotted group wired and sibling group isolated; unbound RadioGroup and plain-value Radio errors; existing gating assertions preserved
+- [x] 9.6 Re-run validation: `openspec validate feat-ui-form-controls`, ruff, pyright, docstring checker, browser-import checker, full unit tier, and E2E groups `ui-form-controls`, `docs-demos`, `components`, `interaction`
+- [x] 9.7 Update design.md (D8, Risks) and the delta spec FormField requirement (confinement sentence + sibling-control scenario)
+
+## 10. Review follow-up: clarify the raw value binding contract
+
+- [x] 10.1 Delta spec (`ui-form-controls` binding requirement): a plain (non-`Signal`) `value` seeds the control's internal signal at construction only; later external changes are not observed and live programmatic sync requires a `Signal` bound in both directions; add the raw-Signal two-way sync scenario
+- [x] 10.2 design.md D1: record the plain-value seed semantics and the Signal requirement for live sync
+- [x] 10.3 `resolve_bind_target` docstring: state the seed distinction
+- [x] 10.4 Unit test: a `Signal` passed as `value` updates the DOM on programmatic change and user write-back flows into the same Signal (chained `on_change` still fires)
+- [x] 10.5 Re-run validation: `openspec validate feat-ui-form-controls`, ruff check/format, docstring checker, unit tests for the form control and `:bind` tiers
