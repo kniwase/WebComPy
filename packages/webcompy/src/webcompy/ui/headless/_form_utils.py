@@ -97,7 +97,7 @@ def providing_form_field_context(context: ComponentContext[Any], ctx: FormFieldC
         ctx: The association context to expose to slotted controls.
 
     Yields:
-        None; the active DI scope is confined to the ``with`` block.
+        None: The active DI scope is confined to the ``with`` block.
 
     """
     previous = _active_di_scope.get(None)
