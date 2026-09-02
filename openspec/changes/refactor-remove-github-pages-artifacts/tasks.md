@@ -9,8 +9,8 @@
 
 ## 2. Verification
 
-- [ ] 2.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix any fallout.
-- [ ] 2.2 Run `uv run python -m webcompy generate --config docs_app.webcompy_config` and confirm `docs_app/dist/` is produced without `CNAME` or `.nojekyll` entries and with everything else unchanged.
+- [x] 2.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix any fallout.
+- [x] 2.2 Run `uv run python -m webcompy generate --config docs_app.webcompy_config` and confirm `docs_app/dist/` is produced without `CNAME` or `.nojekyll` entries and with everything else unchanged.
 
 ## 3. Spec sync and archive
 
