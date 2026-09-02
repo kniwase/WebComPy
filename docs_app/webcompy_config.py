@@ -8,7 +8,6 @@ config = WebComPyBuildConfig(
     wheel_mode="split",
     resource_transfer="all-text",
     dist="dist",
-    cname="webcompy.net",
     static_files_dir="static",
     lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),
     server=WebComPyServerConfig(port=8080),

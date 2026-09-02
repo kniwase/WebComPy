@@ -257,7 +257,6 @@ class TestWebComPyBuildConfig:
         assert config.standalone is False
         assert config.serve_all_deps is True
         assert config.dist == "dist"
-        assert config.cname == ""
         assert config.static_files_dir == "static"
         assert isinstance(config.server, WebComPyServerConfig)
         assert isinstance(config.app_package_path, Path)

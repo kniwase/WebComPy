@@ -2,10 +2,10 @@
 
 ## 1. Code removal
 
-- [ ] 1.1 Remove the `cname` field from `WebComPyBuildConfig` in `packages/webcompy-cli/src/webcompy_cli/config/_build_config.py`, including its `Args:` and `Attributes:` docstring entries.
-- [ ] 1.2 Remove the `.nojekyll` touch and the `CNAME` file emission block from `generate_static_site` in `packages/webcompy-cli/src/webcompy_cli/_generate.py`.
-- [ ] 1.3 Remove `cname="webcompy.net"` from `docs_app/webcompy_config.py`.
-- [ ] 1.4 Remove the `cname` default assertion from `tests/test_config_dataclasses.py`.
+- [x] 1.1 Remove the `cname` field from `WebComPyBuildConfig` in `packages/webcompy-cli/src/webcompy_cli/config/_build_config.py`, including its `Args:` and `Attributes:` docstring entries.
+- [x] 1.2 Remove the `.nojekyll` touch and the `CNAME` file emission block from `generate_static_site` in `packages/webcompy-cli/src/webcompy_cli/_generate.py`.
+- [x] 1.3 Remove `cname="webcompy.net"` from `docs_app/webcompy_config.py`.
+- [x] 1.4 Remove the `cname` default assertion from `tests/test_config_dataclasses.py`.
 
 ## 2. Verification
 
