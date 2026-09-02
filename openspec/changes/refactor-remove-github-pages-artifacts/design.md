@@ -33,6 +33,8 @@ The validator requires a MODIFIED block to carry every scenario the current requ
 ### Normalize the touched requirement headers during sync
 The `WebComPyBuildConfig` requirement blocks in `openspec/specs/config-separation/spec.md` and `openspec/specs/app-config/spec.md` carry a legacy `### MODIFIED: ` header prefix left over from an older archive sync, which prevents name-matching the delta's canonical `### Requirement: ` header. The sync step renames exactly those two headers (content unchanged) so the MODIFIED delta replaces the block instead of appending a duplicate. All other malformed headers in those files are left as-is.
 
+Revision (discovered during sync): renaming only those two headers is not sufficient. The parser treats only canonical `### Requirement:` headers as block boundaries, so each remaining malformed header keeps concatenating its scenarios into the preceding canonical block — once the `WebComPyBuildConfig` requirement becomes name-matchable, it appears to own every scenario down to the next canonical header (dozens in both files), and change validation rejects the MODIFIED delta for "omitting" scenarios that actually belong to other requirements, blocking archive. The sync therefore normalizes ALL legacy `### MODIFIED:` / `### ADDED:` headers in these two files to `### Requirement:` (header line only; block content and requirement names unchanged, no name collisions). Other spec files with malformed headers remain out of scope.
+
 ## Risks / Trade-offs
 
 - [Downstream projects pass `cname=` to `WebComPyBuildConfig`] → TypeError at config construction; acceptable pre-1.0, called out as BREAKING in the proposal and in the eventual v0.1.0 changelog.

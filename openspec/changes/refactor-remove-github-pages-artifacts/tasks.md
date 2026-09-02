@@ -14,6 +14,6 @@
 
 ## 3. Spec sync and archive
 
-- [ ] 3.1 Sync the delta specs into `openspec/specs/`: apply the `MODIFIED` blocks from this change; while syncing, normalize the two touched `### MODIFIED: WebComPyBuildConfig ...` headers in `config-separation/spec.md` and `app-config/spec.md` to the canonical `### Requirement:` form (content unchanged, per design).
-- [ ] 3.2 Confirm `grep -rn "cname\|CNAME\|nojekyll" openspec/specs/` returns no matches and `npx @fission-ai/openspec@latest validate --specs` passes.
+- [x] 3.1 Sync the delta specs into `openspec/specs/`: apply the `MODIFIED` blocks from this change; while syncing, normalize the two touched `### MODIFIED: WebComPyBuildConfig ...` headers in `config-separation/spec.md` and `app-config/spec.md` to the canonical `### Requirement:` form (content unchanged, per design).
+- [x] 3.2 Confirm `grep -rn "cname\|CNAME\|nojekyll" openspec/specs/` returns no matches and `npx @fission-ai/openspec@latest validate --specs` passes.
 - [ ] 3.3 Archive this change with `openspec-archive-change` (or `openspec archive`) so no completed-but-unarchived change remains.
