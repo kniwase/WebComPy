@@ -92,15 +92,6 @@ async def generate_static_site(app: WebComPyApp | None = None):
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    nojekyll_path = dist_dir / ".nojekyll"
-    nojekyll_path.touch()
-    print(nojekyll_path)
-
-    if build_config.cname:
-        cname_path = dist_dir / "CNAME"
-        cname_path.open("w", encoding="utf8").write(build_config.cname)
-        print(cname_path)
-
     static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
     for relative_path in get_static_files(static_files_dir):
         src = static_files_dir / relative_path

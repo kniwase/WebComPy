@@ -49,7 +49,6 @@ class WebComPyBuildConfig:
         resource_transfer: How resource files are transferred to the
             browser.
         dist: Output directory for the static site.
-        cname: Value written to the ``CNAME`` file, when any.
         static_files_dir: Directory housing static files relative to the
             app package path.
         lockfile_sync_config: Configuration for lock file synchronization.
@@ -79,7 +78,6 @@ class WebComPyBuildConfig:
         wheel_mode: Wheel bundling mode.
         resource_transfer: How resource files are transferred.
         dist: Output directory for the static site.
-        cname: Value written to the ``CNAME`` file, when any.
         static_files_dir: Directory housing static files.
         lockfile_sync_config: Configuration for lock file synchronization.
         server: Server configuration.
@@ -101,7 +99,6 @@ class WebComPyBuildConfig:
     wheel_mode: Literal["bundled", "split"] = "bundled"
     resource_transfer: Literal["used", "all-text"] = "used"
     dist: str = "dist"
-    cname: str = ""
     static_files_dir: str = "static"
     lockfile_sync_config: LockfileSyncConfig | None = None
     server: WebComPyServerConfig = field(default_factory=WebComPyServerConfig)
