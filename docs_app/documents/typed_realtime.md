@@ -119,4 +119,4 @@ Calling `register_realtime_type_handler` outside an app DI scope emits a `UserWa
 
 - **Dataclass targets only** — the body wire mode requires a top-level JSON object; wrap collections and scalars in a dataclass.
 - **No hydration transfer** — typed messages, `.last_error`, and registrations never enter the SSR/SSG hydration payload; outside the browser the typed handle behaves like the raw handle's empty closed fallback.
-- **No replay** — reconnection does not replay missed typed messages; re-pull authoritative state when `.state` returns to `OPEN` (see the raw WebSocket [gap/refetch recipe](/documents/websocket#the-gaprefetch-recipe)).
+- **No replay** — reconnection does not replay missed typed messages; re-pull authoritative state when `.state` returns to `OPEN` (see the raw WebSocket [gap/refetch recipe](/documents/advanced/websocket#the-gaprefetch-recipe)).

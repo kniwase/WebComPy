@@ -142,7 +142,7 @@ feed = to_reactive_list(use_event_source("/events"), maxlen=50)
 # feed.items: ReactiveList[SSEvent]
 ```
 
-This is the intended path when occurrence semantics are not what the UI needs — see [Signals and Streams](/documents/signal-stream).
+This is the intended path when occurrence semantics are not what the UI needs — see [Signals and Streams](/documents/advanced/signal-stream).
 
 ## Server-side rendering
 

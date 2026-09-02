@@ -7,7 +7,7 @@ description: Hold externally-produced state as a read-only signal with use_reado
 
 WebComPy's state primitives are **cells**: they hold *current state* and propagate changes, with an equality contract that suppresses same-value writes. When the state comes from outside your component — a window resize, a visibility change, a callback from non-WebComPy code — you want a value your UI can read reactively, but you do not want to hand out write access. `use_readonly_signal` gives you exactly that: a read-only signal whose **only** write path is the `update` function it returns.
 
-This page covers the primitive and the two convenience composables for browser state events. If your data is a stream of *occurrences* (chat messages, ticks, WebSocket events) where every arrival matters, see [Signals and Streams](/documents/signal-stream) instead — signal equality would silently drop duplicates.
+This page covers the primitive and the two convenience composables for browser state events. If your data is a stream of *occurrences* (chat messages, ticks, WebSocket events) where every arrival matters, see [Signals and Streams](/documents/advanced/signal-stream) instead — signal equality would silently drop duplicates.
 
 ## use_readonly_signal: an external-only write path
 

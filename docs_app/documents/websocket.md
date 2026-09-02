@@ -133,7 +133,7 @@ feed = to_reactive_list(use_websocket("/api/chat"), maxlen=50)
 # feed.items: ReactiveList[str]
 ```
 
-See [Signals and Streams](/documents/signal-stream).
+See [Signals and Streams](/documents/advanced/signal-stream).
 
 ## Server-side rendering
 

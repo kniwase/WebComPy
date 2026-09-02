@@ -5,7 +5,7 @@ description: Tabs, Collapse, Accordion, Alert, Progress, Badge, Skeleton, and Ca
 
 # Disclosure & Feedback
 
-Disclosure and feedback primitives from `webcompy.ui`: tabs and collapsible sections for showing/hiding regions, plus status indicators. Each ships as a headless/themed pair (see [UI Primitives](/documents/ui-primitives/)).
+Disclosure and feedback primitives from `webcompy.ui`: tabs and collapsible sections for showing/hiding regions, plus status indicators. Each ships as a headless/themed pair (see [UI Primitives](/documents/basic/ui-primitives)).
 
 ## Tabs
 

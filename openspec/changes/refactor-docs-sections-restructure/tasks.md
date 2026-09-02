@@ -7,9 +7,9 @@
 
 ## 2. Body link fixes
 
-- [ ] 2.1 Convert the three relative `.md` links (`rpc.md` See-also, `rpc_websocket.md` list ×2) to rendered-site URLs with new paths
-- [ ] 2.2 Update all existing `/documents/...` cross-links in `docs_app/documents/*.md` to the new category paths (including the heading-anchor link in `typed_realtime.md` and the Installation link in `quickstart.md`)
-- [ ] 2.3 Add a unit test that scans every `docs_app/documents/*.md` for link targets ending in `.md` and fails on any hit
+- [x] 2.1 Convert the three relative `.md` links (`rpc.md` See-also, `rpc_websocket.md` list ×2) to rendered-site URLs with new paths
+- [x] 2.2 Update all existing `/documents/...` cross-links in `docs_app/documents/*.md` to the new category paths (including the heading-anchor link in `typed_realtime.md` and the Installation link in `quickstart.md`)
+- [x] 2.3 Add a unit test that scans every `docs_app/documents/*.md` for link targets ending in `.md` and fails on any hit
 
 ## 3. Tests follow
 
