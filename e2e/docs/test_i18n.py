@@ -4,7 +4,7 @@ from playwright.sync_api import expect
 
 @pytest.mark.e2e
 def test_i18n_guide_renders(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/i18n")
+    page = docs_page_on("/documents/advanced/i18n")
     assert page.title() == "Internationalization - WebComPy Docs"
     expect(page.get_by_role("heading", name="Internationalization")).to_be_visible()
 

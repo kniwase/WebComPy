@@ -13,8 +13,8 @@
 
 ## 3. Tests follow
 
-- [ ] 3.1 Update `e2e/docs/` navigation paths for all moved pages; keep group names unchanged
-- [ ] 3.2 Update any unit/E2E test referencing old flat `/documents/<page>` URLs (search for `/documents/` literals)
+- [x] 3.1 Update `e2e/docs/` navigation paths for all moved pages; keep group names unchanged
+- [x] 3.2 Update any unit/E2E test referencing old flat `/documents/<page>` URLs (search for `/documents/` literals)
 
 ## 4. Verification
 
