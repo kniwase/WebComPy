@@ -18,8 +18,8 @@
 
 ## 4. Verification
 
-- [ ] 4.1 `uv run ruff check .` + `uv run ruff format --check .` + `uv run pyright`
-- [ ] 4.2 `uv run python -m pytest tests/ --tb=short`
-- [ ] 4.3 `uv run python -m webcompy generate` on docs_app; confirm generated `dist/` contains only new category paths and old flat paths are absent (404)
-- [ ] 4.4 `scripts/run-e2e-tests.sh docs-documents` (prod + static)
-- [ ] 4.5 `python3 scripts/check-doc-spec-refs.py` + `openspec validate refactor-docs-sections-restructure`
+- [x] 4.1 `uv run ruff check .` + `uv run ruff format --check .` + `uv run pyright`
+- [x] 4.2 `uv run python -m pytest tests/ --tb=short`
+- [x] 4.3 `uv run python -m webcompy generate` on docs_app; confirm generated `dist/` contains only new category paths and old flat paths are absent (404)
+- [x] 4.4 `scripts/run-e2e-tests.sh docs-documents` (prod + static)
+- [x] 4.5 `python3 scripts/check-doc-spec-refs.py` + `openspec validate refactor-docs-sections-restructure`

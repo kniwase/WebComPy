@@ -24,6 +24,6 @@ def test_rpc_websocket_page_toc(docs_page_on, assert_no_console_errors):
 def test_rpc_websocket_page_pager_links_to_pwa_guide(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/advanced/rpc-websocket")
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
-    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC")
+    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC Contracts")
     expect(page.locator(".docs-pager-next")).to_have_count(1)
     expect(page.locator(".docs-pager-next a")).to_have_text("Progressive Web App")
