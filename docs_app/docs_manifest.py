@@ -28,6 +28,13 @@ DOCS_INDEX: DocsPageEntry = {
 }
 
 
+CATEGORY_SECTIONS: dict[str, str] = {
+    "Getting Started": f"{DOCS_ROOT}/getting-started",
+    "Guides": f"{DOCS_ROOT}/guides",
+    "Basic Usage": f"{DOCS_ROOT}/basic",
+    "Advanced Usage": f"{DOCS_ROOT}/advanced",
+}
+
 DOCS_SECTIONS: list[DocsSection] = [
     {
         "title": "Getting Started",
@@ -45,81 +52,86 @@ DOCS_SECTIONS: list[DocsSection] = [
         ],
     },
     {
-        "title": "Guides",
+        "title": "Basic Usage",
         "pages": [
             {
-                "label": "Signals and Streams",
-                "path": "/documents/signal-stream",
-                "source": "documents/signal_stream.md",
-            },
-            {
-                "label": "Read-only Signals and Events",
-                "path": "/documents/readonly-signal",
-                "source": "documents/readonly_signal.md",
-            },
-            {
-                "label": "Internationalization",
-                "path": "/documents/i18n",
-                "source": "documents/i18n.md",
-            },
-            {
-                "label": "Custom Elements",
-                "path": "/documents/custom-elements",
-                "source": "documents/custom_elements.md",
-            },
-            {
                 "label": "UI Primitives",
-                "path": "/documents/ui-primitives",
+                "path": "/documents/basic/ui-primitives",
                 "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
             },
             {
                 "label": "Overlay Components",
-                "path": "/documents/overlay",
+                "path": "/documents/basic/overlay",
                 "component": "docs_app.pages.document.overlay:OverlayPage",
             },
             {
                 "label": "Disclosure & Feedback",
-                "path": "/documents/disclosure",
+                "path": "/documents/basic/disclosure",
                 "component": "docs_app.pages.document.disclosure:DisclosurePage",
+            },
+        ],
+    },
+    {
+        "title": "Advanced Usage",
+        "pages": [
+            {
+                "label": "Custom Elements",
+                "path": "/documents/advanced/custom-elements",
+                "source": "documents/custom_elements.md",
+            },
+            {
+                "label": "Signals and Streams",
+                "path": "/documents/advanced/signal-stream",
+                "source": "documents/signal_stream.md",
+            },
+            {
+                "label": "Read-only Signals and Events",
+                "path": "/documents/advanced/readonly-signal",
+                "source": "documents/readonly_signal.md",
+            },
+            {
+                "label": "Internationalization",
+                "path": "/documents/advanced/i18n",
+                "source": "documents/i18n.md",
             },
             {
                 "label": "Loading Screen",
-                "path": "/documents/loading-screen",
+                "path": "/documents/advanced/loading-screen",
                 "source": "documents/loading_screen.md",
             },
             {
                 "label": "Server-Sent Events",
-                "path": "/documents/event-source",
+                "path": "/documents/advanced/event-source",
                 "source": "documents/event_source.md",
             },
             {
                 "label": "WebSocket",
-                "path": "/documents/websocket",
+                "path": "/documents/advanced/websocket",
                 "source": "documents/websocket.md",
             },
             {
                 "label": "Typed Realtime",
-                "path": "/documents/typed-realtime",
+                "path": "/documents/advanced/typed-realtime",
                 "source": "documents/typed_realtime.md",
             },
             {
-                "label": "RPC Contracts",
-                "path": "/documents/rpc-contracts",
-                "source": "documents/rpc_contracts.md",
-            },
-            {
                 "label": "RPC",
-                "path": "/documents/rpc",
+                "path": "/documents/advanced/rpc",
                 "source": "documents/rpc.md",
             },
             {
+                "label": "RPC Contracts",
+                "path": "/documents/advanced/rpc-contracts",
+                "source": "documents/rpc_contracts.md",
+            },
+            {
                 "label": "RPC over WebSocket",
-                "path": "/documents/rpc-websocket",
+                "path": "/documents/advanced/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
             },
             {
                 "label": "Progressive Web App",
-                "path": "/documents/pwa",
+                "path": "/documents/advanced/pwa",
                 "source": "documents/pwa.md",
             },
         ],
@@ -138,7 +150,7 @@ def page_component_ref(entry: DocsPageEntry) -> str:
 def validate_manifest(sections: list[DocsSection]) -> None:
     paths: set[str] = set()
 
-    def _check_entry(entry: DocsPageEntry) -> None:
+    def _check_entry(entry: DocsPageEntry, category_prefix: str | None = None) -> None:
         if "label" not in entry:
             raise WebComPyException(f"Docs manifest entry must include 'label': {entry!r}")
         if "path" not in entry:
@@ -153,11 +165,23 @@ def validate_manifest(sections: list[DocsSection]) -> None:
         if entry_path in paths:
             raise WebComPyException(f"Duplicate docs manifest path: {entry_path!r}")
         paths.add(entry_path)
+        if category_prefix is not None and not entry_path.startswith(category_prefix + "/"):
+            raise WebComPyException(
+                f"Docs manifest path must start with the category prefix {category_prefix!r}: {entry!r}"
+            )
 
     _check_entry(DOCS_INDEX)
+    seen_index = -1
     for section in sections:
+        title = section["title"]
+        if title not in CATEGORY_SECTIONS:
+            raise WebComPyException(f"Unknown docs section title: {title!r}")
+        index = list(CATEGORY_SECTIONS).index(title)
+        if index <= seen_index:
+            raise WebComPyException(f"Docs sections must follow the category order: {title!r}")
+        seen_index = index
         for entry in section["pages"]:
-            _check_entry(entry)
+            _check_entry(entry, CATEGORY_SECTIONS[title])
 
 
 def flatten_pages() -> list[DocsPageEntry]:

@@ -2,8 +2,8 @@
 
 ## 1. Manifest restructure
 
-- [ ] 1.1 Re-title `DOCS_SECTIONS` to `Getting Started` / `Basic Usage` / `Advanced Usage` and assign each of the 15 guide pages per the design mapping table (paths `…/basic/…` and `…/advanced/…`; labels and `source` unchanged)
-- [ ] 1.2 Extend manifest validation: page paths must carry their category prefix; unit tests for a violating path fixture and boundary order (first page Installation, last page Progressive Web App)
+- [x] 1.1 Re-title `DOCS_SECTIONS` to `Getting Started` / `Basic Usage` / `Advanced Usage` and assign each of the 15 guide pages per the design mapping table (paths `…/basic/…` and `…/advanced/…`; labels and `source` unchanged)
+- [x] 1.2 Extend manifest validation: page paths must carry their category prefix; unit tests for a violating path fixture and boundary order (first page Installation, last page Progressive Web App)
 
 ## 2. Body link fixes
 
