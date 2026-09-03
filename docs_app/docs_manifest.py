@@ -173,6 +173,8 @@ def validate_manifest(sections: list[DocsSection]) -> None:
     _check_entry(DOCS_INDEX)
     seen_index = -1
     for section in sections:
+        if "title" not in section:
+            raise WebComPyException(f"Docs manifest section must include 'title': {section!r}")
         title = section["title"]
         if title not in CATEGORY_SECTIONS:
             raise WebComPyException(f"Unknown docs section title: {title!r}")
@@ -180,6 +182,8 @@ def validate_manifest(sections: list[DocsSection]) -> None:
         if index <= seen_index:
             raise WebComPyException(f"Docs sections must follow the category order: {title!r}")
         seen_index = index
+        if not section["pages"]:
+            raise WebComPyException(f"Docs section must include at least one page: {title!r}")
         for entry in section["pages"]:
             _check_entry(entry, CATEGORY_SECTIONS[title])
 

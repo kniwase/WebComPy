@@ -4,21 +4,26 @@
 
 ### Requirement: The docs manifest shall follow the category section model
 
-The `DOCS_SECTIONS` manifest SHALL consist of top-level category sections in the order `Getting Started`, `Basic Usage`, `Advanced Usage`, with a `Guides` category inserted between `Getting Started` and `Basic Usage` when tutorial pages exist. Each page's manifest `path` SHALL start with the category's URL prefix: `/documents/getting-started/`, `/documents/guides/`, `/documents/basic/`, or `/documents/advanced/`. Section titles other than these category names SHALL NOT be introduced by structural changes.
+The `DOCS_SECTIONS` manifest SHALL consist of top-level category sections in the order `Getting Started`, `Basic Usage`, `Advanced Usage`, with a `Guides` category inserted between `Getting Started` and `Basic Usage` when tutorial pages exist. Each page's manifest `path` SHALL start with the category's URL prefix: `/documents/getting-started/`, `/documents/guides/`, `/documents/basic/`, or `/documents/advanced/`. Section titles other than these category names SHALL NOT be introduced by structural changes. A category without pages SHALL be omitted from the manifest rather than carried as an empty section, and manifest validation SHALL reject a section that omits its `title` or contains an empty `pages` list.
 
 #### Scenario: Page paths carry the category prefix
 
 - **WHEN** the manifest is validated
 - **THEN** every page entry's `path` starts with its category's prefix, and the category sections appear in the defined order
 
-#### Scenario: No empty sections
+#### Scenario: Empty section rejected
 
-- **WHEN** a category has no pages yet
-- **THEN** the manifest omits that category section entirely rather than carrying an empty entry
+- **WHEN** the manifest is validated and a category section has an empty `pages` list
+- **THEN** a `WebComPyException` at import/validation time identifies the offending section
+
+#### Scenario: Missing section title rejected
+
+- **WHEN** the manifest is validated and a section omits its `title`
+- **THEN** a `WebComPyException` at import/validation time identifies the offending section
 
 ### Requirement: Docs body cross-links shall use rendered-site URLs
 
-Cross-document links inside `docs_app/documents/*.md` bodies SHALL use absolute rendered-site URLs (category-prefixed paths, optionally with a `#heading-id` fragment) and SHALL NOT link to `.md` source files. A unit test SHALL scan all docs Markdown bodies for link targets ending in `.md` and fail when any is found.
+Cross-document links inside `docs_app/documents/*.md` bodies SHALL use absolute rendered-site URLs (category-prefixed paths, optionally with a `#heading-id` fragment) and SHALL NOT link to `.md` source files. A unit test SHALL scan all docs Markdown bodies for link targets ending in `.md` and fail when any is found. The same scan SHALL fail when any absolute `/documents`-rooted link target, after stripping a `#heading-id` fragment and a trailing slash, matches neither the docs root nor a manifest page path.
 
 #### Scenario: Relative source-file link rejected
 
@@ -29,6 +34,11 @@ Cross-document links inside `docs_app/documents/*.md` bodies SHALL use absolute 
 
 - **WHEN** a docs body links to `/documents/advanced/websocket#the-gaprefetch-recipe`
 - **THEN** the scan test passes and the browser performs a same-path anchor navigation
+
+#### Scenario: Unknown target rejected
+
+- **WHEN** a docs body links to an absolute `/documents/...` path that is not a manifest page path (ignoring any `#heading-id` fragment)
+- **THEN** the docs link scan test fails naming the file and line
 
 ## MODIFIED Requirements
 

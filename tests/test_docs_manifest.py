@@ -107,6 +107,14 @@ class TestValidateManifest:
                 ]
             )
 
+    def test_section_without_title_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="must include 'title'"):
+            validate_manifest([{"pages": [_page({})]}])  # type: ignore[typeddict-item]
+
+    def test_empty_section_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="at least one page"):
+            validate_manifest([_section([])])
+
 
 class TestManifestContent:
     def test_source_files_exist_on_disk(self) -> None:

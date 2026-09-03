@@ -4,12 +4,14 @@
 
 - [x] 1.1 Re-title `DOCS_SECTIONS` to `Getting Started` / `Basic Usage` / `Advanced Usage` and assign each of the 15 guide pages per the design mapping table (paths `…/basic/…` and `…/advanced/…`; labels and `source` unchanged)
 - [x] 1.2 Extend manifest validation: page paths must carry their category prefix; unit tests for a violating path fixture and boundary order (first page Installation, last page Progressive Web App)
+- [x] 1.3 Harden section validation: reject a section without `title` and a section with an empty `pages` list, with matching unit tests
 
 ## 2. Body link fixes
 
 - [x] 2.1 Convert the three relative `.md` links (`rpc.md` See-also, `rpc_websocket.md` list ×2) to rendered-site URLs with new paths
 - [x] 2.2 Update all existing `/documents/...` cross-links in `docs_app/documents/*.md` to the new category paths (including the heading-anchor link in `typed_realtime.md` and the Installation link in `quickstart.md`)
 - [x] 2.3 Add a unit test that scans every `docs_app/documents/*.md` for link targets ending in `.md` and fails on any hit
+- [x] 2.4 Harden the link scan: fail when no docs bodies are found, and resolve every absolute `/documents/...` target (fragment and trailing slash stripped) against the manifest page paths; refresh the dual-run classification baseline for the new import
 
 ## 3. Tests follow
 

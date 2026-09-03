@@ -31,7 +31,7 @@
   "tests/test_dependency_resolver.py": "top-level import from 'webcompy_cli._dependency_resolver' at line 3",
   "tests/test_detect_resources.py": "top-level import from 'webcompy_cli._build' at line 3",
   "tests/test_docs_demos.py": "top-level import of 'webcompy_testing.FakeFetchPort' at line 12",
-  "tests/test_docs_links.py": "module-scope side-effecting call at line 6",
+  "tests/test_docs_links.py": "top-level import from 'docs_app.docs_manifest' at line 6",
   "tests/test_docs_manifest.py": "top-level import from 'docs_app.docs_manifest' at line 8",
   "tests/test_docs_page.py": "top-level import from 'docs_app.components.docs_page' at line 3",
   "tests/test_dynamic_child_node_index.py": "top-level import of unmounted module 'tests.conftest' at line 9",
