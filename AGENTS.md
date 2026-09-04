@@ -387,7 +387,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `dependency-resolver` | Classification of app dependencies for browser deployment |
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
-| `docs-site-documents` | docs_app documentation section: manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` / `Basic Usage` / `Advanced Usage` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors, rendered-site body cross-links |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
 | `package-kind` | `PackageKind` enum for classifying browser dependencies |
 | `lockfile` | Reproducible builds via `webcompy-lock.json` |
