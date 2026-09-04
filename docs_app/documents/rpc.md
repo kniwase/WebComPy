@@ -98,6 +98,6 @@ Outside the browser (SSR/SSG), the stream helper warns and returns an immediatel
 
 ## Non-goals
 
-- Infinite, shared event streams are `Subscription` / `RpcWsClient` subscriptions (see [RPC over WebSocket](./rpc_websocket.md)).
+- Infinite, shared event streams are `Subscription` / `RpcWsClient` subscriptions (see [RPC over WebSocket](/documents/advanced/rpc-websocket)).
 - Streams have no cursor, replay, or rejoin; they fail on disconnect.
 - Streaming is not supported in batch requests or as notifications.

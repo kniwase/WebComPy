@@ -157,7 +157,7 @@ Per-call streams are never shared, replayed, or rejoined: each call runs its own
 
 ## See also
 
-- [RPC Contracts](./rpc_contracts.md) — the declarative contract layer.
-- [RPC](./rpc.md) — HTTP transport via `RpcHttpClient`.
-- [WebSocket](/documents/websocket) — the underlying `use_websocket` transport.
-- [Typed Realtime](/documents/typed-realtime) — the typed message codec used for events.
+- [RPC Contracts](/documents/advanced/rpc-contracts) — the declarative contract layer.
+- [RPC](/documents/advanced/rpc) — HTTP transport via `RpcHttpClient`.
+- [WebSocket](/documents/advanced/websocket) — the underlying `use_websocket` transport.
+- [Typed Realtime](/documents/advanced/typed-realtime) — the typed message codec used for events.

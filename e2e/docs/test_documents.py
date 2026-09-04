@@ -17,7 +17,8 @@ def test_documents_index_shows_section_cards(docs_page_on, assert_no_console_err
 def test_documents_page_content(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents")
     expect(page.get_by_role("heading", name="Getting Started")).to_be_visible()
-    expect(page.get_by_role("heading", name="Guides")).to_be_visible()
+    expect(page.get_by_role("heading", name="Basic Usage")).to_be_visible()
+    expect(page.get_by_role("heading", name="Advanced Usage")).to_be_visible()
 
 
 @pytest.mark.e2e

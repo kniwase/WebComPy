@@ -26,11 +26,15 @@ DOCS_APP_DIR = Path(__file__).parent.parent / "docs_app"
 def _page(overrides: dict) -> dict:
     entry = {
         "label": "Test",
-        "path": "/documents/test",
+        "path": "/documents/basic/test",
         "source": "documents/test.md",
     }
     entry.update(overrides)
     return entry
+
+
+def _section(pages: list[dict], title: str = "Basic Usage") -> dict:
+    return {"title": title, "pages": pages}
 
 
 class TestValidateManifest:
@@ -40,38 +44,37 @@ class TestValidateManifest:
     def test_entry_with_both_source_and_component_rejected(self) -> None:
         entry = _page({"component": "docs_app.pages.document.test:TestPage"})
         with pytest.raises(WebComPyException, match="exactly one"):
-            validate_manifest([{"title": "S", "pages": [entry]}])
+            validate_manifest([_section([entry])])
 
     def test_entry_with_neither_shall_rejected(self) -> None:
-        entry = {"label": "Test", "path": "/documents/test"}
+        entry = {"label": "Test", "path": "/documents/basic/test"}
         with pytest.raises(WebComPyException, match="exactly one"):
-            validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
+            validate_manifest([_section([entry])])  # type: ignore[typeddict-item]
 
     def test_entry_without_label_rejected(self) -> None:
         entry = _page({})
         del entry["label"]
         with pytest.raises(WebComPyException, match="must include 'label'"):
-            validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
+            validate_manifest([_section([entry])])  # type: ignore[typeddict-item]
 
     def test_entry_without_path_rejected(self) -> None:
         entry = _page({})
         del entry["path"]
         with pytest.raises(WebComPyException, match="must include 'path'"):
-            validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
+            validate_manifest([_section([entry])])  # type: ignore[typeddict-item]
 
     def test_duplicate_paths_rejected(self) -> None:
         sections = [
-            {
-                "title": "A",
-                "pages": [
+            _section(
+                [
                     _page({}),
                     {
                         "label": "Other",
-                        "path": "/documents/test",
+                        "path": "/documents/basic/test",
                         "component": "docs_app.pages.document.test:TestPage",
                     },
-                ],
-            }
+                ]
+            )
         ]
         with pytest.raises(WebComPyException, match="Duplicate"):
             validate_manifest(sections)  # type: ignore[arg-type]
@@ -79,12 +82,38 @@ class TestValidateManifest:
     def test_path_outside_docs_root_rejected(self) -> None:
         entry = _page({"path": "/outside"})
         with pytest.raises(WebComPyException, match="must be under"):
-            validate_manifest([{"title": "S", "pages": [entry]}])
+            validate_manifest([_section([entry])])
 
     def test_path_equal_to_docs_root_passes_prefix_check(self) -> None:
         entry = _page({"path": DOCS_ROOT})
         with pytest.raises(WebComPyException, match="Duplicate"):
-            validate_manifest([{"title": "S", "pages": [entry]}])
+            validate_manifest([_section([entry])])
+
+    def test_page_path_without_category_prefix_rejected(self) -> None:
+        entry = _page({"path": "/documents/test"})
+        with pytest.raises(WebComPyException, match="category prefix"):
+            validate_manifest([_section([entry])])
+
+    def test_unknown_section_title_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="Unknown docs section title"):
+            validate_manifest([_section([_page({})], title="Misc")])
+
+    def test_section_category_order_enforced(self) -> None:
+        with pytest.raises(WebComPyException, match="category order"):
+            validate_manifest(
+                [
+                    _section([_page({"path": "/documents/advanced/test"})], title="Advanced Usage"),
+                    _section([], title="Basic Usage"),
+                ]
+            )
+
+    def test_section_without_title_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="must include 'title'"):
+            validate_manifest([{"pages": [_page({})]}])  # type: ignore[typeddict-item]
+
+    def test_empty_section_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="at least one page"):
+            validate_manifest([_section([])])
 
 
 class TestManifestContent:
@@ -127,6 +156,14 @@ class TestManifestContent:
 
     def test_index_excluded_from_nav_and_pager_pages(self) -> None:
         assert DOCS_INDEX["path"] not in [page["path"] for page in flatten_pages()]
+
+    def test_sections_are_categories_in_order(self) -> None:
+        assert [section["title"] for section in DOCS_SECTIONS] == ["Getting Started", "Basic Usage", "Advanced Usage"]
+
+    def test_boundary_pages(self) -> None:
+        paths = [page["path"] for page in flatten_pages()]
+        assert paths[0] == "/documents/getting-started/installation"
+        assert paths[-1] == "/documents/advanced/pwa"
 
 
 class TestPrevNext:
