@@ -1,13 +1,5 @@
 ---
-name: openspec-apply-change
-description: Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks. Also use when the user says "openspec apply", "opsx apply", or "openspec implement".
-allowed-tools: Bash(openspec:*)
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.13.1"
+description: "Implement tasks from an OpenSpec change (Experimental)"
 ---
 
 Implement tasks from an OpenSpec change.
@@ -26,6 +18,7 @@ Otherwise, with no root, what happens next depends on how this workflow was reac
 In both branches, never create the root as a side effect: do not run `openspec init` until the user asks for it, do not hand-create `openspec/` files, and do not let a command create it.
 
 **Input**: Optionally specify a change name (e.g., `/opsx-apply add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Provided arguments**: $ARGUMENTS
 
 **Steps**
 

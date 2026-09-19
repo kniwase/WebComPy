@@ -1,13 +1,5 @@
 ---
-name: openspec-continue-change
-description: Continue working on an OpenSpec change by creating the next artifact. Use when the user wants to progress their change, create the next artifact, or continue their workflow. Also use when the user says "openspec continue" or "opsx continue".
-allowed-tools: Bash(openspec:*)
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.13.1"
+description: "Continue working on a change - create the next artifact (Experimental)"
 ---
 
 Continue working on a change by creating the next artifact.
@@ -25,7 +17,8 @@ Otherwise, with no root, what happens next depends on how this workflow was reac
 
 In both branches, never create the root as a side effect: do not run `openspec init` until the user asks for it, do not hand-create `openspec/` files, and do not let a command create it.
 
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: Optionally specify a change name after `/opsx-continue` (e.g., `/opsx-continue add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Provided arguments**: $ARGUMENTS
 
 **Steps**
 
@@ -63,7 +56,7 @@ In both branches, never create the root as a side effect: do not run `openspec i
    **If all planning artifacts are complete (`isPlanningComplete: true`, or legacy `isComplete: true`)**:
    - Congratulate the user
    - Show final status including the schema used
-   - Suggest: "Planning is complete! You can now implement this change. Once implementation and any tracked work are complete, archive it."
+   - Suggest: "Planning is complete! You can now implement this change with `/opsx-apply`. Once implementation and any tracked work are complete, archive it with `/opsx-archive`."
    - STOP
 
    ---
@@ -109,7 +102,7 @@ After each invocation, show:
 - Schema workflow being used
 - Current progress (N/M complete)
 - What artifacts are now unlocked
-- Prompt: "Want to continue? Just ask me to continue or tell me what to do next."
+- Prompt: "Run `/opsx-continue` to create the next artifact"
 
 **Artifact Creation Guidelines**
 
