@@ -30,9 +30,9 @@
 - **Why cards instead of prose UL**: scannability; reuses `DocsCard`. **Rejected**: wrapping Home in `.prose` — would restyle headings/lists unexpectedly and blur landing vs document identity.
 - The Poetry path stays only in `installation.md` (Home teaser shows the recommended uv path; a "Prefer Poetry? see Installation" line links across).
 
-### 2. Code-block spacing parity via scoped rule
+### 2. Code-block spacing parity via docs_app stylesheet
 
-`Home.scoped_style` adds `".code-block": {"margin": "var(--space-4) 0"}`. Layer `webcompy-scope` beats `components` (where `code-block.css` sets `margin:0`), so the rule wins without `!important` and without touching global stylesheets. **Rejected**: changing `code-block.css` default margin — would affect every non-prose consumer (Examples cards, Docus-style embeds) and re-open the #249 layering decision.
+`docs_app/static/styles/components.css` carries a `.home-page .code-block` rule with `margin: var(--space-4) 0` (the Home root carries the `home-page` class), so teaser code blocks match the `.prose pre` rhythm. The stylesheet is unlayered docs_app-owned CSS, which wins over the `components` layer (where `code-block.css` sets `margin:0`) without `!important` and without touching framework stylesheets. **Why not `Home.scoped_style`**: `webcompy-cid` attributes are stamped per component, so a scoped `.code-block` rule compiles to `.code-block[webcompy-cid-<Home>]` and never matches `CodeBlock` roots carrying their own cid (verified by E2E failure). **Rejected**: changing `code-block.css` default margin — would affect every non-prose consumer (Examples cards, Docus-style embeds) and re-open the #249 layering decision.
 
 ### 3. Getting Started page set and order
 

@@ -18,7 +18,7 @@ The docs_app Home page SHALL consist of: a hero (h1 headline "Build Frontend in 
 
 ### Requirement: Home code blocks shall have symmetric vertical spacing
 
-The Home page SHALL apply `margin: var(--space-4) 0` to its `CodeBlock` elements via component scoped style so rendered code blocks match the prose preset's rhythm, without the Home page adopting the `.prose` wrapper or modifying framework stylesheets.
+The Home page SHALL apply `margin: var(--space-4) 0` to its `CodeBlock` elements via the docs_app-owned stylesheet (`.home-page .code-block` in `docs_app/static/styles/components.css`) so rendered code blocks match the prose preset's rhythm, without the Home page adopting the `.prose` wrapper or modifying framework stylesheets. Component scoped style cannot reach child-component roots because `webcompy-cid` attributes are stamped per component, so the docs_app stylesheet carries this rule instead.
 
 #### Scenario: Code block rhythm matches prose
 
