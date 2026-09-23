@@ -4,6 +4,10 @@
   padding: var(--space-4);
 }
 
+.home-page .code-block {
+  margin: var(--space-4) 0;
+}
+
 .commands-table {
   width: 100%;
   border-collapse: collapse;

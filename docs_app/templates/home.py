@@ -14,7 +14,7 @@ def _code(code: str) -> str:
 @define_component()
 def HomeContent(_: ComponentContext[None]):
     return html.DIV(
-        {"class": "page-container"},
+        {"class": "page-container home-page"},
         html.SECTION(
             {"class": "hero"},
             html.H1({}, "Build Frontend in Python"),
@@ -181,5 +181,4 @@ HomeContent.scoped_style = {
     ".footer-note": {
         "color": "var(--color-fg)",
     },
-    ".code-block": {"margin": "var(--space-4) 0"},
 }
