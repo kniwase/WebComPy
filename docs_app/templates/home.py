@@ -86,8 +86,11 @@ def HomeContent(_: ComponentContext[None]):
                             "lang": "bash",
                             "code": _code(
                                 """
-                                uv init webcompy-project && cd webcompy-project
+                                mkdir webcompy-project && cd webcompy-project
+                                uv init
                                 uv add "webcompy @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
+                                uv add "webcompy-server @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
+                                uv add "webcompy-cli @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
                                 uv run python -m webcompy init
                                 """
                             ),

@@ -26,3 +26,12 @@
 - [x] 4.2 `uv run ruff check .` + `uv run ruff format --check .` + `uv run pyright` + `uv run python -m pytest tests/ --tb=short`
 - [x] 4.3 `uv run python -m webcompy generate` + docs E2E group run
 - [x] 4.4 `python3 scripts/check-doc-spec-refs.py` + `openspec validate feat-docs-home-refresh-getting-started`
+
+## 5. Review follow-ups
+
+- [x] 5.1 Fix Home teaser to match canonical install steps (all three `uv add` lines, `mkdir` form)
+- [ ] 5.2 Use `RouterLink` for Home internal links + SPA proof E2E test
+- [ ] 5.3 Restore Home-based no-duplicated-install-detail test
+- [ ] 5.4 Tag ASCII-diagram fences as `text`; drop dead `.commands-table` CSS
+- [ ] 5.5 Sync spec/design wording for home code-block spacing to docs_app stylesheet approach
+- [ ] 5.6 Full verification (lint, type, unit, generate, docs E2E)
