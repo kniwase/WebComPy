@@ -18,7 +18,7 @@
 - [x] 3.1 `installation.md`: update config snippet to scaffold-template shape (incl. `server=WebComPyServerConfig`, explained fields), clarify optional browser deps, expand headings for TOC, keep git+ URL "until PyPI" note
 - [x] 3.2 `quickstart.md`: switch example to `@define_component()` derived form, mention `custom_element_name=` for non-derivable tags, fix Installation link to current path
 - [x] 3.3 `custom_elements.md`: replace round-trip validation text with the optional-derivation contract (#286)
-- [ ] 3.4 Sweep all `docs_app/documents/*.md` for old `@define_component("<name>")` examples; convert to derived form where derivable
+- [x] 3.4 Sweep all `docs_app/documents/*.md` for old `@define_component("<name>")` examples; convert to derived form where derivable
 
 ## 4. Tests & verification
 
