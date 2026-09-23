@@ -28,7 +28,7 @@ The component renders as `<user-card>` in the browser and in server-rendered HTM
 To pick an element name that differs from the Python name, pass it explicitly (positionally or by keyword):
 
 ```python
-@define_component("user-card")          # or @define_component(custom_element_name="user-card")
+@define_component(custom_element_name="user-card")
 def Card(context: ComponentContext[None]):
     return html.DIV({"class": "card"}, "Hello")
 ```
@@ -74,7 +74,7 @@ An unknown custom element defaults to `display: inline`, which would break layou
 To give the wrapper a real box, declare `display` at the definition site:
 
 ```python
-@define_component("user-card", display="block")
+@define_component(custom_element_name="user-card", display="block")
 def Card(context: ComponentContext[None]):
     return html.DIV({}, "Hello")
 ```
@@ -167,7 +167,7 @@ def UserCard(context):
     return html.DIV({"class": "card"}, "Hello")
 
 # after (explicit tag)
-@define_component("user-card")
+@define_component(custom_element_name="user-card")
 def UserCard(context):
     return html.DIV({"class": "card"}, "Hello")
 ```
