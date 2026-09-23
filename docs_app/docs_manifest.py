@@ -49,6 +49,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/getting-started/quickstart",
                 "source": "documents/quickstart.md",
             },
+            {
+                "label": "What is WebComPy",
+                "path": "/documents/getting-started/what-is-webcompy",
+                "source": "documents/what_is_webcompy.md",
+            },
         ],
     },
     {
