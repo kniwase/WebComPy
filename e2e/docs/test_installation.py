@@ -38,9 +38,9 @@ def test_markdown_content_rendered_with_ids_and_code(docs_page_on, assert_no_con
     page = docs_page_on("/documents/getting-started/installation")
     expect(page.locator("article.prose h1#installation")).to_be_visible()
     expect(page.locator("article.prose h2#install-with-uv-recommended")).to_be_visible()
-    expect(page.locator("article.prose pre.code-block")).to_have_count(6)
+    expect(page.locator("article.prose pre.code-block")).to_have_count(7)
     expect(page.locator("article.prose pre.code-block code.language-bash")).to_have_count(4)
-    expect(page.locator("article.prose pre.code-block code.language-python")).to_have_count(1)
+    expect(page.locator("article.prose pre.code-block code.language-python")).to_have_count(2)
     expect(page.locator("article.prose pre.code-block code.language-toml")).to_have_count(1)
     first_block = page.locator("article.prose pre.code-block").first
     margins = first_block.evaluate("el => [getComputedStyle(el).marginTop, getComputedStyle(el).marginBottom]")
@@ -49,9 +49,10 @@ def test_markdown_content_rendered_with_ids_and_code(docs_page_on, assert_no_con
 
 
 @pytest.mark.e2e
-def test_first_page_omits_prev_link(docs_page_on, assert_no_console_errors):
+def test_installation_shows_prev_and_next_links(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/getting-started/installation")
-    expect(page.locator(".docs-pager-prev")).to_have_count(0)
+    expect(page.locator(".docs-pager-prev")).to_have_count(1)
+    expect(page.locator(".docs-pager-prev a")).to_have_text("Why WebComPy")
     expect(page.locator(".docs-pager-next")).to_have_count(1)
     expect(page.locator(".docs-pager-next a")).to_have_text("Quickstart")
 
