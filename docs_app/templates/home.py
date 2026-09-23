@@ -28,7 +28,7 @@ def HomeContent(_: ComponentContext[None]):
                 DocsButton(
                     {
                         "text": "Get Started",
-                        "href": "/documents/getting-started/what-is-webcompy",
+                        "to": "/documents/getting-started/what-is-webcompy",
                         "variant": "primary",
                     }
                 ),
@@ -115,7 +115,7 @@ def HomeContent(_: ComponentContext[None]):
                     ),
                     DocsLink(
                         {
-                            "href": "/documents/getting-started/installation",
+                            "to": "/documents/getting-started/installation",
                             "text": "Full setup → Installation",
                         }
                     ),
@@ -123,7 +123,7 @@ def HomeContent(_: ComponentContext[None]):
                     "Prefer Poetry? See the ",
                     DocsLink(
                         {
-                            "href": "/documents/getting-started/installation",
+                            "to": "/documents/getting-started/installation",
                             "text": "Installation",
                         }
                     ),

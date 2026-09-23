@@ -2,6 +2,7 @@ from typing import TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
+from webcompy.router import RouterLink
 from webcompy.ui import Card
 
 
@@ -46,20 +47,30 @@ def DocsSection(context: ComponentContext[SectionProps]):
 
 class LinkProps(TypedDict, total=False):
     href: str
+    to: str
     text: str
 
 
 @define_component()
 def DocsLink(context: ComponentContext[LinkProps]):
+    props = context.props
+    if "to" in props:
+        return RouterLink(
+            to=props["to"],
+            text=[props.get("text", "")],
+            attrs={"class": "ui-link"},
+            active_class="",
+        )
     return html.A(
-        {"class": "ui-link", "href": context.props.get("href", "#")},
-        context.props.get("text", ""),
+        {"class": "ui-link", "href": props.get("href", "#")},
+        props.get("text", ""),
     )
 
 
 class ButtonProps(TypedDict, total=False):
     text: str
     href: str
+    to: str
     variant: str
     aria_label: str
     role: str
@@ -93,6 +104,15 @@ def DocsButton(context: ComponentContext[ButtonProps]):
     if "onclick" in props:
         attrs["@click"] = props["onclick"]
 
+    if "to" in props:
+        link_attrs = {k: v for k, v in attrs.items() if k not in ("@click", "type")}
+        link_attrs["class"] = classes
+        return RouterLink(
+            to=props["to"],
+            text=[props.get("text", "")],
+            attrs=link_attrs,
+            active_class="",
+        )
     tag = html.A if "href" in props else html.BUTTON
     return tag(
         attrs,

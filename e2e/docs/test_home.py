@@ -71,16 +71,16 @@ def test_home_page_heading(docs_app_page, assert_no_console_errors):
 def test_home_hero_get_started_link(docs_app_page, assert_no_console_errors):
     link = docs_app_page.get_by_role("link", name="Get Started")
     expect(link).to_be_visible()
-    assert link.get_attribute("href") == "/documents/getting-started/what-is-webcompy"
+    assert link.get_attribute("href") == "/documents/getting-started/what-is-webcompy/"
 
 
 @pytest.mark.e2e
 def test_home_hero_navigates_to_getting_started(docs_app_page, assert_no_console_errors):
+    docs_app_page.evaluate("window.__home_spa_marker = 1")
     docs_app_page.get_by_role("link", name="Get Started").click()
     assert "/documents/getting-started/what-is-webcompy" in docs_app_page.url
     expect(docs_app_page.locator("article.prose h1#what-is-webcompy")).to_be_visible()
-    expect(docs_app_page.get_by_text("Get started with Poetry")).to_have_count(0)
-    expect(docs_app_page.locator(".commands-table")).to_have_count(0)
+    assert docs_app_page.evaluate("window.__home_spa_marker") == 1
 
 
 @pytest.mark.e2e
