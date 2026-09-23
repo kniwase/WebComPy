@@ -9,7 +9,7 @@
 ## 2. Getting Started orientation pages
 
 - [x] 2.1 Write `docs_app/documents/what_is_webcompy.md` (positioning, dual-environment model, core promises, FastAPI relationship) + thin page wrapper + manifest entry `/documents/getting-started/what-is-webcompy`
-- [ ] 2.2 Write `docs_app/documents/why_webcompy.md` (Why list + honest Why-not list incl. PyScript payload/cold start, young ecosystem) + wrapper + manifest entry
+- [x] 2.2 Write `docs_app/documents/why_webcompy.md` (Why list + honest Why-not list incl. PyScript payload/cold start, young ecosystem) + wrapper + manifest entry
 - [ ] 2.3 Write `docs_app/documents/project_structure.md` (app package, config split build vs server, static/, resources, lockfile) + wrapper + manifest entry
 - [ ] 2.4 Reorder Getting Started entries: what-is → why → installation → quickstart → project-structure
 

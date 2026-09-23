@@ -54,6 +54,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/getting-started/what-is-webcompy",
                 "source": "documents/what_is_webcompy.md",
             },
+            {
+                "label": "Why WebComPy",
+                "path": "/documents/getting-started/why-webcompy",
+                "source": "documents/why_webcompy.md",
+            },
         ],
     },
     {
