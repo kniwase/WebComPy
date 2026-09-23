@@ -34,4 +34,4 @@
 - [x] 5.3 Restore Home-based no-duplicated-install-detail test
 - [x] 5.4 Tag ASCII-diagram fences as `text`; drop dead `.commands-table` CSS
 - [x] 5.5 Sync spec/design wording for home code-block spacing to docs_app stylesheet approach
-- [ ] 5.6 Full verification (lint, type, unit, generate, docs E2E)
+- [x] 5.6 Full verification (lint, type, unit, generate, docs E2E)
