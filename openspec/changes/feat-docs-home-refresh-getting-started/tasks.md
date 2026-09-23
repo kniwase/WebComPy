@@ -3,7 +3,7 @@
 ## 1. Home refresh
 
 - [x] 1.1 Restructure `docs_app/templates/home.py`: hero band (h1 + subtitle + Get Started / View on GitHub buttons), feature-cards band (4 `DocsCard` tiles), teaser band (uv one-liner + first-component snippet + Installation link), footer band; delete Poetry blocks and Lock File Commands table
-- [ ] 1.2 Add `".code-block": {"margin": "var(--space-4) 0"}` to `Home` scoped style; verify computed rhythm against `.prose pre` in a browser check
+- [x] 1.2 Add `".code-block": {"margin": "var(--space-4) 0"}` to `Home` scoped style; verify computed rhythm against `.prose pre` in a browser check
 - [ ] 1.3 Update `e2e/docs/test_home.py` to the new structure (hero heading, Get Started link, absence of Poetry block)
 
 ## 2. Getting Started orientation pages

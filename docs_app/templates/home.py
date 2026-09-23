@@ -181,4 +181,5 @@ HomeContent.scoped_style = {
     ".footer-note": {
         "color": "var(--color-fg)",
     },
+    ".code-block": {"margin": "var(--space-4) 0"},
 }
