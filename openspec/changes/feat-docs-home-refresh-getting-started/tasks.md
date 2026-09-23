@@ -25,4 +25,4 @@
 - [x] 4.1 Add E2E files for the three new pages (title, TOC, no console errors; prod + static)
 - [x] 4.2 `uv run ruff check .` + `uv run ruff format --check .` + `uv run pyright` + `uv run python -m pytest tests/ --tb=short`
 - [x] 4.3 `uv run python -m webcompy generate` + docs E2E group run
-- [ ] 4.4 `python3 scripts/check-doc-spec-refs.py` + `openspec validate feat-docs-home-refresh-getting-started`
+- [x] 4.4 `python3 scripts/check-doc-spec-refs.py` + `openspec validate feat-docs-home-refresh-getting-started`
