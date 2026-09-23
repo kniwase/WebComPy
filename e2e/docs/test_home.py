@@ -84,6 +84,12 @@ def test_home_hero_navigates_to_getting_started(docs_app_page, assert_no_console
 
 
 @pytest.mark.e2e
+def test_home_has_no_duplicated_installation_content(docs_app_page, assert_no_console_errors):
+    expect(docs_app_page.get_by_text("Get started with Poetry")).to_have_count(0)
+    expect(docs_app_page.locator(".commands-table")).to_have_count(0)
+
+
+@pytest.mark.e2e
 def test_home_code_block_vertical_margins_are_symmetric(docs_app_page, assert_no_console_errors):
     block = docs_app_page.locator("pre.code-block").first
     expect(block).to_be_visible()
