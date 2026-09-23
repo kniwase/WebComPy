@@ -40,16 +40,6 @@ DOCS_SECTIONS: list[DocsSection] = [
         "title": "Getting Started",
         "pages": [
             {
-                "label": "Installation",
-                "path": "/documents/getting-started/installation",
-                "source": "documents/installation.md",
-            },
-            {
-                "label": "Quickstart",
-                "path": "/documents/getting-started/quickstart",
-                "source": "documents/quickstart.md",
-            },
-            {
                 "label": "What is WebComPy",
                 "path": "/documents/getting-started/what-is-webcompy",
                 "source": "documents/what_is_webcompy.md",
@@ -58,6 +48,16 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "label": "Why WebComPy",
                 "path": "/documents/getting-started/why-webcompy",
                 "source": "documents/why_webcompy.md",
+            },
+            {
+                "label": "Installation",
+                "path": "/documents/getting-started/installation",
+                "source": "documents/installation.md",
+            },
+            {
+                "label": "Quickstart",
+                "path": "/documents/getting-started/quickstart",
+                "source": "documents/quickstart.md",
             },
             {
                 "label": "Project Structure",
