@@ -14,7 +14,7 @@ Every WebComPy app lives in two runtimes:
 - **Browser (PyScript/Emscripten)**: reactive components render into the DOM, handle events, and update the page. This is where your app is interactive.
 - **Server (standard Python)**: the same components render to HTML for server-side rendering (SSR) and static site generation (SSG), so first loads are fast and crawlable.
 
-```
+```text
 Python components
      |-- browser --> interactive DOM (PyScript)
      |-- server  --> pre-rendered HTML (SSR / SSG)

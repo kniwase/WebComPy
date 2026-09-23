@@ -7,7 +7,7 @@ description: The layout of a WebComPy app package, build vs server configuration
 
 Running `webcompy init` inside an existing Python project scaffolds an application package with this layout:
 
-```
+```text
 webcompy-project/
 ├── app/
 │   ├── __init__.py

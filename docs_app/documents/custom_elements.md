@@ -37,7 +37,7 @@ def Card(context: ComponentContext[None]):
 
 When the name is omitted, WebComPy derives it from the function name by converting PascalCase/camelCase to kebab-case:
 
-```
+```text
 UserCard  →  user-card
 ToDoListPage  →  to-do-list-page
 HTTPRequest  →  http-request
