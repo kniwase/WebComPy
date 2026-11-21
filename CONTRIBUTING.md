@@ -79,7 +79,7 @@ Investigate problems, compare approaches, clarify requirements.
 - Ask questions in [Discussions](https://github.com/kniwase/WebComPy/discussions)
 - Search existing specs under `openspec/specs/`
 - Review related issues and PRs
-- Run `/opsx-explore` if using OpenCode
+- Run `/opsx-explore` (OpenCode / Claude Code) or `/openspec-explore` (Antigravity / Claude Code)
 
 ### Propose
 
@@ -147,11 +147,20 @@ For PR submission mechanics, see the **Pull Request Process** section.
 
 ## Using AI Agents and Skills
 
-OpenCode skills under `.opencode/skills/` carry reusable domain knowledge and are loaded on demand. Two thin agents exist for permission-sandboxed execution and are listed below; load a skill directly unless the agent's sandbox is required.
+Reusable domain knowledge lives in Agent Skills under `.agents/skills/` and slash commands under `.agents/commands/` as the single source of truth (SSOT). Two thin permission-sandboxed agents (`webcompy-reviewer`, `webcompy-inspector`) wrap the review and inspect skills where supported; prefer loading a skill directly unless an agent's sandbox is required.
+
+### Supported Coding Harnesses
+
+| Harness | Project Rules | Skills Discovery | Slash Commands | Sandboxed Agents |
+|---|---|---|---|---|
+| **OpenCode** | `AGENTS.md` | `.agents/skills/` (native) | `.opencode/commands/` → `.agents/commands/` (`/opsx-*`) | `.opencode/agents/*.md` (also used by CI) |
+| **Antigravity** | `AGENTS.md` | `.agents/skills/` (native) | `/<skill-name>` (e.g., `/openspec-propose`, `/webcompy-review`) | Built-in subagents + skills |
+| **Claude Code** | `CLAUDE.md` → `AGENTS.md` | `.claude/skills/` → `.agents/skills/` | `.claude/commands/` → `.agents/commands/` (`/opsx-*`, `/<skill-name>`) | `.claude/agents/*.md` |
+| **Codex CLI / Cursor / Gemini CLI** | `AGENTS.md` | `.agents/skills/` (native) | Harness-specific or skill invocation | Harness-specific |
 
 ### Available Skills and Agents
 
-Skills (auto-loaded by OpenCode when their description matches the task):
+Skills (auto-loaded by compatible harnesses when their description matches the task, or invoked directly):
 
 | Skill | Use for |
 |---|---|
@@ -167,10 +176,10 @@ Agents (provide permission sandboxes; load their companion skill):
 
 | Agent | Responsibility |
 |---|---|
-| `webcompy-reviewer` | Automated pull request review against OpenSpec specs (used by CI) |
+| `webcompy-reviewer` | Automated pull request review against OpenSpec specs (OpenCode used by CI; Claude Code `.claude/agents/` locally) |
 | `webcompy-inspector` | Browser verification via `webcompy inspect` (subagent-only) |
 
-### Delegating Tasks (OpenCode)
+### Delegating Tasks
 
 ```text
 "Implement the reactive list reconciliation"
@@ -183,12 +192,12 @@ Agents (provide permission sandboxes; load their companion skill):
 → webcompy-local-ci skill
 
 "Review this diff against specs"
-→ webcompy-review skill (or @webcompy-reviewer for sandboxed CI invocation)
+→ webcompy-review skill (or webcompy-reviewer subagent for sandboxed invocation)
 ```
 
 ### How Reviews Work
 
-Every PR is reviewed by the `webcompy-reviewer` agent after CI passes. The reviewer:
+Every PR is reviewed in CI by the `webcompy-reviewer` OpenCode agent after checks pass. The reviewer:
 
 1. Classifies changed files by subsystem
 2. Reads corresponding OpenSpec specs
@@ -215,14 +224,12 @@ Review results are visible as a PR comment with the history of all review rounds
 ```
 <type>: <description>
 
-🤖 Generated with opencode
-
-Co-Authored-By: opencode <noreply@opencode.ai>
+Co-Authored-By: <harness-name> <noreply@...>
 ```
 
 Where `<type>` is one of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `style`, `perf`.
 
-The `Co-Authored-By` footer is required on every commit.
+Include a `Co-Authored-By:` trailer for AI-assisted commits using the coding harness or tool's standard trailer (e.g., `opencode <noreply@opencode.ai>`, `Claude <noreply@anthropic.com>`, `Antigravity <noreply@google.com>`). Omit the trailer on human-only commits.
 
 ### Code Conventions
 
@@ -231,7 +238,7 @@ The `Co-Authored-By` footer is required on every commit.
 - No comments in code unless explicitly requested
 - Component classes use `@component_template`, `@on_before_rendering`
 - Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`
-See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
+See [openspec/SPEC_INDEX.md](openspec/SPEC_INDEX.md#framework-invariants) for critical invariants
 (dual-environment architecture, DI scope rules, reactive contracts, etc.).
 
 ### Testing
@@ -372,7 +379,7 @@ uv run python -m webcompy inspect pyexec --repl              # REPL over stdin l
 ### Pre-Push Verification (before pushing a branch)
 
 1. **Local CI checks** — use the `webcompy-local-ci` skill (lint, typecheck, unit tests); for browser-runtime changes also run `scripts/run-browser-tests.sh` (probes are hard gate)
-2. **Code review** — use the `webcompy-review` skill (or `@webcompy-reviewer` for sandboxed CI invocation)
+2. **Code review** — use the `webcompy-review` skill (or the `webcompy-reviewer` agent for sandboxed invocation)
 
 ### PR Lifecycle
 

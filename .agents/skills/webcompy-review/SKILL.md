@@ -27,7 +27,7 @@ When using command fallback, exclude lockfiles (`uv.lock`, `package-lock.json`) 
 
 ### Step 2: Classify changed files
 
-Extract all `^diff --git` lines from the diff. Classify them by subsystem (components, elements, reactive, router, etc.) using the File → Spec mapping in `AGENTS.md`.
+Extract all `^diff --git` lines from the diff. Classify them by subsystem (components, elements, reactive, router, etc.) using the File → Spec mapping in `openspec/SPEC_INDEX.md`.
 
 ### Step 3: Read PR context and CI results
 

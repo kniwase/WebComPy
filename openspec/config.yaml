@@ -36,4 +36,4 @@ rules:
     - Always include a "Non-goals" section
   tasks:
     - Break tasks into chunks of max 2 hours
-    - When specs are added, modified, or removed, update .opencode/skills/webcompy-review/SKILL.md to keep the file→spec mapping and Critical Framework Invariants in sync
+    - When specs are added, modified, or removed, update openspec/SPEC_INDEX.md and .agents/skills/webcompy-review/SKILL.md to keep the file→spec mapping, Current Specs list, and Critical Framework Invariants in sync

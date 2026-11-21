@@ -130,9 +130,12 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# OpenCode local config
+# AI coding harness local config
 /opencode.json
 /opencode.jsonc
+/CLAUDE.local.md
+/.claude/settings.local.json
+/.agents/*.local.json
 
 # Temporary directory
 **/.tmp/
