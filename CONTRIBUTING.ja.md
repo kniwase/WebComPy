@@ -78,7 +78,7 @@ WebComPy は [OpenSpec](https://github.com/fission-ai/openspec) によるスペ�
 - [Discussions](https://github.com/kniwase/WebComPy/discussions) で質問する
 - `openspec/specs/` 以下の既存スペックを確認する
 - 関連する Issue や PR を確認する
-- OpenCode 利用時は `/opsx-explore` を実行する
+- `/opsx-explore`（OpenCode / Claude Code）または `/openspec-explore`（Antigravity / Claude Code）を実行する
 
 ### 提案（Propose）
 
@@ -145,11 +145,20 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 
 ## AI エージェントの活用
 
+再利用可能なドメイン知識は `.agents/skills/`、スラッシュコマンドは `.agents/commands/` を唯一の正本（SSOT）として管理しています。権限サンドボックスが必要な場面向けに 2 つの薄いラッパーエージェント（`webcompy-reviewer`、`webcompy-inspector`）を用意していますが、サンドボックスが不要な場合はスキルを直接読み込んでください。
+
+### 対応コーディングハーネス
+
+| ハーネス | プロジェクトルール | スキル検出 | スラッシュコマンド | サンドボックス付きエージェント |
+|---|---|---|---|---|
+| **OpenCode** | `AGENTS.md` | `.agents/skills/`（ネイティブ） | `.opencode/commands/` → `.agents/commands/`（`/opsx-*`） | `.opencode/agents/*.md`（CI でも使用） |
+| **Antigravity** | `AGENTS.md` | `.agents/skills/`（ネイティブ） | `/<skill-name>`（例: `/openspec-propose`、`/webcompy-review`） | 組み込みサブエージェント + スキル |
+| **Claude Code** | `CLAUDE.md` → `AGENTS.md` | `.claude/skills/` → `.agents/skills/` | `.claude/commands/` → `.agents/commands/`（`/opsx-*`、`/<skill-name>`） | `.claude/agents/*.md` |
+| **Codex CLI / Cursor / Gemini CLI** | `AGENTS.md` | `.agents/skills/`（ネイティブ） | 各ハーネス標準またはスキル呼び出し | 各ハーネス固有 |
+
 ### 利用可能なスキルとエージェント
 
-OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じて自動ロードされます。エージェントは権限サンドボックス付きの薄いラッパーとして2つ存在します。サンドボックスが不要なケースではスキルを直接読み込んでください。
-
-スキル（OpenCode が description 一致で自動ロード）:
+スキル（対応ハーネスが description 一致で自動ロード、または直接呼び出し）:
 
 | スキル | 用途 |
 |---|---|
@@ -165,10 +174,10 @@ OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じ�
 
 | エージェント | 責務 |
 |---|---|
-| `webcompy-reviewer` | OpenSpec スペックに基づく自動 PR レビュー（CI 使用） |
+| `webcompy-reviewer` | OpenSpec スペックに基づく PR レビュー（CI は OpenCode で実行、ローカルの Claude Code は `.claude/agents/` を利用） |
 | `webcompy-inspector` | `webcompy inspect` によるブラウザ検証（サブエージェント専用） |
 
-### タスク委譲（OpenCode）
+### タスク委譲の例
 
 ```text
 "リアクティブリストのリコンシリエーションを実装して"
@@ -181,7 +190,7 @@ OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じ�
 → webcompy-local-ci スキル
 
 "この差分をスペックに対してレビューして"
-→ webcompy-review スキル（サンドボックス付きで呼び出すなら @webcompy-reviewer）
+→ webcompy-review スキル（サンドボックス付きで呼び出すなら webcompy-reviewer サブエージェント）
 ```
 
 ### AI エージェントとの言語について
@@ -193,7 +202,7 @@ OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じ�
 
 ### レビューの仕組み
 
-すべての PR は CI 通過後、`webcompy-reviewer` エージェントによってレビューされます。レビュアーは:
+すべての PR は CI 通過後、CI 上の OpenCode `webcompy-reviewer` エージェントによってレビューされます。レビュアーは:
 
 1. 変更ファイルをサブシステムごとに分類
 2. 対応する OpenSpec スペックを参照
@@ -218,14 +227,12 @@ OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じ�
 ```
 <type>: <description>
 
-🤖 Generated with opencode
-
-Co-Authored-By: opencode <noreply@opencode.ai>
+Co-Authored-By: <harness-name> <noreply@...>
 ```
 
 タイプ: `feat`、`fix`、`refactor`、`docs`、`chore`、`test`、`style`、`perf`
 
-`Co-Authored-By` フッターはすべてのコミットで必須です。
+AI アシストによるコミットでは、使用したコーディングハーネスの標準 `Co-Authored-By:` フッター（例: `opencode <noreply@opencode.ai>`、`Claude <noreply@anthropic.com>`、`Antigravity <noreply@google.com>`）を付与してください。人間のみのコミットでは省略可能です。
 
 ### コード規約
 
@@ -235,7 +242,7 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 - コンポーネントクラスは `@component_template`、`@on_before_rendering` を使用
 - リアクティブ状態のプリミティブは `openspec/specs/reactive/spec.md` と `openspec/specs/composables/spec.md` で規定
 重要な不変条件（デュアル環境アーキテクチャ、DI スコープルール、リアクティブ契約など）については
-[AGENTS.md](AGENTS.md#framework-invariants)（英語）を参照してください。
+[openspec/SPEC_INDEX.md](openspec/SPEC_INDEX.md#framework-invariants)（英語）を参照してください。
 
 ### テスト
 
