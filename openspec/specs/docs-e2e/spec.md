@@ -55,7 +55,7 @@ Since docs_app is a production site without `data-testid` attributes, tests SHAL
 
 #### Scenario: Verifying the home page heading
 - **WHEN** a test navigates to `/`
-- **THEN** the test SHALL locate the "What is WebComPy" heading using `page.get_by_role("heading", name="What is WebComPy")`
+- **THEN** the test SHALL locate the hero headline using `page.get_by_role("heading", name="Build Frontend in Python", level=1)`
 
 #### Scenario: Verifying a button exists on the FizzBuzz page
 - **WHEN** a test navigates to `/sample/fizzbuzz`
@@ -102,7 +102,12 @@ Tests SHALL verify that client-side routing works by clicking navigation links a
 #### Scenario: Navigating back to Home
 - **WHEN** a test navigates to `/sample/helloworld` and then clicks the "Home" link
 - **THEN** the URL SHALL change to `/`
-- **AND** the "What is WebComPy" heading SHALL be visible
+- **AND** the "Build Frontend in Python" hero heading SHALL be visible
+
+#### Scenario: Navigating from the Home hero to Getting Started
+- **WHEN** a test on the home page clicks the "Get Started" button
+- **THEN** the URL SHALL change to `/documents/getting-started/what-is-webcompy`
+- **AND** the page's heading SHALL be visible
 
 ### Requirement: Docs E2E CI matrix shall cover all test groups
 The CI workflow SHALL include a separate matrix entry for docs E2E tests, split into groups for parallel execution. The `docs-documents` group SHALL run against both `prod` and `static` serving modes; the remaining docs groups SHALL run against the `static` serving mode.
