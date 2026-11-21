@@ -7,7 +7,7 @@ WebComPy previously restructured its OpenCode tooling so procedural knowledge li
 Antigravity (`agy` / IDE / App), Claude Code, OpenCode, Codex CLI, Cursor, and Gemini CLI share the Agent Skills standard and `AGENTS.md` ecosystem, but differ in discovery paths, per-file rule caps, slash-command invocation, and agent sandboxing:
 
 - **Antigravity**: Reads `AGENTS.md` and `.agents/skills/*/SKILL.md` natively (where skills are also invocable as `/<skill-name>`), enforces a 24,000-byte per-file rule cap, and deprecated `.agent/workflows/`.
-- **Claude Code**: Reads `CLAUDE.md` natively (supporting `@AGENTS.md` import), scans `.claude/skills/` and `.claude/commands/` natively (requiring physical directories with individual entry symlinks rather than a symlinked parent directory), and supports `.claude/agents/*.md` subagent sandboxes.
+- **Claude Code**: Reads `CLAUDE.md` natively, scans `.claude/skills/` and `.claude/commands/` natively (requiring physical directories with individual entry symlinks rather than a symlinked parent directory), and supports `.claude/agents/*.md` subagent sandboxes.
 - **OpenCode**: Reads `AGENTS.md`, `.agents/skills/`, `.opencode/commands/`, and `.opencode/agents/*.md` (used locally and by CI).
 
 ## Goals / Non-Goals
@@ -39,8 +39,8 @@ All 8 `.opencode/commands/opsx-*.md` files move to `.agents/commands/` and are s
 ### D3: Physical mirror directories with individual relative symlinks
 `.claude/skills/`, `.claude/commands/`, and `.opencode/commands/` MUST remain physical directories containing individual relative symlinks (`../../.agents/skills/<name>` and `../../.agents/commands/<file>`). Claude Code's discovery scanner skips a symlinked top-level `.claude/skills` directory. Although OpenCode scans both `.agents/skills/` and `.claude/skills/`, it deduplicates matching skill names safely.
 
-### D4: Extract `openspec/SPEC_INDEX.md` and add `CLAUDE.md`
-`Framework Invariants`, `File → Spec Mapping`, and `Current Specs` are extracted verbatim from `AGENTS.md` into `openspec/SPEC_INDEX.md`. `AGENTS.md` keeps core dual-environment rules, commands, conventions, git rules, skill summaries, and language rules alongside an explicit instruction to consult `openspec/SPEC_INDEX.md` before modifying or reviewing code. Root `CLAUDE.md` contains `@AGENTS.md` so Claude Code loads the identical ruleset regardless of version or fallback settings.
+### D4: Extract `openspec/SPEC_INDEX.md` and symlink `CLAUDE.md`
+`Framework Invariants`, `File → Spec Mapping`, and `Current Specs` are extracted verbatim from `AGENTS.md` into `openspec/SPEC_INDEX.md`. `AGENTS.md` keeps core dual-environment rules, commands, conventions, git rules, skill summaries, and language rules alongside an explicit instruction to consult `openspec/SPEC_INDEX.md` before modifying or reviewing code. Root `CLAUDE.md` is a relative symlink pointing to `AGENTS.md` (`CLAUDE.md -> AGENTS.md`), keeping the ruleset identical across Claude Code and all `AGENTS.md`-reading harnesses without duplicating text or relying on `@`-import syntax.
 
 ### D5: Thin per-harness agent envelopes with CI unchanged
 `.opencode/agents/webcompy-reviewer.md` and `.opencode/agents/webcompy-inspector.md` remain for OpenCode and `.github/workflows/ci.yml`, updating only their fallback skill read paths to `.agents/skills/`. Matching thin envelopes `.claude/agents/webcompy-reviewer.md` and `.claude/agents/webcompy-inspector.md` provide Claude Code read-only / inspect-only subagent boundaries.
@@ -49,7 +49,7 @@ All 8 `.opencode/commands/opsx-*.md` files move to `.agents/commands/` and are s
 The existing CI-enforced guardrail script is extended to:
 1. Scan `openspec/SPEC_INDEX.md` and `.agents/skills/*/SKILL.md` (replacing `.opencode/skills/`).
 2. Fail if `AGENTS.md` exceeds 24,000 UTF-8 bytes.
-3. Fail if `.claude/skills/`, `.claude/commands/`, or `.opencode/commands/` is missing, is itself a symlink, is out of 1-to-1 parity with `.agents/`, or contains broken/non-relative symlinks.
+3. Fail if `CLAUDE.md` is missing or not a valid relative symlink to `AGENTS.md`, or if `.claude/skills/`, `.claude/commands/`, or `.opencode/commands/` is missing, is itself a symlink, is out of 1-to-1 parity with `.agents/`, or contains broken/non-relative symlinks.
 
 ## Risks / Trade-offs
 

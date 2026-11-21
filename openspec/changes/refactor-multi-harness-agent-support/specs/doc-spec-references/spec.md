@@ -60,7 +60,7 @@ When a spec is added or removed, the referencing universal docs SHALL be updated
 
 ### Requirement: Harness skill and command symlink mirrors shall stay in parity with SSOT
 
-`.claude/skills/`, `.claude/commands/`, and `.opencode/commands/` SHALL be physical directories whose entries are non-dangling relative symlinks matching `.agents/skills/` and `.agents/commands/` 1-to-1. `scripts/check-doc-spec-refs.py` SHALL verify directory type, target parity, and symlink resolution.
+`CLAUDE.md` SHALL be a relative symlink to `AGENTS.md`. `.claude/skills/`, `.claude/commands/`, and `.opencode/commands/` SHALL be physical directories whose entries are non-dangling relative symlinks matching `.agents/skills/` and `.agents/commands/` 1-to-1. `scripts/check-doc-spec-refs.py` SHALL verify symlink targets, directory types, and parity.
 
 #### Scenario: Missing or extra symlink in mirror directory
 
@@ -69,10 +69,10 @@ When a spec is added or removed, the referencing universal docs SHALL be updated
 
 #### Scenario: Parent mirror directory is itself a symlink or entry is broken
 
-- **WHEN** a mirror directory itself is a symlink or any symlink target is broken or does not resolve to the SSOT entry
+- **WHEN** `CLAUDE.md` is not a valid relative symlink to `AGENTS.md`, a mirror directory itself is a symlink, or any symlink target is broken or does not resolve to the SSOT entry
 - **THEN** `scripts/check-doc-spec-refs.py` SHALL report the error and exit non-zero
 
 #### Scenario: All mirror symlinks match SSOT
 
-- **WHEN** all three mirror directories are physical directories whose entries match `.agents/` 1-to-1 via valid relative symlinks
+- **WHEN** `CLAUDE.md` links to `AGENTS.md` and all three mirror directories are physical directories whose entries match `.agents/` 1-to-1 via valid relative symlinks
 - **THEN** the mirror parity check in `scripts/check-doc-spec-refs.py` SHALL pass

@@ -10,10 +10,10 @@ This change establishes a single-source-of-truth (SSOT) layout under `.agents/` 
 - Move all 8 `/opsx-*` slash commands from `.opencode/commands/` to `.agents/commands/` as the single source of truth, and expose them via individual relative symlinks in physical `.opencode/commands/` and `.claude/commands/` directories.
 - Expose `.agents/skills/` to Claude Code via individual relative symlinks inside a physical `.claude/skills/` directory.
 - Extract `Framework Invariants`, `File → Spec Mapping`, and `Current Specs` from `AGENTS.md` into `openspec/SPEC_INDEX.md`, keeping `AGENTS.md` well under 24,000 bytes with explicit pointers to `openspec/SPEC_INDEX.md`.
-- Add root `CLAUDE.md` importing `@AGENTS.md`.
+- Add root `CLAUDE.md` as a relative symlink to `AGENTS.md`.
 - Add thin Claude Code agent envelopes `.claude/agents/webcompy-reviewer.md` and `.claude/agents/webcompy-inspector.md`, and update `.opencode/agents/*.md` skill fallback paths to `.agents/skills/`.
 - Update `webcompy-review` and `webcompy-local-ci` skill references to point to `openspec/SPEC_INDEX.md` and `.agents/` paths.
-- Extend `scripts/check-doc-spec-refs.py` to scan `.agents/skills/*/SKILL.md` and `openspec/SPEC_INDEX.md`, enforce `AGENTS.md <= 24,000` bytes, and validate 1-to-1 symlink mirror parity across `.claude/skills/`, `.claude/commands/`, and `.opencode/commands/`.
+- Extend `scripts/check-doc-spec-refs.py` to scan `.agents/skills/*/SKILL.md` and `openspec/SPEC_INDEX.md`, enforce `AGENTS.md <= 24,000` bytes, and validate `CLAUDE.md -> AGENTS.md` plus 1-to-1 symlink mirror parity across `.claude/skills/`, `.claude/commands/`, and `.opencode/commands/`.
 - Make `AGENTS.md`, `CONTRIBUTING.md`, `CONTRIBUTING.ja.md`, `openspec/config.yaml`, and `.gitignore` harness-neutral while preserving OpenCode CI review behavior.
 - Update the `doc-spec-references` specification to reflect the new universal doc paths, `AGENTS.md` byte limit, and symlink mirror parity checks.
 
