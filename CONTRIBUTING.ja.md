@@ -284,7 +284,7 @@ AI アシストによるコミットでは、使用したコーディングハ�
 ### プッシュ前の確認
 
 1. **ローカル CI チェック** — `webcompy-local-ci` スキルを使用（lint、typecheck、ユニットテスト）
-2. **コードレビュー** — `webcompy-review` スキルを使用（サンドボックス付きで呼び出す場合は `@webcompy-reviewer`）
+2. **コードレビュー** — `webcompy-review` スキルを使用（サンドボックス付きで呼び出す場合は `webcompy-reviewer` エージェント）
 
 ### PR のライフサイクル
 
