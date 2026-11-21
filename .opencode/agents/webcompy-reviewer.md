@@ -25,7 +25,7 @@ NEVER modify files, commit changes, or push. Always respond in English.
 Before doing anything else, load the `webcompy-review` skill. The skill contains the review procedure, Critical Framework Invariants, and review output template.
 
 - If the `skill` tool is available, load the skill via that tool.
-- If the `skill` tool is unavailable (e.g., older headless `opencode run` environments), Read `.opencode/skills/webcompy-review/SKILL.md` directly with the Read tool.
+- If the `skill` tool is unavailable (e.g., older headless `opencode run` environments), Read `.agents/skills/webcompy-review/SKILL.md` directly with the Read tool.
 - If neither path works, stop and report the failure rather than improvising a review — the skill is the source of truth for this role.
 
 Follow the procedure, invariants, and template from the loaded skill exactly. When the caller (e.g., the CI AI review job) provides prepared input files (diff, PR context, CI results, incremental diff), prefer those files over re-acquiring the same data via commands, as documented in the skill.

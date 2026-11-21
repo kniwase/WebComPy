@@ -49,7 +49,7 @@ Execute these commands in order. Stop on the first failure unless instructed oth
    python3 scripts/check-doc-spec-refs.py
    ```
    - Validates that universal docs reference existing OpenSpec specs and contain no retired API names
-   - Run when AGENTS.md, CONTRIBUTING.*, `.opencode/skills/`, or `openspec/` files were changed
+   - Run when `AGENTS.md`, `CONTRIBUTING.*`, `openspec/SPEC_INDEX.md`, `CLAUDE.md`, `.agents/skills/`, `.agents/commands/`, or `openspec/` files were changed
 
 8. **Docstring Coverage Check**
    ```bash
