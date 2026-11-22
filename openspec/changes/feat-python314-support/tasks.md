@@ -18,7 +18,7 @@
 ## 4. Full Local CI Verification on Python 3.14
 
 - [x] 4.1 Run lint, format, docstring, doc-spec-ref, browser-import, pydoclint, pyright, and wheel smoke checks under Python 3.14 (`uv run ruff check .`, `uv run ruff format --check .`, `uv run pydoclint ...`, `uv run python scripts/check-browser-imports.py`, `python3 scripts/check-docstrings.py`, `python3 scripts/check-doc-spec-refs.py`, `uv run pyright`, `uv build --package webcompy`) and confirm zero failures
-- [ ] 4.2 Run `uv run python -m webcompy generate --config docs_app.webcompy_config`, `scripts/run-browser-tests.sh` (unit + `--probes`), and E2E groups affected or representative (`scripts/run-e2e-tests.sh docs-home docs-documents --parallel` and core E2E) under Python 3.14 and confirm all pass
+- [x] 4.2 Run `uv run python -m webcompy generate --config docs_app.webcompy_config`, `scripts/run-browser-tests.sh` (unit + `--probes`), and E2E groups affected or representative (`scripts/run-e2e-tests.sh docs-home docs-documents --parallel` and core E2E) under Python 3.14 and confirm all pass
 
 ## 5. Spec Sync & Archive
 
