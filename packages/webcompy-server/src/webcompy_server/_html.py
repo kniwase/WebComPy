@@ -27,7 +27,7 @@ _logger = getLogger(__name__)
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
-PYSCRIPT_VERSION = "2026.3.1"
+PYSCRIPT_VERSION = "2026.7.3"
 PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
 
 
