@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import pathlib
 import shutil
@@ -10,7 +9,7 @@ import threading
 import time
 import urllib.request
 from functools import partial
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 import pytest
@@ -70,16 +69,24 @@ class _QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self):
-        resolved = self.translate_path(self.path.split("?")[0])
+        del self.headers["If-Modified-Since"]
+        del self.headers["If-None-Match"]
+        path_only = self.path.split("?")[0]
+        resolved = self.translate_path(path_only)
         if pathlib.Path(resolved).is_file():
             super().do_GET()
         elif (pathlib.Path(resolved) / "index.html").is_file():
             self.path = self.path.rstrip("/") + "/index.html"
             super().do_GET()
         else:
+            has_extension = "." in path_only.rsplit("/", 1)[-1]
             fallback = pathlib.Path(self.directory) / "404.html"
-            if fallback.is_file():
+            if not has_extension and fallback.is_file():
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html")
                 self.end_headers()
@@ -169,7 +176,8 @@ def _generate(dist_dir: pathlib.Path, env_extra: dict[str, str] | None = None) -
 
 
 def _serve_dist(dist_dir: pathlib.Path):
-    server = HTTPServer(("127.0.0.1", 0), partial(_QuietHandler, directory=str(dist_dir)))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(_QuietHandler, directory=str(dist_dir)))
+    server.daemon_threads = True
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -233,7 +241,10 @@ def _goto_and_wait_worker(page, url: str) -> None:
         "() => navigator.serviceWorker.getRegistrations().then(rs => rs.length > 0)",
         timeout=SW_TIMEOUT_MS,
     )
-    page.evaluate("() => navigator.serviceWorker.ready.then(() => true)")
+    page.wait_for_function(
+        "() => navigator.serviceWorker.ready.then(r => Boolean(r.active))",
+        timeout=SW_TIMEOUT_MS,
+    )
 
 
 def _worker_scope(page) -> str:
@@ -346,20 +357,23 @@ class TestBuildRotation:
 
             _generate(dist_dir, {"PWA_VERSION": "2.0.0"})
 
-            deadline = time.monotonic() + 120
-            current: list[str] = []
-            while time.monotonic() < deadline:
-                page.evaluate(
-                    "async () => { const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); }"
-                )
-                with contextlib.suppress(Exception):
-                    page.goto(url, wait_until="domcontentloaded")
-                time.sleep(1.0)
-                current = [n for n in _cache_names(page) if n.startswith("webcompy-pwa-")]
-                if current and all("2.0.0" in n for n in current) and not any("1.0.0" in n for n in current):
-                    break
-            else:
-                pytest.fail(f"old caches were not cleaned; current: {current}")
+            page.wait_for_function(
+                """async () => {
+                    const r = await navigator.serviceWorker.getRegistration();
+                    if (!r) return false;
+                    await r.update();
+                    return true;
+                }""",
+                timeout=SW_TIMEOUT_MS,
+            )
+            page.wait_for_function(
+                """async () => {
+                    const names = (await caches.keys()).filter(n => n.startsWith("webcompy-pwa-"));
+                    return names.length > 0 && names.every(n => n.includes("2.0.0")) && !names.some(n => n.includes("1.0.0"));
+                }""",
+                timeout=SW_TIMEOUT_MS,
+            )
+            page.goto(url, wait_until="domcontentloaded")
             expect(page.locator("[data-testid='home-page'] h1")).to_have_text("PWA Home Page")
         finally:
             server.shutdown()
