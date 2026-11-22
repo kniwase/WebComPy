@@ -17,9 +17,9 @@
 
 ## 4. End-to-end, browser-tier, SSG, and static verification
 
-- [ ] 4.1 Run all static and docstring checks (`uv run ruff check .`, `uv run ruff format --check .`, `uv run pydoclint packages/webcompy/src/webcompy packages/webcompy-server/src/webcompy_server packages/webcompy-cli/src/webcompy_cli packages/webcompy-testing/src/webcompy_testing`, `uv run python scripts/check-browser-imports.py`, `python3 scripts/check-docstrings.py`, `python3 scripts/check-doc-spec-refs.py`, `uv run pyright`) and verify zero errors.
-- [ ] 4.2 Run the full CPython unit test suite (`uv run python -m pytest tests/ --tb=short`) and wheel smoke build (`uv build --package webcompy` and verify `webcompy/template/__init__.py` is present), confirming all unit tests pass.
-- [ ] 4.3 Run browser-tier tests (`scripts/run-browser-tests.sh --tb=short`, `scripts/run-browser-tests.sh --probes --tb=short`, and informational `--dual` sweep), verify `docs_app` SSG regeneration (`uv run python -m webcompy generate --config docs_app.webcompy_config` producing `docs_app/webcompy-lock.json` pinned to `2026.7.3` / `314.0.3` and Python 3.14 wheels), and verify core + docs E2E suites pass via `scripts/run-e2e-tests.sh --parallel`.
+- [x] 4.1 Run all static and docstring checks (`uv run ruff check .`, `uv run ruff format --check .`, `uv run pydoclint packages/webcompy/src/webcompy packages/webcompy-server/src/webcompy_server packages/webcompy-cli/src/webcompy_cli packages/webcompy-testing/src/webcompy_testing`, `uv run python scripts/check-browser-imports.py`, `python3 scripts/check-docstrings.py`, `python3 scripts/check-doc-spec-refs.py`, `uv run pyright`) and verify zero errors.
+- [x] 4.2 Run the full CPython unit test suite (`uv run python -m pytest tests/ --tb=short`) and wheel smoke build (`uv build --package webcompy` and verify `webcompy/template/__init__.py` is present), confirming all unit tests pass.
+- [x] 4.3 Run browser-tier tests (`scripts/run-browser-tests.sh --tb=short`, `scripts/run-browser-tests.sh --probes --tb=short`, and informational `--dual` sweep), verify `docs_app` SSG regeneration (`uv run python -m webcompy generate --config docs_app.webcompy_config` producing `docs_app/webcompy-lock.json` pinned to `2026.7.3` / `314.0.3` and Python 3.14 wheels), and verify core + docs E2E suites pass via `scripts/run-e2e-tests.sh --parallel`.
 
 ## 5. Spec synchronization and change archive
 

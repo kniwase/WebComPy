@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import patch
 
 from webcompy_cli._lockfile import (
     Lockfile,
@@ -493,6 +492,8 @@ class TestGenerateLockfileRuntimeAssets:
         assert lockfile.runtime_assets == {}
 
     def test_runtime_local_314_uses_pyodide_asm_mjs(self, tmp_path):
+        from unittest.mock import patch
+
         from webcompy_cli._lockfile import generate_lockfile
 
         modules_dir = tmp_path / ".webcompy_modules"
@@ -510,6 +511,8 @@ class TestGenerateLockfileRuntimeAssets:
 
 class TestResolveLockfileVersionInvalidation:
     def test_reuses_matching_pyscript_and_pyodide_version(self, tmp_path):
+        from unittest.mock import patch
+
         lockfile_path = tmp_path / "webcompy-lock.json"
         modules_dir = tmp_path / ".webcompy_modules"
         save_lockfile(
@@ -532,6 +535,8 @@ class TestResolveLockfileVersionInvalidation:
         assert lockfile.pyodide_version == "314.0.3"
 
     def test_regenerates_when_pyscript_version_mismatches(self, tmp_path):
+        from unittest.mock import patch
+
         lockfile_path = tmp_path / "webcompy-lock.json"
         modules_dir = tmp_path / ".webcompy_modules"
         save_lockfile(
@@ -560,6 +565,8 @@ class TestResolveLockfileVersionInvalidation:
         assert reloaded.pyodide_version == "314.0.3"
 
     def test_regenerates_when_pyodide_version_mismatches(self, tmp_path):
+        from unittest.mock import patch
+
         lockfile_path = tmp_path / "webcompy-lock.json"
         modules_dir = tmp_path / ".webcompy_modules"
         save_lockfile(
