@@ -150,9 +150,6 @@ docs_app/dist/
 # WebComPy lock files
 webcompy-lock.json
 
-# Python version (developer-managed)
-.python-version
-
 # Playwright MCP
 .playwright-mcp/
 
