@@ -13,7 +13,7 @@
 ## 3. Python 3.14 Regression Tests & Compatibility Audit
 
 - [x] 3.1 Add unit regression tests verifying that `asyncio.run(...)` exits cleanly without `RuntimeError: Timeout should be used inside a task` after `run_sync()`, `_resolve_async_callback()`, and `_run_refresh_sync()` patch a running loop on CPython 3.14+; run those tests under Python 3.14 to confirm pass
-- [ ] 3.2 Run the full unit suite (`uv run python -m pytest tests/ --tb=short`) under Python 3.14, inspect any PEP 649, `dis`, `tokenize`, or `ast` regressions, and fix any compatibility issues discovered until the full unit suite passes
+- [x] 3.2 Run the full unit suite (`uv run python -m pytest tests/ --tb=short`) under Python 3.14, inspect any PEP 649, `dis`, `tokenize`, or `ast` regressions, and fix any compatibility issues discovered until the full unit suite passes
 
 ## 4. Full Local CI Verification on Python 3.14
 

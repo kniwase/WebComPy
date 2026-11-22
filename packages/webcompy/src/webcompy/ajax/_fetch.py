@@ -75,7 +75,7 @@ class Response:
                         lambda name: (name[1:], getattr(self, name)),
                         filter(
                             lambda name: name.startswith("_"),
-                            self.__annotations__.keys(),
+                            type(self).__annotations__.keys(),
                         ),
                     ),
                     key=lambda li: li[0],
