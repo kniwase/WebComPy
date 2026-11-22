@@ -15,6 +15,7 @@ from webcompy_cli._pwa import (
     runtime_entry_urls,
 )
 from webcompy_cli.config import ManifestConfig, PWAConfig, RuntimeCachingRule
+from webcompy_server._html import PYSCRIPT_BASE_URL
 
 
 def _pwa(**kwargs) -> PWAConfig:
@@ -110,7 +111,7 @@ class TestBuildPrecacheEntries:
             runtime_asset_files=None,
             cdn_runtime_urls=urls,
         )
-        assert "https://pyscript.net/releases/2026.3.1/core.js" in entries
+        assert f"{PYSCRIPT_BASE_URL}/core.js" in entries
         assert "https://cdn.example/pyodide-lock.json" in entries
         err = capsys.readouterr().err
         assert "entry files" in err

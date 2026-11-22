@@ -13,7 +13,7 @@
 ## 3. Promote pinned PyScript version and generalize brittle tests
 
 - [x] 3.1 Update `PYSCRIPT_VERSION = "2026.7.3"` in `packages/webcompy-server/src/webcompy_server/_html.py` and verify `uv run python -c "from webcompy_server._html import PYSCRIPT_VERSION, PYSCRIPT_BASE_URL; print(PYSCRIPT_VERSION, PYSCRIPT_BASE_URL)"` outputs `2026.7.3 https://pyscript.net/releases/2026.7.3`.
-- [ ] 3.2 Update brittle version/chunk-hash assertions in `tests/test_pwa_sw_generation.py` (assert `f"{PYSCRIPT_BASE_URL}/core.js"`) and `e2e/core/test_standalone.py` (resolve the `./core-*.js` import from `dist/_webcompy-assets/core.js` instead of hardcoding `core-BuLtL7jM.js`), and verify both tests pass via `uv run python -m pytest tests/test_pwa_sw_generation.py -q` and `scripts/run-e2e-tests.sh standalone --serving-mode=static`.
+- [x] 3.2 Update brittle version/chunk-hash assertions in `tests/test_pwa_sw_generation.py` (assert `f"{PYSCRIPT_BASE_URL}/core.js"`) and `e2e/core/test_standalone.py` (resolve the `./core-*.js` import from `dist/_webcompy-assets/core.js` instead of hardcoding `core-BuLtL7jM.js`), and verify both tests pass via `uv run python -m pytest tests/test_pwa_sw_generation.py -q` and `scripts/run-e2e-tests.sh standalone --serving-mode=static`.
 
 ## 4. End-to-end, browser-tier, SSG, and static verification
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 
@@ -72,7 +73,12 @@ def test_standalone_static_has_local_lockfile_url(standalone_dist):
 
 
 def test_standalone_static_runtime_assets_exist(standalone_dist):
-    assert (standalone_dist / "_webcompy-assets" / "core.js").exists()
+    core_js = standalone_dist / "_webcompy-assets" / "core.js"
+    assert core_js.exists()
     assert (standalone_dist / "_webcompy-assets" / "core.css").exists()
-    assert (standalone_dist / "_webcompy-assets" / "core-BuLtL7jM.js").exists()
+    imported_chunks = re.findall(r'from\s*["\']\./([^"\']+\.js)["\']', core_js.read_text(encoding="utf-8"))
+    assert imported_chunks
+    for chunk in imported_chunks:
+        assert (standalone_dist / "_webcompy-assets" / chunk).exists()
     assert (standalone_dist / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
+    assert (standalone_dist / "_webcompy-assets" / "pyodide" / "pyodide.asm.mjs").exists()
