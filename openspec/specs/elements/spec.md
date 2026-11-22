@@ -207,7 +207,7 @@ A non-recursive `_re_index_children` pass SHALL propagate the newly assigned bas
 
 ### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
 
-A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the nest_asyncio + loop.run_until_complete sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.
+A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the `nest_asyncio2` + `loop.run_until_complete` sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.
 
 #### Scenario: SwitchElement uses shared helper
 - **WHEN** `SwitchElement._refresh_sync` is called
@@ -225,7 +225,7 @@ A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: An
 
 ### Requirement: Synchronous refresh dispatch shall not block the event loop in the Pyodide environment
 
-`_run_refresh_sync` SHALL NOT call `loop.run_until_complete` when running in the Pyodide environment (`ENVIRONMENT == "pyscript"`). Instead, the refresh coroutine SHALL be scheduled on the event loop (via the existing `aio_run` mechanism) so it completes fully without raising "Cannot stack switch"; exceptions raised by the refresh SHALL be logged with a formatted traceback (via `_log_error`, the same logging path used by `_resolve_async_callback`) rather than propagated into the DOM event handler. In non-Pyodide environments, `_run_refresh_sync` SHALL keep its current synchronous behavior (`asyncio.run` without a running loop; `nest_asyncio` + `run_until_complete` with one), so a refresh SHALL complete before the call returns.
+`_run_refresh_sync` SHALL NOT call `loop.run_until_complete` when running in the Pyodide environment (`ENVIRONMENT == "pyscript"`). Instead, the refresh coroutine SHALL be scheduled on the event loop (via the existing `aio_run` mechanism) so it completes fully without raising "Cannot stack switch"; exceptions raised by the refresh SHALL be logged with a formatted traceback (via `_log_error`, the same logging path used by `_resolve_async_callback`) rather than propagated into the DOM event handler. In non-Pyodide environments, `_run_refresh_sync` SHALL keep its current synchronous behavior (`asyncio.run` without a running loop; `nest_asyncio2` + `run_until_complete` with one), so a refresh SHALL complete before the call returns.
 
 #### Scenario: Signal-driven refresh from a DOM event handler completes in Pyodide
 - **WHEN** a signal-driven refresh (`RepeatElement`, `SwitchElement`, or `MarkdownForElement`) is dispatched from a synchronous DOM event handler in the Pyodide environment

@@ -179,15 +179,15 @@ Signal callback registration SHALL use a sync wrapper method (`_refresh_sync`) O
 The fire-and-forget path for `_on_set_parent()` is safe because:
 1. Signal propagation is synchronous: `producer_notify_consumers()` iterates consumers in insertion order
 2. Synchronous callbacks (e.g., `Computed` re-evaluation → `_update_text`) complete before async callbacks are dispatched
-3. The `_refresh` async callback is dispatched via `_resolve_async_callback()` → in PyScript, `aio_run()` (fire-and-forget); in server/test, `nest_asyncio` + `run_until_complete()`
+3. The `_refresh` async callback is dispatched via `_resolve_async_callback()` → in PyScript, `aio_run()` (fire-and-forget); in server/test, `nest_asyncio2` + `run_until_complete()`
 
 The sync wrapper SHALL delegate to the shared `_run_refresh_sync(refresh, *args)` helper in `webcompy/elements/types/_dynamic.py` (see the `elements` spec). `_run_refresh_sync` SHALL dispatch the refresh as follows:
 
 - **No running event loop** (all environments): `asyncio.run(refresh(*args))`
 - **Running event loop in the Pyodide environment** (`ENVIRONMENT == "pyscript"`): the refresh coroutine SHALL be scheduled on the event loop via `aio_run`, wrapped in a safe coroutine that logs refresh exceptions with a formatted traceback (via `_log_error`). `_run_refresh_sync` SHALL NOT call `loop.run_until_complete` here — Pyodide's webloop raises `RuntimeError: Cannot stack switch` from synchronous JS entrypoints, so blocking would only partially execute the refresh and drop the async remainder
-- **Running event loop elsewhere** (CPython server/test): `nest_asyncio.apply(loop)` SHALL be applied conditionally (once per loop), then `loop.run_until_complete(refresh(*args))`
+- **Running event loop elsewhere** (CPython server/test): `nest_asyncio2.apply(loop)` SHALL be applied conditionally (once per loop), then `loop.run_until_complete(refresh(*args))`
 
-In Pyodide, `nest_asyncio` SHALL NOT be imported or applied. In CPython (server/test), `nest_asyncio.apply()` SHALL be used conditionally to allow nested `run_until_complete()` calls.
+In Pyodide, `nest_asyncio2` SHALL NOT be imported or applied. In CPython (server/test), `nest_asyncio2.apply()` SHALL be used conditionally to allow nested `run_until_complete()` calls.
 
 `RepeatElement._render()` and `SwitchElement._render()` SHALL continue to call `await self._refresh()` for the initial render path (where the caller is already in an async context).
 
@@ -203,7 +203,7 @@ In Pyodide, `nest_asyncio` SHALL NOT be imported or applied. In CPython (server/
 - **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is registered via `_refresh` (async) in `_on_set_parent()`
 - **THEN** `_dispatch()` SHALL detect `_is_async = True` and delegate to `_resolve_async_callback()`
 - **AND** in browser, `_resolve_async_callback` SHALL dispatch `_refresh` via `aio_run()` (fire-and-forget)
-- **AND** in server/test, `_resolve_async_callback` SHALL execute `_refresh` synchronously via `nest_asyncio` + `run_until_complete()`
+- **AND** in server/test, `_resolve_async_callback` SHALL execute `_refresh` synchronously via `nest_asyncio2` + `run_until_complete()`
 - **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly regardless of environment
 - **AND** synchronous dependent callbacks (e.g., `Computed` re-evaluation, text element updates) SHALL complete before the async refresh is dispatched, ensuring DOM consistency
 
@@ -236,7 +236,7 @@ The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SH
 - **WHEN** a signal changes and an async callback (e.g., a user-defined async hook) is registered
 - **THEN** `_dispatch()` SHALL detect `_is_async = True` and call `_resolve_async_callback(self._callback, self._producer._value)`
 - **AND** in browser, `_resolve_async_callback` SHALL dispatch via `aio_run()` (fire-and-forget, intended for user-level async callbacks that do not need synchronous DOM updates)
-- **AND** in server/test, `_resolve_async_callback` SHALL execute the coroutine to completion synchronously via `nest-asyncio`
+- **AND** in server/test, `_resolve_async_callback` SHALL execute the coroutine to completion synchronously via `nest-asyncio2`
 - **AND** for dynamic element refresh (`RepeatElement`, `SwitchElement`), the signal callback SHALL be the sync wrapper (`_refresh_sync`) when registered from `_render()`, or the async `_refresh` when registered from `_on_set_parent()`. The `_render()` path uses the sync wrapper for sync DOM updates; the `_on_set_parent()` path uses the async callback because: (a) it runs during synchronous construction, and (b) synchronous dependent callbacks (computed → text element) complete before the async callback is dispatched.
 
 #### Scenario: Cascading signal changes during callback execution
@@ -336,7 +336,7 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `packages/webcompy/src/webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
 
 - **Browser (PyScript)**: async callbacks SHALL be dispatched fire-and-forget via `aio_run()` → `asyncio.ensure_future()`. Async callbacks are NOT guaranteed to complete before the next synchronous statement after the signal setter returns. This is intentional — the browser prioritizes UI responsiveness over completion ordering for user-level async callbacks.
-- **Server / test (CPython)**: async callbacks SHALL be executed to completion synchronously via `nest_asyncio` + `loop.run_until_complete()` before the signal setter returns. This is intentional — SSG/SSR and tests need deterministic, in-order completion so that HTML output and assertions are reproducible.
+- **Server / test (CPython)**: async callbacks SHALL be executed to completion synchronously via `nest_asyncio2` + `loop.run_until_complete()` before the signal setter returns. This is intentional — SSG/SSR and tests need deterministic, in-order completion so that HTML output and assertions are reproducible.
 
 This divergence is a deliberate design decision, not a bug. Dependent changes (e.g. SSG/SSR via `feat-ssg-via-ssr`, data transfer via `feat-hydration-data-transfer`, `Suspense` via `feat-suspense-component`) SHALL rely on this written contract rather than an emergent behavior.
 
@@ -351,16 +351,20 @@ This divergence is a deliberate design decision, not a bug. Dependent changes (e
 
 #### Scenario: Async user hook triggered by a signal during SSG
 - **WHEN** the same hook is triggered during `generate_html()` / `generate_static_site()`
-- **THEN** the server SHALL execute the hook to completion synchronously via `nest_asyncio` + `loop.run_until_complete()`
+- **THEN** the server SHALL execute the hook to completion synchronously via `nest_asyncio2` + `loop.run_until_complete()`
 - **AND** the hook SHALL complete before the signal setter returns
 - **AND** the resulting HTML SHALL reflect any DOM mutations the hook performed, deterministically
 
 #### Scenario: `_refresh_sync` is treated as a sync callback regardless of environment
 - **WHEN** a signal updates and the registered callback is `_refresh_sync` (a sync `def`)
 - **THEN** `_dispatch()` SHALL detect `_is_async = False` and call `_refresh_sync(...)` directly
-- **AND** `_refresh_sync` SHALL delegate to `_run_refresh_sync`, which SHALL run `self._refresh(...)` to completion via `loop.run_until_complete()` in non-Pyodide environments (server/test uses `nest_asyncio`-patched `run_until_complete`)
+- **AND** `_refresh_sync` SHALL delegate to `_run_refresh_sync`, which SHALL run `self._refresh(...)` to completion via `loop.run_until_complete()` in non-Pyodide environments (server/test uses `nest_asyncio2`-patched `run_until_complete`)
 - **AND** in the Pyodide environment, `_run_refresh_sync` SHALL schedule `self._refresh(...)` on the event loop via `aio_run` (fire-and-forget) instead of blocking, so the refresh completes on a later event-loop iteration without raising "Cannot stack switch"
 - **AND** the DOM update SHALL complete before the signal setter returns in non-Pyodide environments only
+
+#### Scenario: Event loop shuts down cleanly on Python 3.14+ after nested async callback execution
+- **WHEN** `asyncio.run(...)` executes server rendering or signal updates that invoke `_resolve_async_callback` or `_run_refresh_sync` inside the active loop on CPython 3.14+
+- **THEN** `asyncio.run()` SHALL complete `loop.shutdown_default_executor()` cleanly without raising `RuntimeError: Timeout should be used inside a task`
 
 ### Requirement: Signal value collection shall occur after await_pending completes
 

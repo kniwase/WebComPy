@@ -22,4 +22,4 @@
 
 ## 5. Spec Sync & Archive
 
-- [ ] 5.1 Sync delta specs (`async-rendering`, `elements`, `testing-module`, normalizing `testing-module`'s legacy `### ADDED:` header on the modified requirement to `### Requirement:`), verify `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md` remain accurate, archive `feat-python314-support`, and confirm `openspec validate --specs` and `openspec validate --changes` pass with zero active changes
+- [x] 5.1 Sync delta specs (`async-rendering`, `elements`, `testing-module`, normalizing `testing-module`'s legacy `### ADDED:` header on the modified requirement to `### Requirement:`), verify `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md` remain accurate, archive `feat-python314-support`, and confirm `openspec validate --specs` and `openspec validate --changes` pass with zero active changes
