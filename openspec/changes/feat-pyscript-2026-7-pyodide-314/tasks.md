@@ -8,7 +8,7 @@
 
 ## 2. Pre-promotion browser probe sweep (2026.3.1 vs 2026.7.3)
 
-- [ ] 2.1 Run `scripts/run-browser-version-sweep.sh 2026.7.3` while `PYSCRIPT_VERSION` is still `"2026.3.1"`, inspect `artifacts/browser-version-sweep.json` and `artifacts/probes-candidate.json`, and verify `regressions == []` with all 17 probes in `tests/browser/probes/**` passing at candidate `2026.7.3`.
+- [x] 2.1 Run `scripts/run-browser-version-sweep.sh 2026.7.3` while `PYSCRIPT_VERSION` is still `"2026.3.1"`, inspect `artifacts/browser-version-sweep.json` and `artifacts/probes-candidate.json`, and verify `regressions == []` with all 17 probes in `tests/browser/probes/**` passing at candidate `2026.7.3`.
 
 ## 3. Promote pinned PyScript version and generalize brittle tests
 
