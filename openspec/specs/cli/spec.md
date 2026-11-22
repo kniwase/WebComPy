@@ -213,13 +213,13 @@ When `runtime_serving="local"`, the dev server SHALL serve all PyScript core bun
 
 #### Scenario: Dev server with runtime_serving=local serves all PyScript bundle files
 - **WHEN** a developer starts the dev server with `runtime_serving="local"`
-- **THEN** all PyScript core bundle `.js` and `.css` files SHALL be available at `/_webcompy-assets/{filename}`
+- **THEN** all PyScript core bundle `.js` and `.css` files SHALL be available at `/_webcompy-assets/{PYSCRIPT_VERSION}/{filename}`
 
 ### MODIFIED: The dev server shall serve runtime and WASM assets from disk
 When `runtime_serving="local"` or `wasm_serving="local"`, the dev server SHALL serve assets directly from the project-local cache directory using `FileResponse` or equivalent disk-based streaming.
 
 #### Scenario: Serving a local runtime asset
-- **WHEN** a browser requests `/_webcompy-assets/core.js` and `runtime_serving="local"`
+- **WHEN** a browser requests `/_webcompy-assets/{PYSCRIPT_VERSION}/core.js` and `runtime_serving="local"`
 - **THEN** the server SHALL stream the file from the project-local cache directory
 - **AND** the file SHALL NOT be fully loaded into memory before the response begins
 
@@ -299,12 +299,12 @@ When `webcompy generate` or `webcompy start` creates temporary directories for C
 - **THEN** any temporary directories created for wheel extraction SHALL be removed
 
 ### MODIFIED: Runtime-local HTML shall reference local runtime asset URLs and configure PyScript for local Pyodide
-In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN URLs with same-origin paths under `/_webcompy-assets/`. The PyScript `py-config` SHALL include `interpreter` and `lockFileURL` pointing to local Pyodide assets.
+In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN URLs with same-origin paths under `/_webcompy-assets/{PYSCRIPT_VERSION}/`. The PyScript `py-config` SHALL include `interpreter` and `lockFileURL` pointing to local Pyodide assets.
 
 #### Scenario: Runtime-local PyScript script tag
 - **WHEN** runtime-local mode is enabled
-- **THEN** the `<script type="module" src="...">` tag SHALL reference `/_webcompy-assets/core.js`
-- **AND** the CSS link SHALL reference `/_webcompy-assets/core.css`
+- **THEN** the `<script type="module" src="...">` tag SHALL reference `/_webcompy-assets/{PYSCRIPT_VERSION}/core.js`
+- **AND** the CSS link SHALL reference `/_webcompy-assets/{PYSCRIPT_VERSION}/core.css`
 
 #### Scenario: Non-runtime-local HTML is unchanged
 - **WHEN** `runtime_serving="cdn"` (default)
@@ -334,7 +334,7 @@ When `standalone=True` is set, the CLI SHALL enable all local-serving modes and 
 
 #### Scenario: Generating a standalone static site
 - **WHEN** a developer runs `python -m webcompy generate --standalone`
-- **THEN** all PyScript and Pyodide runtime assets SHALL be downloaded to `dist/_webcompy-assets/`
+- **THEN** all PyScript and Pyodide runtime assets SHALL be downloaded to `dist/_webcompy-assets/{PYSCRIPT_VERSION}/`
 - **AND** all WASM package wheels referenced in the lock file SHALL be downloaded to `dist/_webcompy-assets/packages/`
 - **AND** pure-Python packages from the Pyodide CDN SHALL be bundled into the app wheel
 - **AND** the generated HTML SHALL reference all local asset URLs

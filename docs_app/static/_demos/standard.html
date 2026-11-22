@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/_webcompy-assets/core.css">
   <link rel="stylesheet" href="/_webcompy-ui/index.css">
 </head>
 <body>
@@ -35,20 +34,52 @@
       return;
     }
 
+    const isSafeLocalRuntimeUrl = (u) =>
+      typeof u === "string" && /^\/_webcompy-assets\/[A-Za-z0-9._-]+\//.test(u);
+    const isSafeCoreAssetUrl = (u) =>
+      typeof u === "string" &&
+      /^(\/_webcompy-assets\/|https:\/\/pyscript\.net\/releases\/)[A-Za-z0-9._-]+\//.test(u);
+
     let wheel = "";
+    let parentInterpreter = "";
+    let parentLockfileUrl = "";
+    let coreJs = "";
+    let coreCss = "";
     try {
-      const parentScript = window.parent.document.querySelector('script[type="py"][config]');
+      const parentDoc = window.parent.document;
+      const parentScript = parentDoc.querySelector('script[type="py"][config]');
       if (parentScript) {
         const raw = parentScript.getAttribute("config").replace(/&quot;/g, '"');
         const config = JSON.parse(raw);
         wheel = config.packages.find(function (p) { return p.indexOf("webcompy-") !== -1; }) || "";
+        parentInterpreter = config.interpreter || "";
+        parentLockfileUrl = config.lockFileURL || "";
+      }
+      const parentCoreScript = parentDoc.querySelector('script[type="module"][src*="core.js"]');
+      if (parentCoreScript) {
+        coreJs = parentCoreScript.getAttribute("src") || "";
+      }
+      const parentCoreCss = parentDoc.querySelector('link[rel="stylesheet"][href*="core.css"]');
+      if (parentCoreCss) {
+        coreCss = parentCoreCss.getAttribute("href") || "";
       }
     } catch (e) {
-      console.error("Failed to resolve webcompy wheel URL from parent config:", e);
+      console.error("Failed to resolve runtime configuration from parent config:", e);
     }
     if (!wheel || !/^\/_webcompy-app-package\//.test(wheel)) {
       document.body.textContent = "Wheel URL not found.";
       return;
+    }
+    if (!isSafeCoreAssetUrl(coreJs)) {
+      document.body.textContent = "Runtime URL not found.";
+      return;
+    }
+
+    if (isSafeCoreAssetUrl(coreCss)) {
+      const cssLink = document.createElement("link");
+      cssLink.rel = "stylesheet";
+      cssLink.href = coreCss;
+      document.head.appendChild(cssLink);
     }
 
     const extra = APP_PACKAGES[app];
@@ -56,18 +87,21 @@
       packages: [wheel, ...extra],
       experimental_create_proxy: "auto",
     };
-    if (extra.length === 0) {
-      config.interpreter = "/_webcompy-assets/pyodide/pyodide.mjs";
-      config.lockFileURL = "/_webcompy-assets/pyodide/pyodide-lock.json";
+    if (extra.length === 0 && isSafeLocalRuntimeUrl(parentInterpreter) && isSafeLocalRuntimeUrl(parentLockfileUrl)) {
+      config.interpreter = parentInterpreter;
+      config.lockFileURL = parentLockfileUrl;
     }
 
     const script = document.getElementById("demo-script");
     script.setAttribute("src", "/_demos/" + app + "/app.py");
     script.setAttribute("config", JSON.stringify(config));
+
+    const coreScript = document.createElement("script");
+    coreScript.type = "module";
+    coreScript.src = coreJs;
+    document.body.appendChild(coreScript);
   })();
 </script>
-
-<script type="module" src="/_webcompy-assets/core.js"></script>
 
 </body>
 </html>

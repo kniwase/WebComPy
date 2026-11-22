@@ -31,6 +31,20 @@ PYSCRIPT_VERSION = "2026.7.3"
 PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
 
 
+def get_runtime_asset_prefix(pyscript_version: str = PYSCRIPT_VERSION) -> str:
+    """Return the relative URL path prefix for versioned local runtime assets.
+
+    Args:
+        pyscript_version: Target PyScript version string. Defaults to
+            ``PYSCRIPT_VERSION``.
+
+    Returns:
+        Relative path prefix of the form ``_webcompy-assets/{pyscript_version}``.
+
+    """
+    return f"_webcompy-assets/{pyscript_version}"
+
+
 class _DummyParent:
     def __init__(self, node) -> None:
         self._node = node
@@ -606,11 +620,12 @@ async def _generate_html_impl(
     scripts_head: Scripts = []
     scripts_body: Scripts = []
 
+    runtime_prefix = get_runtime_asset_prefix(PYSCRIPT_VERSION)
     core_js_url = (
-        f"{base_url}_webcompy-assets/core.js" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.js"
+        f"{base_url}{runtime_prefix}/core.js" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.js"
     )
     core_css_url = (
-        f"{base_url}_webcompy-assets/core.css" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.css"
+        f"{base_url}{runtime_prefix}/core.css" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.css"
     )
 
     scripts_head.append(
@@ -635,8 +650,8 @@ async def _generate_html_impl(
             py_packages.append(name)
     py_config_dict: dict = {"packages": py_packages, "experimental_create_proxy": "auto"}
     if runtime_serving == "local":
-        py_config_dict["interpreter"] = f"{base_url}_webcompy-assets/pyodide/pyodide.mjs"
-        py_config_dict["lockFileURL"] = f"{base_url}_webcompy-assets/pyodide/pyodide-lock.json"
+        py_config_dict["interpreter"] = f"{base_url}{runtime_prefix}/pyodide/pyodide.mjs"
+        py_config_dict["lockFileURL"] = f"{base_url}{runtime_prefix}/pyodide/pyodide-lock.json"
     elif lockfile_url is not None:
         py_config_dict["lockFileURL"] = lockfile_url
     py_config = html_module.escape(

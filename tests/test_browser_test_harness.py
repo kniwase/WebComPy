@@ -12,6 +12,7 @@ from webcompy_cli._browser_test_harness import (
     report_uninstallable_packages,
     resolve_supply_mode,
 )
+from webcompy_server._html import PYSCRIPT_VERSION
 
 BASE_URL = "http://127.0.0.1:8123/"
 
@@ -82,8 +83,10 @@ def test_build_py_config_wheel_mode():
     assert config["files"] == {
         "http://127.0.0.1:8123/_webcompy-test/files/tests/browser/test_a.py": ("/home/pyodide/tests/browser/test_a.py")
     }
-    assert config["interpreter"] == "http://127.0.0.1:8123/_webcompy-assets/pyodide/pyodide.mjs"
-    assert config["lockFileURL"] == "http://127.0.0.1:8123/_webcompy-assets/pyodide/pyodide-lock.json"
+    assert config["interpreter"] == f"http://127.0.0.1:8123/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs"
+    assert (
+        config["lockFileURL"] == f"http://127.0.0.1:8123/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json"
+    )
 
 
 def test_build_py_config_source_mode():
@@ -135,9 +138,30 @@ def test_generate_harness_html_parity_and_order():
     collector_index = page.index("__webcompy_test_console__")
     py_script_index = page.index('<script type="py"')
     assert collector_index < py_script_index
-    assert 'src="http://127.0.0.1:8123/_webcompy-assets/core.js"' in page
-    assert 'href="http://127.0.0.1:8123/_webcompy-assets/core.css"' in page
+    assert f'src="http://127.0.0.1:8123/_webcompy-assets/{PYSCRIPT_VERSION}/core.js"' in page
+    assert f'href="http://127.0.0.1:8123/_webcompy-assets/{PYSCRIPT_VERSION}/core.css"' in page
     assert '<div id="webcompy-app"></div>' in page
+
+
+def test_harness_paths_respect_custom_pyscript_version():
+    py_config = build_py_config(
+        base_url=BASE_URL,
+        supply_mode="wheel",
+        wheel_names=["x.whl"],
+        test_relpaths=["tests/browser/test_a.py"],
+        pyscript_version="2026.3.1",
+    )
+    page = generate_harness_html(
+        py_config,
+        base_url=BASE_URL,
+        source_mounted=False,
+        pyscript_version="2026.3.1",
+    )
+
+    assert py_config["interpreter"] == "http://127.0.0.1:8123/_webcompy-assets/2026.3.1/pyodide/pyodide.mjs"
+    assert py_config["lockFileURL"] == "http://127.0.0.1:8123/_webcompy-assets/2026.3.1/pyodide/pyodide-lock.json"
+    assert 'src="http://127.0.0.1:8123/_webcompy-assets/2026.3.1/core.js"' in page
+    assert 'href="http://127.0.0.1:8123/_webcompy-assets/2026.3.1/core.css"' in page
 
 
 def test_bootstrap_lines_wheel_mode():
