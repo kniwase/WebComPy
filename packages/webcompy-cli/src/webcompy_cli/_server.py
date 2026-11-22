@@ -41,7 +41,7 @@ from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server._context import ServerRenderContext
-from webcompy_server._html import generate_html
+from webcompy_server._html import PYSCRIPT_VERSION, generate_html, get_runtime_asset_prefix
 
 
 class _ServingApp:
@@ -191,11 +191,19 @@ def create_asgi_app(
             if filename in runtime_asset_files:
                 asset_path = runtime_asset_files[filename]
                 media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
-                return FileResponse(asset_path, media_type=media_type)
+                headers = {
+                    "Cache-Control": (
+                        "max-age=86400, must-revalidate"
+                        if artifacts.dev_mode
+                        else "public, max-age=31536000, immutable"
+                    )
+                }
+                return FileResponse(asset_path, media_type=media_type, headers=headers)
             else:
                 raise HTTPException(404)
 
-        runtime_asset_routes.append(Route("/_webcompy-assets/{filename:path}", send_runtime_asset))
+        runtime_prefix = get_runtime_asset_prefix(PYSCRIPT_VERSION)
+        runtime_asset_routes.append(Route(f"/{runtime_prefix}/{{filename:path}}", send_runtime_asset))
 
     static_file_routes: list[Route] = []
     static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()

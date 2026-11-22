@@ -59,16 +59,24 @@ def test_standalone_static_no_cdn_urls(standalone_dist):
 
 
 def test_standalone_static_has_local_interpreter(standalone_dist):
+    from webcompy_server._html import PYSCRIPT_VERSION
+
     html_content = (standalone_dist / "index.html").read_text(encoding="utf-8")
-    assert "/_webcompy-assets/pyodide/pyodide.mjs" in html_content
+    assert f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs" in html_content
 
 
 def test_standalone_static_has_local_lockfile_url(standalone_dist):
+    from webcompy_server._html import PYSCRIPT_VERSION
+
     html_content = (standalone_dist / "index.html").read_text(encoding="utf-8")
-    assert "/_webcompy-assets/pyodide/pyodide-lock.json" in html_content
+    assert f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json" in html_content
 
 
 def test_standalone_static_runtime_assets_exist(standalone_dist):
-    assert (standalone_dist / "_webcompy-assets" / "core.js").exists()
-    assert (standalone_dist / "_webcompy-assets" / "core.css").exists()
-    assert (standalone_dist / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
+    from webcompy_server._html import PYSCRIPT_VERSION
+
+    version_dir = standalone_dist / "_webcompy-assets" / PYSCRIPT_VERSION
+    assert (version_dir / "core.js").exists()
+    assert (version_dir / "core.css").exists()
+    assert (version_dir / "pyodide" / "pyodide.mjs").exists()
+    assert not (standalone_dist / "_webcompy-assets" / "core.js").exists()

@@ -3,7 +3,7 @@
 ## 1. Core versioned runtime path prefix and server/CLI alignment
 
 - [x] 1.1 Add `get_runtime_asset_prefix(pyscript_version: str = PYSCRIPT_VERSION)` in `packages/webcompy-server/src/webcompy_server/_html.py`, update `_generate_html_impl()` to emit `{base_url}{runtime_prefix}/...` URLs when `runtime_serving="local"`, and update `tests/test_html_generation.py` and `tests/test_runtime_local_integration.py` (preserving `tests/.dualrun/ineligible.json` line pins).
-- [ ] 1.2 Update `packages/webcompy-cli/src/webcompy_cli/_generate.py`, `_server.py` (versioned route + `Cache-Control` headers for prod `immutable` and dev `max-age=86400`), and `_pwa.py` (`RUNTIME_ASSET_PREFIX`); update `tests/test_pwa_sw_generation.py`, `tests/test_build_runtime_local.py`, `tests/test_build_standalone.py`, and add ASGI runtime-asset header/404 tests in `tests/test_cli_resource_endpoint.py`.
+- [x] 1.2 Update `packages/webcompy-cli/src/webcompy_cli/_generate.py`, `_server.py` (versioned route + `Cache-Control` headers for prod `immutable` and dev `max-age=86400`), and `_pwa.py` (`RUNTIME_ASSET_PREFIX`); update `tests/test_pwa_sw_generation.py`, `tests/test_build_runtime_local.py`, `tests/test_build_standalone.py`, and add ASGI runtime-asset header/404 tests in `tests/test_cli_resource_endpoint.py`.
 - [ ] 1.3 Parameterize `packages/webcompy-cli/src/webcompy_cli/_browser_test_harness.py` (`build_py_config`, `generate_harness_html`, `create_harness_server`) with `pyscript_version` using `get_runtime_asset_prefix()`, and update/extend `tests/test_browser_test_harness.py`.
 
 ## 2. Docs demo iframe inheritance and E2E updates

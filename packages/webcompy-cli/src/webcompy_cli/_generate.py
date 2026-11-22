@@ -22,6 +22,7 @@ from webcompy_cli._server import create_asgi_app
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
+from webcompy_server._html import PYSCRIPT_VERSION, get_runtime_asset_prefix
 
 
 async def generate_static_site(app: WebComPyApp | None = None):
@@ -124,8 +125,9 @@ async def generate_static_site(app: WebComPyApp | None = None):
             print(dst)
 
     if artifacts.runtime_asset_files:
+        runtime_prefix = get_runtime_asset_prefix(PYSCRIPT_VERSION)
         for rel_path, src_path in artifacts.runtime_asset_files.items():
-            dst = dist_dir / "_webcompy-assets" / rel_path
+            dst = dist_dir / runtime_prefix / rel_path
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_path, dst)
             print(dst)

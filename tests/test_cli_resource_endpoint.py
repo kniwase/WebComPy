@@ -249,3 +249,71 @@ class TestResourceEndpointDisabled:
                 response = await client.get("/_webcompy-resource/templates/card.html")
 
         assert response.status_code == 404
+
+
+class TestRuntimeAssetEndpoint:
+    def _setup(self, tmp_path: Path, *, mode: str):
+        pkg, _app_module, build_config = _setup_app_in_pkg(tmp_path, {})
+        runtime_dir = pkg / ".webcompy_modules" / "runtime-assets" / "current"
+        runtime_dir.mkdir(parents=True)
+        core_js = runtime_dir / "core.js"
+        core_js.write_text("export const ok = true;\n", encoding="utf-8")
+
+        artifacts = BuildArtifacts(
+            app_version="test-version",
+            wheel_filename="test.whl",
+            app_package_files={"test.whl": (b"x", "application/zip")},
+            runtime_serving="local",
+            runtime_asset_files={"core.js": core_js},
+            dev_mode=(mode == "dev"),
+        )
+
+        from webcompy.app._app import WebComPyApp
+        from webcompy.app._config import WebComPyAppConfig
+
+        app = WebComPyApp(
+            root_component=lambda _: None,
+            config=WebComPyAppConfig(base_url="/"),
+        )
+        return app, build_config, artifacts
+
+    @pytest.mark.asyncio
+    async def test_prod_mode_serves_versioned_runtime_with_immutable_cache(self, tmp_path: Path) -> None:
+        from webcompy_cli._server import create_asgi_app
+        from webcompy_server._html import PYSCRIPT_VERSION
+
+        app, build_config, artifacts = self._setup(tmp_path, mode="prod")
+        with (
+            patch("webcompy_cli._server.resolve_build_artifacts", return_value=artifacts),
+            patch("webcompy_cli._server.get_static_files", return_value=()),
+        ):
+            serving = create_asgi_app(app, build_config, mode="prod")
+            transport = httpx.ASGITransport(app=serving.asgi)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                ok_res = await client.get(f"/_webcompy-assets/{PYSCRIPT_VERSION}/core.js")
+                unversioned_res = await client.get("/_webcompy-assets/core.js")
+                mismatched_res = await client.get("/_webcompy-assets/2026.3.1/core.js")
+
+        assert ok_res.status_code == 200
+        assert ok_res.headers.get("cache-control") == "public, max-age=31536000, immutable"
+        assert "export const ok = true;" in ok_res.text
+        assert unversioned_res.status_code == 404
+        assert mismatched_res.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_dev_mode_serves_versioned_runtime_with_revalidate_cache(self, tmp_path: Path) -> None:
+        from webcompy_cli._server import create_asgi_app
+        from webcompy_server._html import PYSCRIPT_VERSION
+
+        app, build_config, artifacts = self._setup(tmp_path, mode="dev")
+        with (
+            patch("webcompy_cli._server.resolve_build_artifacts", return_value=artifacts),
+            patch("webcompy_cli._server.get_static_files", return_value=()),
+        ):
+            serving = create_asgi_app(app, build_config, mode="dev")
+            transport = httpx.ASGITransport(app=serving.asgi)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                ok_res = await client.get(f"/_webcompy-assets/{PYSCRIPT_VERSION}/core.js")
+
+        assert ok_res.status_code == 200
+        assert ok_res.headers.get("cache-control") == "max-age=86400, must-revalidate"

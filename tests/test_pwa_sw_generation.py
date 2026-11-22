@@ -15,7 +15,7 @@ from webcompy_cli._pwa import (
     runtime_entry_urls,
 )
 from webcompy_cli.config import ManifestConfig, PWAConfig, RuntimeCachingRule
-from webcompy_server._html import PYSCRIPT_BASE_URL
+from webcompy_server._html import PYSCRIPT_BASE_URL, PYSCRIPT_VERSION
 
 
 def _pwa(**kwargs) -> PWAConfig:
@@ -31,10 +31,10 @@ def _make_dist(tmp_path: Path) -> Path:
         "documents/foo/index.html": "<html></html>",
         "_webcompy-app-package/app-0+sha.deadbeef-py3-none-any.whl": "wheel",
         "_webcompy-ui/index.css": "css",
-        "_webcompy-assets/pyodide/pyodide.mjs": "runtime",
-        "_webcompy-assets/pyodide/pyodide.asm.wasm": "runtimewasm",
-        "_webcompy-assets/core.js": "core",
-        "_webcompy-assets/core.css": "corecss",
+        f"_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs": "runtime",
+        f"_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.asm.wasm": "runtimewasm",
+        f"_webcompy-assets/{PYSCRIPT_VERSION}/core.js": "core",
+        f"_webcompy-assets/{PYSCRIPT_VERSION}/core.css": "corecss",
         "_webcompy-assets/packages/numpy-1.0-py3-none-any.whl": "wasmwheel",
         "manifest.webmanifest": "{}",
         "sw.js": "old",
@@ -88,16 +88,16 @@ class TestBuildPrecacheEntries:
     def test_runtime_excluded_by_default(self, tmp_path):
         dist = _make_dist(tmp_path)
         entries = build_precache_entries(_pwa(), dist_dir=dist, runtime_asset_files=RUNTIME_FILES)
-        assert "_webcompy-assets/pyodide/pyodide.mjs" not in entries
-        assert "_webcompy-assets/core.js" not in entries
-        assert "_webcompy-assets/core.css" not in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs" not in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/core.js" not in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/core.css" not in entries
 
     def test_runtime_opt_in_local_includes_and_warns(self, tmp_path, capsys):
         dist = _make_dist(tmp_path)
-        runtime_files = {rel: dist / "_webcompy-assets" / rel for rel in RUNTIME_FILES}
+        runtime_files = {rel: dist / "_webcompy-assets" / PYSCRIPT_VERSION / rel for rel in RUNTIME_FILES}
         entries = build_precache_entries(_pwa(precache_runtime=True), dist_dir=dist, runtime_asset_files=runtime_files)
-        assert "_webcompy-assets/pyodide/pyodide.mjs" in entries
-        assert "_webcompy-assets/core.js" in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs" in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/core.js" in entries
         err = capsys.readouterr().err
         assert "precache_runtime enabled" in err
         assert "MB" in err
@@ -159,10 +159,10 @@ class TestPrecacheEntriesForArtifacts:
 
     def test_local_runtime_not_included_without_opt_in(self, tmp_path):
         dist = _make_dist(tmp_path)
-        runtime_files = {rel: dist / "_webcompy-assets" / rel for rel in RUNTIME_FILES}
+        runtime_files = {rel: dist / "_webcompy-assets" / PYSCRIPT_VERSION / rel for rel in RUNTIME_FILES}
         artifacts = self._artifacts(runtime_asset_files=runtime_files)
         entries = precache_entries_for_artifacts(_pwa(), artifacts, dist_dir=dist)
-        assert "_webcompy-assets/pyodide/pyodide.mjs" not in entries
+        assert f"_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs" not in entries
 
     def test_cdn_urls_only_when_opt_in(self, capsys):
         artifacts = self._artifacts(runtime_asset_files=None, lockfile_url="https://cdn/lock.json")
