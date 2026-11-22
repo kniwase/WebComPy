@@ -68,6 +68,7 @@
   "tests/test_lockfile_sync.py": "top-level import from 'webcompy_cli._exception' at line 6",
   "tests/test_markdown_for.py": "top-level import of unmounted module 'tests.conftest' at line 7",
   "tests/test_nested_dynamic.py": "top-level import of unmounted module 'tests.conftest' at line 3",
+  "tests/test_nested_loop_shutdown.py": "pragma 'browser-dualrun: skip'",
   "tests/test_node_index_base_consistency.py": "top-level import of unmounted module 'tests.conftest' at line 7",
   "tests/test_plugin_render_context_init.py": "module-scope side-effecting call at line 14",
   "tests/test_plugin_system.py": "top-level import of unmounted module 'tests.conftest' at line 5",
