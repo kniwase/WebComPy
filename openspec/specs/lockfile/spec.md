@@ -59,15 +59,20 @@ The lock file SHALL use schema version 2, which replaces `pyodide_packages` with
 - **AND** the package SHALL NOT be bundled
 
 ### Requirement: The lock file shall be validated against current dependencies
-When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the union of `explicit` entries in `pure_python_packages` and `explicit` entries in `wasm_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions.
+When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the union of `explicit` entries in `pure_python_packages` and `explicit` entries in `wasm_packages`, AND that the lock file's recorded `pyscript_version` (and resolved `pyodide_version`) matches the active `PYSCRIPT_VERSION`. If dependencies have changed or the recorded runtime versions differ from the active `PYSCRIPT_VERSION`, the lock file SHALL be treated as stale and regenerated automatically. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions.
 
 #### Scenario: Lock file matches dependencies
 - **WHEN** the lock file's explicit dependencies match `AppConfig.dependencies`
+- **AND** its `pyscript_version` and `pyodide_version` match the active runtime pin
 - **THEN** the lock file SHALL be used as-is
 
 #### Scenario: Lock file is stale
 - **WHEN** `AppConfig.dependencies` has been modified since the lock file was generated
 - **THEN** the lock file SHALL be regenerated automatically
+
+#### Scenario: Lock file has mismatched PyScript or Pyodide version
+- **WHEN** an existing lock file records a different `pyscript_version` or `pyodide_version` than the active `PYSCRIPT_VERSION` (for example `2026.3.1` / `0.29.3` when `2026.7.3` / `314.0.3` is pinned)
+- **THEN** the lock file SHALL be treated as stale and regenerated automatically for the active `PYSCRIPT_VERSION`
 
 #### Scenario: Pure-Python package missing from local environment
 - **WHEN** a package listed in `pure_python_packages` with `in_pyodide_cdn=false` is not found in the local Python environment via `importlib.util.find_spec()`

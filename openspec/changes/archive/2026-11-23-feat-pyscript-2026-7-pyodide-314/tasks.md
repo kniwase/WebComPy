@@ -23,4 +23,4 @@
 
 ## 5. Spec synchronization and change archive
 
-- [ ] 5.1 Confirm `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md` align with the modified `dependency-resolver`, `pyscript-bundle`, and `lockfile` specs, sync delta specs to `openspec/specs/`, archive `feat-pyscript-2026-7-pyodide-314`, and verify `/home/kniwase/.npm-global/bin/openspec validate --specs`, `/home/kniwase/.npm-global/bin/openspec validate --changes`, `python3 scripts/check-docstrings.py`, and `python3 scripts/check-doc-spec-refs.py` all pass.
+- [x] 5.1 Confirm `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md` align with the modified `dependency-resolver`, `pyscript-bundle`, and `lockfile` specs, sync delta specs to `openspec/specs/`, archive `feat-pyscript-2026-7-pyodide-314`, and verify `/home/kniwase/.npm-global/bin/openspec validate --specs`, `/home/kniwase/.npm-global/bin/openspec validate --changes`, `python3 scripts/check-docstrings.py`, and `python3 scripts/check-doc-spec-refs.py` all pass.
