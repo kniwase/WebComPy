@@ -372,8 +372,12 @@ def resolve_lockfile(
 ) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
+        expected_pyodide_version = get_pyodide_version(pyscript_version)
+        version_matches = (
+            existing.pyscript_version == pyscript_version and existing.pyodide_version == expected_pyodide_version
+        )
         issues = validate_lockfile(existing, dependencies)
-        if not issues:
+        if version_matches and not issues:
             return existing, [], []
     try:
         lockfile, errors, warnings = generate_lockfile(
