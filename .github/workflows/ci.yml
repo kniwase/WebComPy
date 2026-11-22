@@ -186,6 +186,7 @@ jobs:
     needs: [detect-scope, lint, typecheck, test]
     if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash -eo pipefail {0}
@@ -245,6 +246,7 @@ jobs:
     if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-e2e-changes == 'true') && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [detect-scope, lint, typecheck, generate, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash -eo pipefail {0}
@@ -318,6 +320,7 @@ jobs:
     if: ${{ needs.detect-scope.outputs.has-generate-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [detect-scope, generate]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash -eo pipefail {0}
@@ -413,6 +416,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          python-version: "3.14"
 
       - run: uv sync --dev --no-group docs
 

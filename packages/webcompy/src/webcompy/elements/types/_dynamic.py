@@ -67,10 +67,10 @@ def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: A
 
             aio_run(_safe_refresh())
         else:
-            import nest_asyncio
+            import nest_asyncio2
 
             if not getattr(loop, "_nest_asyncio_patched", False):
-                nest_asyncio.apply(loop)
+                nest_asyncio2.apply(loop)
                 loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
             loop.run_until_complete(refresh(*args))
 
