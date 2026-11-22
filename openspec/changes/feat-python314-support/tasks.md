@@ -8,7 +8,7 @@
 
 ## 2. Migrate Nested Event-Loop Call Sites
 
-- [ ] 2.1 Update `packages/webcompy/src/webcompy/aio/_aio.py`, `packages/webcompy/src/webcompy/elements/types/_dynamic.py`, and `packages/webcompy-testing/src/webcompy_testing/_utils.py` to import and apply `nest_asyncio2` (keeping the `_nest_asyncio_patched` guard), and verify no non-archive runtime/package references to `nest_asyncio` remain via `git grep`
+- [x] 2.1 Update `packages/webcompy/src/webcompy/aio/_aio.py`, `packages/webcompy/src/webcompy/elements/types/_dynamic.py`, and `packages/webcompy-testing/src/webcompy_testing/_utils.py` to import and apply `nest_asyncio2` (keeping the `_nest_asyncio_patched` guard), and verify no non-archive runtime/package references to `nest_asyncio` remain via `git grep`
 
 ## 3. Python 3.14 Regression Tests & Compatibility Audit
 
