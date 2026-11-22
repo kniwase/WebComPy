@@ -8,7 +8,7 @@
 
 ## 2. Docs demo iframe inheritance and E2E updates
 
-- [ ] 2.1 Update `docs_app/static/_demos/standard.html` to dynamically resolve and validate `core.js`, `core.css`, `interpreter`, and `lockFileURL` from the parent document, update `e2e/core/test_standalone.py` and `e2e/core/test_runtime_local.py` for versioned paths, and verify `standalone`, `runtime-local`, `docs-home`, `docs-demos`, and `docs-matplotlib` E2E suites.
+- [x] 2.1 Update `docs_app/static/_demos/standard.html` to dynamically resolve and validate `core.js`, `core.css`, `interpreter`, and `lockFileURL` from the parent document, update `e2e/core/test_standalone.py` and `e2e/core/test_runtime_local.py` for versioned paths, and verify `standalone`, `runtime-local`, `docs-home`, `docs-demos`, and `docs-matplotlib` E2E suites.
 
 ## 3. Full verification
 
