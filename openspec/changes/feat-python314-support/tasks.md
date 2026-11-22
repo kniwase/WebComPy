@@ -3,7 +3,7 @@
 ## 1. Python 3.14 Environment Pin & Dependency Updates
 
 - [x] 1.1 Create `.python-version` (`3.14`) and add `"Programming Language :: Python :: 3.14"` to `classifiers` in all four `packages/*/pyproject.toml` while keeping `requires-python = ">=3.12"`, `[tool.ruff] target-version = "py312"`, and `[tool.pyright] pythonVersion = "3.12"`; verify `uv python find` selects 3.14
-- [ ] 1.2 Replace `nest-asyncio>=1.6.0` with `nest-asyncio2>=1.7.4` in `packages/webcompy-server/pyproject.toml` and root `pyproject.toml`, relax `[dependency-groups] docs` `numpy==2.2.5` to `numpy>=2.2.5,<3` in `pyproject.toml`, and run `uv lock && uv sync --all-groups` to verify lockfile resolution and prebuilt wheel installation on Python 3.14
+- [x] 1.2 Replace `nest-asyncio>=1.6.0` with `nest-asyncio2>=1.7.4` in `packages/webcompy-server/pyproject.toml` and root `pyproject.toml`, relax `[dependency-groups] docs` `numpy==2.2.5` to `numpy>=2.2.5,<3` in `pyproject.toml`, and run `uv lock && uv sync --all-groups` to verify lockfile resolution and prebuilt wheel installation on Python 3.14
 - [ ] 1.3 Pin `python-version: "3.14"` on `astral-sh/setup-uv@v7` in `.github/actions/setup-environment/action.yml` and `.github/workflows/ci.yml` (`review` job); verify workflow YAML parses cleanly
 
 ## 2. Migrate Nested Event-Loop Call Sites
