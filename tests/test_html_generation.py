@@ -4,7 +4,7 @@ import re
 import pytest
 
 from webcompy.components._generator import define_component
-from webcompy_server._html import generate_html
+from webcompy_server._html import PYSCRIPT_VERSION, generate_html
 from webcompy_testing import create_test_app, render_app_html
 
 
@@ -112,16 +112,17 @@ class TestGenerateHtmlWasmLocalServing:
 
     def test_lockfile_url_local(self):
         app = _make_app()
+        expected = f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json"
         html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-            lockfile_url="/_webcompy-assets/pyodide/pyodide-lock.json",
+            lockfile_url=expected,
         )
         config = _extract_py_config(html_str)
-        assert config["lockFileURL"] == "/_webcompy-assets/pyodide/pyodide-lock.json"
+        assert config["lockFileURL"] == expected
 
     def test_combined_wasm_local_and_lockfile_url(self):
         app = _make_app()
@@ -173,7 +174,7 @@ class TestGenerateHtmlRuntimeLocalServing:
             runtime_serving="local",
         )
         script_src = _extract_script_src(html_str)
-        assert script_src == "/_webcompy-assets/core.js"
+        assert script_src == f"/_webcompy-assets/{PYSCRIPT_VERSION}/core.js"
 
     def test_runtime_local_css_href(self):
         app = _make_app()
@@ -186,7 +187,7 @@ class TestGenerateHtmlRuntimeLocalServing:
             runtime_serving="local",
         )
         css_href = _extract_css_href(html_str)
-        assert css_href == "/_webcompy-assets/core.css"
+        assert css_href == f"/_webcompy-assets/{PYSCRIPT_VERSION}/core.css"
 
     def test_runtime_local_py_config_includes_interpreter_and_lockfile(self):
         app = _make_app()
@@ -199,8 +200,8 @@ class TestGenerateHtmlRuntimeLocalServing:
             runtime_serving="local",
         )
         config = _extract_py_config(html_str)
-        assert config["interpreter"] == "/_webcompy-assets/pyodide/pyodide.mjs"
-        assert config["lockFileURL"] == "/_webcompy-assets/pyodide/pyodide-lock.json"
+        assert config["interpreter"] == f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs"
+        assert config["lockFileURL"] == f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json"
 
     def test_runtime_cdn_no_interpreter_no_lockfile(self):
         app = _make_app()
@@ -242,12 +243,12 @@ class TestGenerateHtmlRuntimeLocalServing:
             runtime_serving="local",
         )
         config = _extract_py_config(html_str)
-        assert config["interpreter"] == "/myapp/_webcompy-assets/pyodide/pyodide.mjs"
-        assert config["lockFileURL"] == "/myapp/_webcompy-assets/pyodide/pyodide-lock.json"
+        assert config["interpreter"] == f"/myapp/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs"
+        assert config["lockFileURL"] == f"/myapp/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json"
         script_src = _extract_script_src(html_str)
         css_href = _extract_css_href(html_str)
-        assert script_src == "/myapp/_webcompy-assets/core.js"
-        assert css_href == "/myapp/_webcompy-assets/core.css"
+        assert script_src == f"/myapp/_webcompy-assets/{PYSCRIPT_VERSION}/core.js"
+        assert css_href == f"/myapp/_webcompy-assets/{PYSCRIPT_VERSION}/core.css"
 
     def test_runtime_local_overrides_lockfile_url(self):
         app = _make_app()
@@ -261,8 +262,8 @@ class TestGenerateHtmlRuntimeLocalServing:
             lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
         )
         config = _extract_py_config(html_str)
-        assert config["lockFileURL"] == "/_webcompy-assets/pyodide/pyodide-lock.json"
-        assert config["interpreter"] == "/_webcompy-assets/pyodide/pyodide.mjs"
+        assert config["lockFileURL"] == f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json"
+        assert config["interpreter"] == f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs"
 
     def test_runtime_cdn_wasm_local_lockfile_url(self):
         app = _make_app()
