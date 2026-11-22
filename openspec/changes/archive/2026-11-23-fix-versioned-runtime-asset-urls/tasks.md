@@ -17,4 +17,4 @@
 
 ## 4. Spec synchronization and archive
 
-- [ ] 4.1 Archive `fix-versioned-runtime-asset-urls`, sync delta specs to `openspec/specs/`, update the legacy unversioned runtime path references in `openspec/specs/cli/spec.md`, and verify `openspec validate --specs`, `openspec validate --changes`, `scripts/check-doc-spec-refs.py`, and `scripts/check-docstrings.py` all pass.
+- [x] 4.1 Archive `fix-versioned-runtime-asset-urls`, sync delta specs to `openspec/specs/`, update the legacy unversioned runtime path references in `openspec/specs/cli/spec.md`, and verify `openspec validate --specs`, `openspec validate --changes`, `scripts/check-doc-spec-refs.py`, and `scripts/check-docstrings.py` all pass.
