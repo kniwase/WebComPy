@@ -12,8 +12,8 @@
 
 ## 3. Full verification
 
-- [ ] 3.1 Run all static, docstring, and type checks (`ruff check .`, `ruff format --check .`, `pydoclint`, `check-browser-imports.py`, `check-docstrings.py`, `check-doc-spec-refs.py`, `pyright`) and the full CPython unit test suite (`uv run python -m pytest tests/ --tb=short`), confirming zero failures.
-- [ ] 3.2 Run browser-tier tests (`scripts/run-browser-tests.sh --tb=short`, `--probes --tb=short`), verify `docs_app` SSG output (`dist/_webcompy-assets/{PYSCRIPT_VERSION}/...` present and unversioned `dist/_webcompy-assets/core.js` absent), and verify the full E2E suite (`scripts/run-e2e-tests.sh --parallel`).
+- [x] 3.1 Run all static, docstring, and type checks (`ruff check .`, `ruff format --check .`, `pydoclint`, `check-browser-imports.py`, `check-docstrings.py`, `check-doc-spec-refs.py`, `pyright`) and the full CPython unit test suite (`uv run python -m pytest tests/ --tb=short`), confirming zero failures.
+- [x] 3.2 Run browser-tier tests (`scripts/run-browser-tests.sh --tb=short`, `--probes --tb=short`), verify `docs_app` SSG output (`dist/_webcompy-assets/{PYSCRIPT_VERSION}/...` present and unversioned `dist/_webcompy-assets/core.js` absent), and verify the full E2E suite (`scripts/run-e2e-tests.sh --parallel`).
 
 ## 4. Spec synchronization and archive
 
