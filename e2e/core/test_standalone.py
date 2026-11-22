@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 
 import pytest
+
+from webcompy_server._html import PYSCRIPT_VERSION
 
 pytestmark = [
     pytest.mark.e2e,
@@ -63,16 +66,23 @@ def test_standalone_static_no_cdn_urls(standalone_dist):
 
 def test_standalone_static_has_local_interpreter(standalone_dist):
     html_content = (standalone_dist / "index.html").read_text(encoding="utf-8")
-    assert "/_webcompy-assets/pyodide/pyodide.mjs" in html_content
+    assert f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide.mjs" in html_content
 
 
 def test_standalone_static_has_local_lockfile_url(standalone_dist):
     html_content = (standalone_dist / "index.html").read_text(encoding="utf-8")
-    assert "/_webcompy-assets/pyodide/pyodide-lock.json" in html_content
+    assert f"/_webcompy-assets/{PYSCRIPT_VERSION}/pyodide/pyodide-lock.json" in html_content
 
 
 def test_standalone_static_runtime_assets_exist(standalone_dist):
-    assert (standalone_dist / "_webcompy-assets" / "core.js").exists()
-    assert (standalone_dist / "_webcompy-assets" / "core.css").exists()
-    assert (standalone_dist / "_webcompy-assets" / "core-BuLtL7jM.js").exists()
-    assert (standalone_dist / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
+    version_dir = standalone_dist / "_webcompy-assets" / PYSCRIPT_VERSION
+    core_js = version_dir / "core.js"
+    assert core_js.exists()
+    assert (version_dir / "core.css").exists()
+    assert not (standalone_dist / "_webcompy-assets" / "core.js").exists()
+    imported_chunks = re.findall(r'from\s*["\']\./([^"\']+\.js)["\']', core_js.read_text(encoding="utf-8"))
+    assert imported_chunks
+    for chunk in imported_chunks:
+        assert (version_dir / chunk).exists()
+    assert (version_dir / "pyodide" / "pyodide.mjs").exists()
+    assert (version_dir / "pyodide" / "pyodide.asm.mjs").exists()

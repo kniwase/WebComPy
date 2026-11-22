@@ -22,9 +22,9 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     except RuntimeError:
         return asyncio.run(coro)
     else:
-        import nest_asyncio
+        import nest_asyncio2
 
         if not getattr(loop, "_nest_asyncio_patched", False):
-            nest_asyncio.apply(loop)
+            nest_asyncio2.apply(loop)
             loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
         return loop.run_until_complete(coro)

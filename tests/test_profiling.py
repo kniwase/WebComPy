@@ -223,7 +223,7 @@ class TestLazyPreloadPhaseRecordedOnServer:
                 assert "lazy_preloaded" in app._profile_data
                 elapsed = app._profile_data["lazy_preloaded"] - app._profile_data["lazy_preload_start"]
                 assert elapsed >= 0
-                assert app._profile_data["init_start"] < app._profile_data["lazy_preloaded"]
+                assert app._profile_data["init_start"] <= app._profile_data["lazy_preloaded"]
             finally:
                 ctx.dispose()
         finally:

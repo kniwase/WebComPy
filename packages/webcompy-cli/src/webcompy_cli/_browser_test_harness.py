@@ -29,7 +29,7 @@ from webcompy_cli._pyodide_lock import fetch_pyodide_lock, get_pyodide_version
 from webcompy_cli._runtime_downloader import download_runtime_assets
 from webcompy_cli._utils import get_webcompy_packge_dir
 from webcompy_cli._wheel_builder import make_browser_webcompy_wheel, make_wheel
-from webcompy_server._html import PYSCRIPT_VERSION
+from webcompy_server._html import PYSCRIPT_VERSION, get_runtime_asset_prefix
 
 SUPPLY_MODE_ENV_VAR = "WEBCOMPY_BROWSER_SOURCE"
 BROWSER_TEST_DIR = "tests/browser"
@@ -130,11 +130,32 @@ def build_py_config(
     test_relpaths: list[str],
     framework_files: dict[str, list[str]] | None = None,
     pyodide_package_names: tuple[str, ...] = _HARNESS_PYODIDE_PACKAGES,
+    pyscript_version: str = PYSCRIPT_VERSION,
 ) -> dict:
-    """Generate the harness py-config dictionary with parity to ``webcompy_server._html``."""
+    """Generate the harness py-config dictionary with parity to ``webcompy_server._html``.
+
+    Args:
+        base_url: Base URL where the harness server is mounted.
+        supply_mode: Package delivery mode, ``"wheel"`` or ``"source"``.
+        wheel_names: Built framework wheel filenames for wheel supply mode.
+        test_relpaths: Relative paths of browser test modules to mount.
+        framework_files: Framework source file mapping required when
+            ``supply_mode`` is ``"source"``.
+        pyodide_package_names: Pre-resolved Pyodide CDN package names.
+        pyscript_version: Target PyScript version whose local runtime prefix is
+            emitted in ``interpreter`` and ``lockFileURL``.
+
+    Returns:
+        Dictionary suitable for JSON serialization in ``<script type="py" config>``.
+
+    Raises:
+        ValueError: If ``supply_mode`` is ``"source"`` and ``framework_files`` is ``None``.
+
+    """
     if supply_mode == "source" and framework_files is None:
         raise ValueError("supply_mode='source' requires the framework source inventory (framework_files)")
     normalized = base_url.rstrip("/")
+    runtime_prefix = get_runtime_asset_prefix(pyscript_version)
     config: dict = {"experimental_create_proxy": "auto"}
     files: dict[str, str] = {}
     for rel in test_relpaths:
@@ -149,8 +170,8 @@ def build_py_config(
         config["packages"] = list(pyodide_package_names)
     if files:
         config["files"] = files
-    config["interpreter"] = f"{normalized}/_webcompy-assets/pyodide/pyodide.mjs"
-    config["lockFileURL"] = f"{normalized}/_webcompy-assets/pyodide/pyodide-lock.json"
+    config["interpreter"] = f"{normalized}/{runtime_prefix}/pyodide/pyodide.mjs"
+    config["lockFileURL"] = f"{normalized}/{runtime_prefix}/pyodide/pyodide-lock.json"
     return config
 
 
@@ -170,17 +191,31 @@ def generate_harness_html(
     *,
     base_url: str,
     source_mounted: bool,
+    pyscript_version: str = PYSCRIPT_VERSION,
 ) -> str:
-    """Render the harness page that boots PyScript with the given py-config."""
+    """Render the harness page that boots PyScript with the given py-config.
+
+    Args:
+        py_config: Harness configuration dictionary to embed on ``<script type="py">``.
+        base_url: Base URL where the harness server is mounted.
+        source_mounted: Whether framework packages are source-mounted rather than wheels.
+        pyscript_version: Target PyScript version whose local ``core.js`` and
+            ``core.css`` paths are referenced.
+
+    Returns:
+        Rendered HTML document string for ``/testharness``.
+
+    """
     normalized = base_url.rstrip("/")
+    runtime_prefix = get_runtime_asset_prefix(pyscript_version)
     config_attr = html_module.escape(json.dumps(py_config), quote=True)
     bootstrap = bootstrap_lines("source" if source_mounted else "wheel")
     return (
         "<!doctype html>"
         "<html>"
         "<head>"
-        f'<link rel="stylesheet" href="{normalized}/_webcompy-assets/core.css">'
-        f'<script type="module" src="{normalized}/_webcompy-assets/core.js"></script>'
+        f'<link rel="stylesheet" href="{normalized}/{runtime_prefix}/core.css">'
+        f'<script type="module" src="{normalized}/{runtime_prefix}/core.js"></script>'
         "</head>"
         "<body>"
         '<div id="webcompy-app"></div>'
@@ -408,11 +443,13 @@ def create_harness_app(
         test_relpaths=test_rels,
         framework_files=framework_files,
         pyodide_package_names=installable,
+        pyscript_version=version,
     )
     harness_html = generate_harness_html(
         py_config,
         base_url=base_url,
         source_mounted=mode == "source",
+        pyscript_version=version,
     )
 
     async def send_runtime_asset(request: Request):
@@ -454,8 +491,9 @@ def create_harness_app(
     async def send_testharness(request: Request):
         return Response(harness_html, media_type="text/html")
 
+    runtime_prefix = get_runtime_asset_prefix(version)
     routes = [
-        Route("/_webcompy-assets/{filename:path}", send_runtime_asset),
+        Route(f"/{runtime_prefix}/{{filename:path}}", send_runtime_asset),
         Route("/_webcompy-test/files/{tree}/{path:path}", send_mounted_file),
         Route("/_webcompy-test/wheels/{filename}", send_wheel),
         Route("/_webcompy-test/config.json", send_config),

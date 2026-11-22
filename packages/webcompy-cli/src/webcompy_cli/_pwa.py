@@ -16,6 +16,7 @@ from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 from webcompy.exception import WebComPyException
+from webcompy_server._html import PYSCRIPT_VERSION, get_runtime_asset_prefix
 
 if TYPE_CHECKING:
     from webcompy_cli._build import BuildArtifacts
@@ -26,7 +27,7 @@ SW_FILENAME = "sw.js"
 PWA_OUTPUT_NAMES = frozenset({MANIFEST_FILENAME, SW_FILENAME})
 MANIFEST_MEDIA_TYPE = "application/manifest+json"
 SW_MEDIA_TYPE = "application/javascript"
-RUNTIME_ASSET_PREFIX = "_webcompy-assets/"
+RUNTIME_ASSET_PREFIX = f"{get_runtime_asset_prefix(PYSCRIPT_VERSION)}/"
 
 _DEFAULT_OFFLINE_HTML = (
     '<!doctype html><html><head><meta charset="utf-8">'
@@ -351,7 +352,7 @@ def build_precache_entries(
         dist_dir: SSG output directory to enumerate, or ``None`` for
             dynamic server mode (no pages to precache).
         runtime_asset_files: Mapping of runtime asset paths (relative to
-            the ``_webcompy-assets/`` prefix) to on-disk source paths, for
+            the versioned ``_webcompy-assets/{PYSCRIPT_VERSION}/`` prefix) to on-disk source paths, for
             local runtime serving.
         cdn_runtime_urls: Absolute CDN entry URLs for runtime precaching
             when the runtime is served from a CDN.

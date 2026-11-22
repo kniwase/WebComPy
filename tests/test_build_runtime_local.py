@@ -61,8 +61,12 @@ def test_runtime_local_static_no_cdn_urls(runtime_local_static_site):
 
 
 def test_runtime_local_static_assets_exist(runtime_local_static_site):
+    from webcompy_server._html import PYSCRIPT_VERSION
+
     dist_dir = runtime_local_static_site
-    assert (dist_dir / "_webcompy-assets" / "core.js").exists()
-    assert (dist_dir / "_webcompy-assets" / "core.css").exists()
-    assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
-    assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide-lock.json").exists()
+    version_dir = dist_dir / "_webcompy-assets" / PYSCRIPT_VERSION
+    assert (version_dir / "core.js").exists()
+    assert (version_dir / "core.css").exists()
+    assert (version_dir / "pyodide" / "pyodide.mjs").exists()
+    assert (version_dir / "pyodide" / "pyodide-lock.json").exists()
+    assert not (dist_dir / "_webcompy-assets" / "core.js").exists()

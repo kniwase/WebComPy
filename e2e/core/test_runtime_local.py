@@ -12,6 +12,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 import pytest
 
+from webcompy_server._html import PYSCRIPT_VERSION
+
 pytestmark = [
     pytest.mark.e2e,
     pytest.mark.skipif(os.environ.get("CI") == "true", reason="Requires external CDN access"),
@@ -183,7 +185,7 @@ def test_runtime_local_html_uses_local_assets(runtime_local_server, page):
         return s ? s.getAttribute('src') : null;
     }""")
     assert script_src is not None
-    assert "/_webcompy-assets/core.js" in script_src
+    assert f"/_webcompy-assets/{PYSCRIPT_VERSION}/core.js" in script_src
 
 
 def test_runtime_local_no_cdn_requests(runtime_local_server, page):
@@ -211,7 +213,10 @@ def test_runtime_local_static_no_cdn_urls(runtime_local_static_site):
 
 def test_runtime_local_static_assets_exist(runtime_local_static_site):
     dist_dir = runtime_local_static_site
-    assert (dist_dir / "_webcompy-assets" / "core.js").exists()
-    assert (dist_dir / "_webcompy-assets" / "core.css").exists()
-    assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
-    assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide-lock.json").exists()
+    version_dir = dist_dir / "_webcompy-assets" / PYSCRIPT_VERSION
+    assert (version_dir / "core.js").exists()
+    assert (version_dir / "core.css").exists()
+    assert not (dist_dir / "_webcompy-assets" / "core.js").exists()
+    assert (version_dir / "pyodide" / "pyodide.mjs").exists()
+    assert (version_dir / "pyodide" / "pyodide.asm.mjs").exists()
+    assert (version_dir / "pyodide" / "pyodide-lock.json").exists()

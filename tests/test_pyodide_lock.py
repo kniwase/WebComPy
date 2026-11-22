@@ -13,6 +13,10 @@ class TestGetPyodideVersion:
         result = get_pyodide_version("2026.3.1")
         assert result == "0.29.3"
 
+    def test_known_version_2026_7_3(self):
+        result = get_pyodide_version("2026.7.3")
+        assert result == "314.0.3"
+
     def test_unknown_version_raises(self):
         try:
             get_pyodide_version("0.0.0")
