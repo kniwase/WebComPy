@@ -11,6 +11,7 @@ from webcompy_cli._lockfile import (
     get_cdn_pure_python_package_names,
     get_wasm_package_names,
     load_lockfile,
+    resolve_lockfile,
     save_lockfile,
     validate_local_environment,
     validate_lockfile,
@@ -489,6 +490,102 @@ class TestGenerateLockfileRuntimeAssets:
         )
         assert lockfile.runtime_serving == "cdn"
         assert lockfile.runtime_assets == {}
+
+    def test_runtime_local_314_uses_pyodide_asm_mjs(self, tmp_path):
+        from unittest.mock import patch
+
+        from webcompy_cli._lockfile import generate_lockfile
+
+        modules_dir = tmp_path / ".webcompy_modules"
+        with patch("webcompy_cli._lockfile.fetch_pyodide_lock", return_value={"packages": {}}):
+            lockfile, _errors, _warnings = generate_lockfile(
+                dependencies=[],
+                pyscript_version="2026.7.3",
+                modules_dir=modules_dir,
+                runtime_serving="local",
+            )
+        assert lockfile.pyodide_version == "314.0.3"
+        assert "pyodide.asm.mjs" in lockfile.runtime_assets
+        assert "pyodide.asm.js" not in lockfile.runtime_assets
+
+
+class TestResolveLockfileVersionInvalidation:
+    def test_reuses_matching_pyscript_and_pyodide_version(self, tmp_path):
+        from unittest.mock import patch
+
+        lockfile_path = tmp_path / "webcompy-lock.json"
+        modules_dir = tmp_path / ".webcompy_modules"
+        save_lockfile(
+            Lockfile(pyodide_version="314.0.3", pyscript_version="2026.7.3"),
+            lockfile_path,
+        )
+
+        with patch("webcompy_cli._lockfile.fetch_pyodide_lock") as mock_fetch:
+            lockfile, errors, _warnings = resolve_lockfile(
+                dependencies=[],
+                pyscript_version="2026.7.3",
+                lockfile_path=lockfile_path,
+                modules_dir=modules_dir,
+            )
+
+        mock_fetch.assert_not_called()
+        assert errors == []
+        assert lockfile is not None
+        assert lockfile.pyscript_version == "2026.7.3"
+        assert lockfile.pyodide_version == "314.0.3"
+
+    def test_regenerates_when_pyscript_version_mismatches(self, tmp_path):
+        from unittest.mock import patch
+
+        lockfile_path = tmp_path / "webcompy-lock.json"
+        modules_dir = tmp_path / ".webcompy_modules"
+        save_lockfile(
+            Lockfile(pyodide_version="0.29.3", pyscript_version="2026.3.1"),
+            lockfile_path,
+        )
+
+        with patch("webcompy_cli._lockfile.fetch_pyodide_lock", return_value={"packages": {}}) as mock_fetch:
+            lockfile, errors, _warnings = resolve_lockfile(
+                dependencies=[],
+                pyscript_version="2026.7.3",
+                lockfile_path=lockfile_path,
+                modules_dir=modules_dir,
+                runtime_serving="local",
+            )
+
+        mock_fetch.assert_called_once()
+        assert errors == []
+        assert lockfile is not None
+        assert lockfile.pyscript_version == "2026.7.3"
+        assert lockfile.pyodide_version == "314.0.3"
+        assert "pyodide.asm.mjs" in lockfile.runtime_assets
+        reloaded = load_lockfile(lockfile_path)
+        assert reloaded is not None
+        assert reloaded.pyscript_version == "2026.7.3"
+        assert reloaded.pyodide_version == "314.0.3"
+
+    def test_regenerates_when_pyodide_version_mismatches(self, tmp_path):
+        from unittest.mock import patch
+
+        lockfile_path = tmp_path / "webcompy-lock.json"
+        modules_dir = tmp_path / ".webcompy_modules"
+        save_lockfile(
+            Lockfile(pyodide_version="0.29.3", pyscript_version="2026.7.3"),
+            lockfile_path,
+        )
+
+        with patch("webcompy_cli._lockfile.fetch_pyodide_lock", return_value={"packages": {}}) as mock_fetch:
+            lockfile, errors, _warnings = resolve_lockfile(
+                dependencies=[],
+                pyscript_version="2026.7.3",
+                lockfile_path=lockfile_path,
+                modules_dir=modules_dir,
+            )
+
+        mock_fetch.assert_called_once()
+        assert errors == []
+        assert lockfile is not None
+        assert lockfile.pyodide_version == "314.0.3"
 
 
 class TestLockfileStandaloneField:

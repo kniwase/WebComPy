@@ -13,6 +13,7 @@ PYODIDE_RUNTIME_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{pyodide_versi
 
 PYSCRIPT_TO_PYODIDE: dict[str, str] = {
     "2026.3.1": "0.29.3",
+    "2026.7.3": "314.0.3",
 }
 
 
@@ -25,7 +26,7 @@ def get_pyodide_version(pyscript_version: str) -> str:
         raise ValueError(
             f"Unknown PyScript version '{pyscript_version}'. "
             f"Known versions: {', '.join(sorted(PYSCRIPT_TO_PYODIDE))}. "
-            f"Update the PYSCRIPT_TO_PYODIDE mapping in webcompy/cli/_pyodide_lock.py."
+            f"Update the PYSCRIPT_TO_PYODIDE mapping in webcompy_cli/_pyodide_lock.py."
         )
     return PYSCRIPT_TO_PYODIDE[pyscript_version]
 

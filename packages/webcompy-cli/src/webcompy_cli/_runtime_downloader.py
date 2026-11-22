@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -15,10 +16,37 @@ PYSCRIPT_OFFLINE_URL_TEMPLATE = "https://pyscript.net/releases/{pyscript_version
 PYODIDE_RUNTIME_ASSETS = [
     "pyodide.mjs",
     "pyodide.asm.wasm",
-    "pyodide.asm.js",
+    "pyodide.asm.mjs",
     "python_stdlib.zip",
     "pyodide-lock.json",
 ]
+
+
+def get_pyodide_runtime_assets(pyodide_version: str) -> list[str]:
+    """Return the Pyodide runtime asset filenames for a given Pyodide version.
+
+    Pyodide 0.30+ and 314.x distribute the WebAssembly glue module as
+    ``pyodide.asm.mjs`` rather than ``pyodide.asm.js``.
+
+    Args:
+        pyodide_version: Target Pyodide distribution version string.
+
+    Returns:
+        Ordered list of runtime asset filenames required for local serving.
+
+    """
+    match = re.match(r"^\s*(\d+)\.(\d+)", pyodide_version)
+    major = int(match.group(1)) if match else 314
+    minor = int(match.group(2)) if match else 0
+    asm_entry = "pyodide.asm.js" if major == 0 and minor < 30 else "pyodide.asm.mjs"
+    return [
+        "pyodide.mjs",
+        "pyodide.asm.wasm",
+        asm_entry,
+        "python_stdlib.zip",
+        "pyodide-lock.json",
+    ]
+
 
 _EXCLUDED_ZIP_NAMES = frozenset(
     {
@@ -148,7 +176,7 @@ def download_runtime_assets(
     pyodide_dest_dir = (dest_dir or modules_dir / "runtime-assets" / pyscript_version) / "pyodide"
     pyodide_cache_dir = modules_dir / "runtime-assets" / pyscript_version / "pyodide"
 
-    for filename in PYODIDE_RUNTIME_ASSETS:
+    for filename in get_pyodide_runtime_assets(pyodide_version):
         cached_path = pyodide_cache_dir / filename
         dest_path = pyodide_dest_dir / filename
         rel_path = f"pyodide/{filename}"

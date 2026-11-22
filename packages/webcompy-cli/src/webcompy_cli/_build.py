@@ -25,7 +25,7 @@ from webcompy_cli._pyodide_downloader import (
     download_wasm_wheels,
     extract_wheel,
 )
-from webcompy_cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
+from webcompy_cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE, get_pyodide_version
 from webcompy_cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy_cli._utils import (
     ensure_webcompy_modules_dir,
@@ -198,7 +198,7 @@ def resolve_build_artifacts(
     if resolved_runtime_serving == "local":
         try:
             runtime_results = download_runtime_assets(
-                lockfile.pyodide_version if lockfile else "0.29.3",
+                lockfile.pyodide_version if lockfile else get_pyodide_version(PYSCRIPT_VERSION),
                 PYSCRIPT_VERSION,
                 modules_dir,
                 lock_file=lockfile,

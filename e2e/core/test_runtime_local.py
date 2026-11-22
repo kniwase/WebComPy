@@ -214,4 +214,5 @@ def test_runtime_local_static_assets_exist(runtime_local_static_site):
     assert (dist_dir / "_webcompy-assets" / "core.js").exists()
     assert (dist_dir / "_webcompy-assets" / "core.css").exists()
     assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
+    assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide.asm.mjs").exists()
     assert (dist_dir / "_webcompy-assets" / "pyodide" / "pyodide-lock.json").exists()

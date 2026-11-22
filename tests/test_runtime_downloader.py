@@ -13,6 +13,7 @@ from webcompy_cli._runtime_downloader import (
     RuntimeDownloadError,
     download_pyscript_bundle,
     download_runtime_assets,
+    get_pyodide_runtime_assets,
 )
 
 FAKE_PYODIDE_DATA_MAP: dict[str, bytes] = {
@@ -20,6 +21,7 @@ FAKE_PYODIDE_DATA_MAP: dict[str, bytes] = {
     "pyodide.mjs": b"pyodide-mjs-data",
     "pyodide.asm.wasm": b"pyodide-asm-wasm-data",
     "pyodide.asm.js": b"pyodide-asm-js-data",
+    "pyodide.asm.mjs": b"pyodide-asm-mjs-data",
     "python_stdlib.zip": b"python-stdlib-data",
 }
 
@@ -70,9 +72,19 @@ class TestPyodideAssetLists:
     def test_pyodide_runtime_assets(self):
         assert "pyodide.mjs" in PYODIDE_RUNTIME_ASSETS
         assert "pyodide.asm.wasm" in PYODIDE_RUNTIME_ASSETS
-        assert "pyodide.asm.js" in PYODIDE_RUNTIME_ASSETS
+        assert "pyodide.asm.mjs" in PYODIDE_RUNTIME_ASSETS
         assert "python_stdlib.zip" in PYODIDE_RUNTIME_ASSETS
         assert "pyodide-lock.json" in PYODIDE_RUNTIME_ASSETS
+
+    def test_get_pyodide_runtime_assets_0_29(self):
+        assets = get_pyodide_runtime_assets("0.29.3")
+        assert "pyodide.asm.js" in assets
+        assert "pyodide.asm.mjs" not in assets
+
+    def test_get_pyodide_runtime_assets_314(self):
+        assets = get_pyodide_runtime_assets("314.0.3")
+        assert "pyodide.asm.mjs" in assets
+        assert "pyodide.asm.js" not in assets
 
 
 class TestDownloadPyscriptBundle:
@@ -161,6 +173,26 @@ class TestDownloadRuntimeAssets:
         assert "pyodide/pyodide.mjs" in results
         assert "pyodide/pyodide.asm.wasm" in results
         assert "pyodide/pyodide.asm.js" in results
+        assert "pyodide/python_stdlib.zip" in results
+        assert "pyodide/pyodide-lock.json" in results
+
+    def test_combines_bundle_with_pyodide_314_assets(self, tmp_path):
+        pyodide_version = "314.0.3"
+        pyscript_version = "2026.7.3"
+        modules_dir = tmp_path / ".webcompy_modules"
+
+        with patch(
+            "webcompy_cli._runtime_downloader._download_file",
+            side_effect=_make_bundle_and_pyodide_mock(),
+        ):
+            results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
+
+        for name in FAKE_BUNDLE_FILES:
+            assert name in results
+        assert "pyodide/pyodide.mjs" in results
+        assert "pyodide/pyodide.asm.wasm" in results
+        assert "pyodide/pyodide.asm.mjs" in results
+        assert "pyodide/pyodide.asm.js" not in results
         assert "pyodide/python_stdlib.zip" in results
         assert "pyodide/pyodide-lock.json" in results
 
