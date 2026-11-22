@@ -127,7 +127,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/_version_sweep.py`, `scripts/run-browser-version-sweep.sh` | `browser-probes/spec.md` |
 | `webcompy_cli/_inspect_pyexec.py`, `webcompy_testing/browser_runner/` (evaluate) | `inspect-pyexec/spec.md`, `browser-test-harness/spec.md` |
 | `tests/browser/probes/` | `browser-probes/spec.md`, `browser-test-harness/spec.md` |
-| `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
+| `docs_app/` | `docs-site-home/spec.md`, `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
 | `scripts/check-docstrings.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
@@ -182,7 +182,8 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `dependency-resolver` | Classification of app dependencies for browser deployment |
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
-| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` / `Basic Usage` / `Advanced Usage` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors, rendered-site body cross-links |
+| `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, feature cards, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Basic Usage` / `Advanced Usage` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
 | `package-kind` | `PackageKind` enum for classifying browser dependencies |
 | `lockfile` | Reproducible builds via `webcompy-lock.json` |

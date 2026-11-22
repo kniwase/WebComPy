@@ -14,7 +14,7 @@ Unlike state (`Signal`) which has cell semantics, SSE messages have *occurrence*
 ```python
 from webcompy.realtime import use_event_source
 
-@define_component("sse-alerts")
+@define_component(custom_element_name="sse-alerts")
 def Alerts(context):
     alerts = use_event_source("/api/alerts")
 

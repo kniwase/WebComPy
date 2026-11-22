@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.ui.code_block import CodeBlock
 from webcompy.utils import strip_multiline_text
 
-from ..components.ui import DocsSection, InlineCode
+from ..components.ui import DocsButton, DocsCard, DocsLink, DocsSection
 
 
 def _code(code: str) -> str:
@@ -14,35 +14,73 @@ def _code(code: str) -> str:
 @define_component()
 def HomeContent(_: ComponentContext[None]):
     return html.DIV(
-        {"class": "page-container"},
-        DocsSection(
-            {"heading": "What is WebComPy"},
-            slots={
-                "default": lambda: html.DIV(
-                    {},
-                    "WebComPy is a Python frontend framework for PyScript with the following features.",
-                    html.UL(
-                        {},
-                        html.LI({}, "Component-based declarative rendering"),
-                        html.LI({}, "Automatic DOM refreshing"),
-                        html.LI({}, "Built-in router"),
-                        html.LI(
-                            {},
-                            "CLI tools (Project scaffolding, Dev server, Static Site Generator)",
-                        ),
-                        html.LI({}, "Dependency management with lock file sync"),
-                    ),
-                )
-            },
+        {"class": "page-container home-page"},
+        html.SECTION(
+            {"class": "hero"},
+            html.H1({}, "Build Frontend in Python"),
+            html.P(
+                {"class": "hero-subtitle"},
+                "Python-native reactive components with routing and SSR/SSG — "
+                "all in Python, running in the browser via PyScript.",
+            ),
+            html.DIV(
+                {"class": "hero-actions"},
+                DocsButton(
+                    {
+                        "text": "Get Started",
+                        "to": "/documents/getting-started/what-is-webcompy",
+                        "variant": "primary",
+                    }
+                ),
+                DocsButton(
+                    {
+                        "text": "View on GitHub",
+                        "href": "https://github.com/kniwase/WebComPy",
+                    }
+                ),
+            ),
+        ),
+        html.SECTION(
+            {"class": "feature-cards"},
+            DocsCard(
+                {"title": "Reactive by default"},
+                slots={
+                    "default": lambda: (
+                        "Signals and computed values keep the DOM in sync automatically — no manual refresh calls."
+                    )
+                },
+            ),
+            DocsCard(
+                {"title": "Components & Router"},
+                slots={
+                    "default": lambda: (
+                        "Function-style components with props, slots, and scoped CSS, plus client-side routing in history or hash mode."
+                    )
+                },
+            ),
+            DocsCard(
+                {"title": "CLI, SSR & SSG"},
+                slots={
+                    "default": lambda: (
+                        "Scaffold projects, run a dev server with live reload, and pre-render pages with server-side rendering or static site generation."
+                    )
+                },
+            ),
+            DocsCard(
+                {"title": "PyScript runtime"},
+                slots={
+                    "default": lambda: (
+                        "Your Python runs in the browser via PyScript — reuse the ecosystem you know, including numpy and friends."
+                    )
+                },
+            ),
         ),
         DocsSection(
-            {"heading": "Get started with uv (Recommended)"},
+            {"heading": "Try it in a minute"},
             slots={
                 "default": lambda: html.DIV(
                     {},
-                    "Create a new project and set up dependencies using ",
-                    html.STRONG({}, "uv"),
-                    ".",
+                    "Scaffold a project with the recommended uv setup:",
                     CodeBlock(
                         {
                             "lang": "bash",
@@ -58,178 +96,53 @@ def HomeContent(_: ComponentContext[None]):
                             ),
                         }
                     ),
-                    "Add browser dependencies to ",
-                    InlineCode({"text": "[project.optional-dependencies]"}),
-                    " in ",
-                    InlineCode({"text": "pyproject.toml"}),
-                    ":",
-                    CodeBlock(
-                        {
-                            "lang": "toml",
-                            "code": _code(
-                                """
-                                [project.optional-dependencies]
-                                browser = ["numpy", "matplotlib"]
-                                """
-                            ),
-                        }
-                    ),
-                    "Configure ",
-                    InlineCode({"text": "webcompy_config.py"}),
-                    " with ",
-                    InlineCode({"text": "LockfileSyncConfig"}),
-                    ":",
+                    "Then define your first component:",
                     CodeBlock(
                         {
                             "lang": "python",
                             "code": _code(
                                 """
-                            # webcompy_config.py
-                            import app.app as app_module
-                            from webcompy_cli.config import WebComPyBuildConfig, LockfileSyncConfig
+                                from webcompy.components import ComponentContext, define_component
+                                from webcompy.elements import html
 
-                            config = WebComPyBuildConfig(
-                                app_module,
-                                dependencies=None,
-                                dependencies_from="browser",
-                                lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),
-                            )
-                            """
+
+                                @define_component()
+                                def HomePage(context: ComponentContext[None]):
+                                    return html.H1({}, "Hello WebComPy!")
+                                """
                             ),
                         }
                     ),
-                    "Generate the lock file and start the dev server:",
-                    CodeBlock(
+                    DocsLink(
                         {
-                            "lang": "bash",
-                            "code": _code(
-                                """
-                                uv run python -m webcompy lock
-                                uv run python -m webcompy start --dev
-                                """
-                            ),
+                            "to": "/documents/getting-started/installation",
+                            "text": "Full setup → Installation",
                         }
                     ),
-                )
-            },
-        ),
-        DocsSection(
-            {"heading": "Get started with Poetry"},
-            slots={
-                "default": lambda: html.DIV(
-                    {},
-                    "If you prefer ",
-                    html.STRONG({}, "Poetry"),
-                    ", use the following setup:",
-                    CodeBlock(
-                        {
-                            "lang": "bash",
-                            "code": _code(
-                                """
-                                poetry new webcompy-project && cd webcompy-project
-                                poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
-                                poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
-                                poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
-                                poetry run python -m webcompy init
-                                """
-                            ),
-                        }
-                    ),
-                    "Add browser dependencies to ",
-                    InlineCode({"text": "[project.optional-dependencies]"}),
-                    " in ",
-                    InlineCode({"text": "pyproject.toml"}),
-                    " (same as the uv setup above).",
                     html.BR(),
-                    "Then configure ",
-                    InlineCode({"text": "webcompy_config.py"}),
-                    " as shown above, and run:",
-                    CodeBlock(
+                    "Prefer Poetry? See the ",
+                    DocsLink(
                         {
-                            "lang": "bash",
-                            "code": _code(
-                                """
-                                poetry run python -m webcompy lock
-                                poetry run python -m webcompy start --dev
-                                """
-                            ),
+                            "to": "/documents/getting-started/installation",
+                            "text": "Installation",
                         }
                     ),
-                    html.EM(
-                        {},
-                        "Note: ",
-                        InlineCode({"text": "webcompy lock --install"}),
-                        " uses ",
-                        InlineCode({"text": "uv pip"}),
-                        " or ",
-                        InlineCode({"text": "pip"}),
-                        ", not ",
-                        InlineCode({"text": "poetry install"}),
-                        ". Use ",
-                        InlineCode({"text": "webcompy lock --sync"}),
-                        " to compare versions with ",
-                        InlineCode({"text": "pyproject.toml"}),
-                        ".",
-                    ),
+                    " guide for the Poetry path.",
                 )
             },
         ),
-        DocsSection(
-            {"heading": "Lock File Commands"},
-            slots={
-                "default": lambda: html.DIV(
-                    {},
-                    html.TABLE(
-                        {"class": "commands-table"},
-                        html.THEAD(
-                            {},
-                            html.TR(
-                                {},
-                                html.TH({}, "Command"),
-                                html.TH({}, "Description"),
-                            ),
-                        ),
-                        html.TBODY(
-                            {},
-                            html.TR(
-                                {},
-                                html.TD({}, InlineCode({"text": "webcompy lock"})),
-                                html.TD({}, "Generate or update the lock file"),
-                            ),
-                            html.TR(
-                                {},
-                                html.TD({}, InlineCode({"text": "webcompy lock --export"})),
-                                html.TD({}, "Export lock file dependencies to requirements.txt"),
-                            ),
-                            html.TR(
-                                {},
-                                html.TD({}, InlineCode({"text": "webcompy lock --sync"})),
-                                html.TD({}, "Compare lock file with pyproject.toml / requirements.txt"),
-                            ),
-                            html.TR(
-                                {},
-                                html.TD({}, InlineCode({"text": "webcompy lock --install"})),
-                                html.TD({}, "Export and install lock file dependencies"),
-                            ),
-                        ),
-                    ),
-                )
-            },
-        ),
-        DocsSection(
-            {"heading": "Source Code"},
-            slots={
-                "default": lambda: html.DIV(
-                    {},
-                    html.A(
-                        {
-                            "href": "https://github.com/kniwase/WebComPy",
-                            "class": "ui-link",
-                        },
-                        "Project Home",
-                    ),
-                )
-            },
+        html.FOOTER(
+            {"class": "footer-strip"},
+            DocsLink(
+                {
+                    "href": "https://github.com/kniwase/WebComPy",
+                    "text": "Source Code",
+                }
+            ),
+            html.SPAN(
+                {"class": "footer-note"},
+                "WebComPy is developed in the open — issues and pull requests are welcome.",
+            ),
         ),
     )
 
@@ -240,19 +153,35 @@ HomeContent.scoped_style = {
         "margin": "0 auto",
         "padding": "var(--space-4)",
     },
-    ".commands-table": {
-        "width": "100%",
-        "border-collapse": "collapse",
-        "margin-top": "var(--space-3)",
+    ".hero": {
+        "text-align": "center",
+        "padding": "var(--space-5) 0",
     },
-    ".commands-table th, .commands-table td": {
-        "padding": "var(--space-2) var(--space-3)",
-        "text-align": "left",
-        "border-bottom": "1px solid var(--color-border)",
+    ".hero-subtitle": {
         "color": "var(--color-fg)",
+        "font-size": "var(--font-size-xl)",
     },
-    ".commands-table th": {
-        "background-color": "var(--color-bg-elevated)",
-        "font-weight": "600",
+    ".hero-actions": {
+        "display": "flex",
+        "gap": "var(--space-3)",
+        "justify-content": "center",
+        "margin-top": "var(--space-4)",
+    },
+    ".feature-cards": {
+        "display": "grid",
+        "grid-template-columns": "repeat(auto-fit, minmax(240px, 1fr))",
+        "gap": "var(--space-4)",
+    },
+    ".footer-strip": {
+        "display": "flex",
+        "gap": "var(--space-3)",
+        "align-items": "center",
+        "justify-content": "center",
+        "padding": "var(--space-4) 0",
+        "border-top": "1px solid var(--color-border)",
+        "margin-top": "var(--space-5)",
+    },
+    ".footer-note": {
+        "color": "var(--color-fg)",
     },
 }

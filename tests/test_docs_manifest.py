@@ -162,7 +162,7 @@ class TestManifestContent:
 
     def test_boundary_pages(self) -> None:
         paths = [page["path"] for page in flatten_pages()]
-        assert paths[0] == "/documents/getting-started/installation"
+        assert paths[0] == "/documents/getting-started/what-is-webcompy"
         assert paths[-1] == "/documents/advanced/pwa"
 
 

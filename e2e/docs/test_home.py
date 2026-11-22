@@ -63,8 +63,39 @@ def test_navbar_dropdown_opens_and_switches_exclusively(docs_app_page, assert_no
 
 @pytest.mark.e2e
 def test_home_page_heading(docs_app_page, assert_no_console_errors):
-    heading = docs_app_page.get_by_role("heading", name="What is WebComPy")
+    heading = docs_app_page.get_by_role("heading", name="Build Frontend in Python", level=1)
     expect(heading).to_be_visible()
+
+
+@pytest.mark.e2e
+def test_home_hero_get_started_link(docs_app_page, assert_no_console_errors):
+    link = docs_app_page.get_by_role("link", name="Get Started")
+    expect(link).to_be_visible()
+    assert link.get_attribute("href") == "/documents/getting-started/what-is-webcompy/"
+
+
+@pytest.mark.e2e
+def test_home_hero_navigates_to_getting_started(docs_app_page, assert_no_console_errors):
+    docs_app_page.evaluate("window.__home_spa_marker = 1")
+    docs_app_page.get_by_role("link", name="Get Started").click()
+    assert "/documents/getting-started/what-is-webcompy" in docs_app_page.url
+    expect(docs_app_page.locator("article.prose h1#what-is-webcompy")).to_be_visible()
+    assert docs_app_page.evaluate("window.__home_spa_marker") == 1
+
+
+@pytest.mark.e2e
+def test_home_has_no_duplicated_installation_content(docs_app_page, assert_no_console_errors):
+    expect(docs_app_page.get_by_text("Get started with Poetry")).to_have_count(0)
+    expect(docs_app_page.locator(".commands-table")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_home_code_block_vertical_margins_are_symmetric(docs_app_page, assert_no_console_errors):
+    block = docs_app_page.locator("pre.code-block").first
+    expect(block).to_be_visible()
+    margins = block.evaluate("el => [getComputedStyle(el).marginTop, getComputedStyle(el).marginBottom]")
+    assert margins[0] == margins[1], f"code block margins must be symmetric, got {margins}"
+    assert margins[0] != "0px", f"code block margins must be non-zero, got {margins}"
 
 
 @pytest.mark.e2e
@@ -99,7 +130,7 @@ def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_consol
     home_link = page.locator("nav a[href='/']")
     home_link.click()
     assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
-    heading = page.get_by_role("heading", name="What is WebComPy")
+    heading = page.get_by_role("heading", name="Build Frontend in Python", level=1)
     expect(heading).to_be_visible()
 
 

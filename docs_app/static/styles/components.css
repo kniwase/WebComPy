@@ -4,23 +4,8 @@
   padding: var(--space-4);
 }
 
-.commands-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: var(--space-3);
-}
-
-.commands-table th,
-.commands-table td {
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-fg);
-}
-
-.commands-table th {
-  background-color: var(--color-bg-elevated);
-  font-weight: 600;
+.home-page .code-block {
+  margin: var(--space-4) 0;
 }
 
 .demo-display-root {
