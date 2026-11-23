@@ -5,7 +5,7 @@ description: Convert realtime data streams into reactive state with to_signal, t
 
 # Signals and Streams
 
-WebComPy state primitives are **cells**: `Signal`, `Computed`, and `ReactiveList` hold *current state* and propagate changes, with an equality contract that suppresses same-value writes. Realtime data (WebSocket/SSE messages, progress ticks) has **occurrence** semantics instead: every arrival matters, duplicates included. The `webcompy.aio` stream utilities bridge these two worlds.
+WebComPy state primitives are **cells**: `Signal`, `Computed`, and `ReactiveList` hold *current state* and propagate changes, with an equality contract that suppresses same-value writes (covered in [Reactive State](/documents/basic/reactive-state)). Realtime data (WebSocket/SSE messages, progress ticks) has **occurrence** semantics instead: every arrival matters, duplicates included. The `webcompy.aio` stream utilities bridge these two worlds.
 
 ## to_signal: one-shot values
 
@@ -61,3 +61,9 @@ await result.aclose()  # stop pumping
 ```
 
 Bridged values are derived client-side views and never participate in hydration transfer (same rule as `Computed`).
+
+## Next steps
+
+- Review cell-based `Signal`, `Computed`, and `use_state` basics in [Reactive State](/documents/basic/reactive-state).
+- See external callback signals in [Read-only Signals and Events](/documents/advanced/readonly-signal).
+- Pair stream utilities with [Server-Sent Events](/documents/advanced/event-source) or [WebSocket](/documents/advanced/websocket).

@@ -70,6 +70,61 @@ DOCS_SECTIONS: list[DocsSection] = [
         "title": "Basic Usage",
         "pages": [
             {
+                "label": "Components",
+                "path": "/documents/basic/components",
+                "source": "documents/basic_components.md",
+            },
+            {
+                "label": "HTML Templates",
+                "path": "/documents/basic/template-html",
+                "source": "documents/basic_template_html.md",
+            },
+            {
+                "label": "Reactive State",
+                "path": "/documents/basic/reactive-state",
+                "source": "documents/basic_reactive_state.md",
+            },
+            {
+                "label": "Elements & Events",
+                "path": "/documents/basic/elements-and-events",
+                "source": "documents/basic_elements_events.md",
+            },
+            {
+                "label": "Markdown Documents",
+                "path": "/documents/basic/markdown-documents",
+                "source": "documents/basic_markdown_documents.md",
+            },
+            {
+                "label": "Routing",
+                "path": "/documents/basic/routing",
+                "source": "documents/basic_routing.md",
+            },
+            {
+                "label": "Forms",
+                "path": "/documents/basic/forms",
+                "source": "documents/basic_forms.md",
+            },
+            {
+                "label": "HTTP & Async",
+                "path": "/documents/basic/http-and-async",
+                "source": "documents/basic_http_async.md",
+            },
+            {
+                "label": "Styling & Themes",
+                "path": "/documents/basic/styling-and-themes",
+                "source": "documents/basic_styling.md",
+            },
+            {
+                "label": "Storage",
+                "path": "/documents/basic/storage",
+                "source": "documents/basic_storage.md",
+            },
+            {
+                "label": "Error Handling",
+                "path": "/documents/basic/error-handling",
+                "source": "documents/basic_error_handling.md",
+            },
+            {
                 "label": "UI Primitives",
                 "path": "/documents/basic/ui-primitives",
                 "component": "docs_app.pages.document.ui_primitives:UiPrimitivesPage",
