@@ -19,4 +19,4 @@ def test_project_structure_page_content(docs_page_on, assert_no_console_errors):
 def test_project_structure_page_pager(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/getting-started/project-structure")
     expect(page.locator(".docs-pager-prev a")).to_have_text("Quickstart")
-    expect(page.locator(".docs-pager-next a")).to_have_text("Components")
+    expect(page.locator(".docs-pager-next a")).to_have_text("Overview")

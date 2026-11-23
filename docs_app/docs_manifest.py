@@ -67,6 +67,46 @@ DOCS_SECTIONS: list[DocsSection] = [
         ],
     },
     {
+        "title": "Guides",
+        "pages": [
+            {
+                "label": "Overview",
+                "path": "/documents/guides/overview",
+                "source": "documents/guides_overview.md",
+            },
+            {
+                "label": "Step 1: App Shell",
+                "path": "/documents/guides/todo-app-shell",
+                "source": "documents/guides_step1_state.md",
+            },
+            {
+                "label": "Step 2: Components",
+                "path": "/documents/guides/todo-components",
+                "source": "documents/guides_step2_components.md",
+            },
+            {
+                "label": "Step 3: Navigation",
+                "path": "/documents/guides/todo-navigation",
+                "source": "documents/guides_step3_navigation.md",
+            },
+            {
+                "label": "Step 4: Forms",
+                "path": "/documents/guides/todo-forms",
+                "source": "documents/guides_step4_forms.md",
+            },
+            {
+                "label": "Step 5: Remote Data",
+                "path": "/documents/guides/todo-remote-data",
+                "source": "documents/guides_step5_remote_data.md",
+            },
+            {
+                "label": "Step 6: Deploy",
+                "path": "/documents/guides/todo-deploy",
+                "source": "documents/guides_step6_deploy.md",
+            },
+        ],
+    },
+    {
         "title": "Basic Usage",
         "pages": [
             {
