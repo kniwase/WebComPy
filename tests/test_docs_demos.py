@@ -495,7 +495,7 @@ async def test_todo_tutorial_step5_renders_with_middleware():
 
 @pytest.mark.asyncio
 async def test_todo_tutorial_step6_renders_with_error_boundary():
-    from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY
     from webcompy.ports._middleware import FetchMiddlewareRegistry, _MiddlewareFetchPort
 
     with mock_app_run():
@@ -508,7 +508,7 @@ async def test_todo_tutorial_step6_renders_with_error_boundary():
         scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_make_failing_fetch_port(), registry))
 
         with TestRenderer.render(App, parent_scope=scope) as result:
-            await asyncio.sleep(0)
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
             html = result.to_html()
             assert "Prepare for static deploy" in html
             assert len(result.query_selector_all("li")) == 3
