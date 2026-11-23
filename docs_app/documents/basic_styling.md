@@ -145,4 +145,4 @@ app.append_style(":root { --color-accent: #2563eb; }")
 
 - Review how `webcompy.ui` uses design tokens and cascade layers in [UI Primitives](/documents/basic/ui-primitives).
 - See `:host` and `display` wrapper rules in [Custom Elements](/documents/advanced/custom-elements).
-- Advanced topics coming in Advanced Usage: `@reactive_scoped_style`, `css_text_template`, and dynamic app-level `reactive_style` / `reactive_block`.
+- Continue to [Styling Deep Dive](/documents/advanced/styling-deep-dive) for `reactive_scoped_style`, `css_text_template`, app-level `reactive_style` / `reactive_block`, and the full cascade model.

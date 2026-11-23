@@ -183,4 +183,5 @@ Watch for these behavior changes:
 ## Next steps
 
 - Revisit everyday component props, slots, and hooks in [Components](/documents/basic/components).
-- Review cascade layers and `:host` styling in [Styling & Themes](/documents/basic/styling-and-themes).
+- Review cascade layers and `:host` styling in [Styling & Themes](/documents/basic/styling-and-themes) and [Styling Deep Dive](/documents/advanced/styling-deep-dive).
+- Animate box-generating components with enter/leave CSS classes in [Transition](/documents/advanced/transition).

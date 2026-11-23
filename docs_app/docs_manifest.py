@@ -14,6 +14,7 @@ class DocsPageEntry(TypedDict):
     path: str
     source: NotRequired[str]
     component: NotRequired[str]
+    group: NotRequired[str]
 
 
 class DocsSection(TypedDict):
@@ -185,64 +186,112 @@ DOCS_SECTIONS: list[DocsSection] = [
         "title": "Advanced Usage",
         "pages": [
             {
-                "label": "Custom Elements",
-                "path": "/documents/advanced/custom-elements",
-                "source": "documents/custom_elements.md",
-            },
-            {
                 "label": "Signals and Streams",
                 "path": "/documents/advanced/signal-stream",
                 "source": "documents/signal_stream.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "Read-only Signals and Events",
                 "path": "/documents/advanced/readonly-signal",
                 "source": "documents/readonly_signal.md",
-            },
-            {
-                "label": "Internationalization",
-                "path": "/documents/advanced/i18n",
-                "source": "documents/i18n.md",
-            },
-            {
-                "label": "Loading Screen",
-                "path": "/documents/advanced/loading-screen",
-                "source": "documents/loading_screen.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "Server-Sent Events",
                 "path": "/documents/advanced/event-source",
                 "source": "documents/event_source.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "WebSocket",
                 "path": "/documents/advanced/websocket",
                 "source": "documents/websocket.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "Typed Realtime",
                 "path": "/documents/advanced/typed-realtime",
                 "source": "documents/typed_realtime.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "RPC",
                 "path": "/documents/advanced/rpc",
                 "source": "documents/rpc.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "RPC Contracts",
                 "path": "/documents/advanced/rpc-contracts",
                 "source": "documents/rpc_contracts.md",
+                "group": "Realtime & RPC",
             },
             {
                 "label": "RPC over WebSocket",
                 "path": "/documents/advanced/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
+                "group": "Realtime & RPC",
+            },
+            {
+                "label": "SSR & SSG",
+                "path": "/documents/advanced/ssr-and-ssg",
+                "source": "documents/ssr_ssg.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Hydration & Data Transfer",
+                "path": "/documents/advanced/hydration-and-transfer",
+                "source": "documents/hydration_and_transfer.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Async Rendering & Boundaries",
+                "path": "/documents/advanced/async-rendering-and-boundaries",
+                "source": "documents/async_rendering_boundaries.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Transition",
+                "path": "/documents/advanced/transition",
+                "source": "documents/transition.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Teleport",
+                "path": "/documents/advanced/teleport",
+                "source": "documents/teleport.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Loading Screen",
+                "path": "/documents/advanced/loading-screen",
+                "source": "documents/loading_screen.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Styling Deep Dive",
+                "path": "/documents/advanced/styling-deep-dive",
+                "source": "documents/styling_deep_dive.md",
+                "group": "Rendering & Performance",
             },
             {
                 "label": "Progressive Web App",
                 "path": "/documents/advanced/pwa",
                 "source": "documents/pwa.md",
+                "group": "Rendering & Performance",
+            },
+            {
+                "label": "Custom Elements",
+                "path": "/documents/advanced/custom-elements",
+                "source": "documents/custom_elements.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Internationalization",
+                "path": "/documents/advanced/i18n",
+                "source": "documents/i18n.md",
+                "group": "Architecture & Integration",
             },
         ],
     },
@@ -279,6 +328,10 @@ def validate_manifest(sections: list[DocsSection]) -> None:
             raise WebComPyException(
                 f"Docs manifest path must start with the category prefix {category_prefix!r}: {entry!r}"
             )
+        if "group" in entry:
+            group = entry["group"]
+            if not isinstance(group, str) or not group.strip():
+                raise WebComPyException(f"Docs manifest entry 'group' must be a non-empty string: {entry!r}")
 
     _check_entry(DOCS_INDEX)
     seen_index = -1

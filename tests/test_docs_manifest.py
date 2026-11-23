@@ -115,6 +115,17 @@ class TestValidateManifest:
         with pytest.raises(WebComPyException, match="at least one page"):
             validate_manifest([_section([])])
 
+    def test_entry_with_valid_group_accepted(self) -> None:
+        validate_manifest([_section([_page({"group": "Rendering & Performance"})])])
+
+    def test_entry_with_empty_group_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="non-empty string"):
+            validate_manifest([_section([_page({"group": "   "})])])
+
+    def test_entry_with_non_string_group_rejected(self) -> None:
+        with pytest.raises(WebComPyException, match="non-empty string"):
+            validate_manifest([_section([_page({"group": 123})])])
+
 
 class TestManifestContent:
     def test_source_files_exist_on_disk(self) -> None:
@@ -168,7 +179,65 @@ class TestManifestContent:
     def test_boundary_pages(self) -> None:
         paths = [page["path"] for page in flatten_pages()]
         assert paths[0] == "/documents/getting-started/what-is-webcompy"
-        assert paths[-1] == "/documents/advanced/pwa"
+        assert paths[-1] == "/documents/advanced/i18n"
+
+    def test_rendering_and_performance_group_order(self) -> None:
+        advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")
+        rendering_paths = [page["path"] for page in advanced["pages"] if page.get("group") == "Rendering & Performance"]
+        expected_prefix = [
+            "/documents/advanced/ssr-and-ssg",
+            "/documents/advanced/hydration-and-transfer",
+            "/documents/advanced/async-rendering-and-boundaries",
+            "/documents/advanced/transition",
+            "/documents/advanced/teleport",
+            "/documents/advanced/loading-screen",
+            "/documents/advanced/styling-deep-dive",
+        ]
+        assert rendering_paths[: len(expected_prefix)] == expected_prefix
+
+    def test_routes_and_prev_next_ignore_groups(self) -> None:
+        children = route_children()
+        pages = route_pages()
+        assert len(children) == len(pages)
+
+        prev_p, next_p = prev_next("/documents/advanced/ssr-and-ssg")
+        assert prev_p is not None and prev_p["path"] == "/documents/advanced/rpc-websocket"
+        assert next_p is not None and next_p["path"] == "/documents/advanced/hydration-and-transfer"
+
+        prev_pwa, next_pwa = prev_next("/documents/advanced/pwa")
+        assert prev_pwa is not None and prev_pwa["path"] == "/documents/advanced/styling-deep-dive"
+        assert next_pwa is not None and next_pwa["path"] == "/documents/advanced/custom-elements"
+
+    def test_sidebar_renders_group_subheaders(self) -> None:
+        from docs_app.components.docs_sidebar import DocsSidebar
+        from webcompy.components import ComponentContext, define_component
+        from webcompy.di import DIScope
+        from webcompy.di._keys import _ROUTER_KEY
+        from webcompy.elements import html
+        from webcompy.ports._keys import HISTORY_PORT_KEY
+        from webcompy.router import Router
+        from webcompy_testing import FakeHistoryPort, TestRenderer
+
+        @define_component("test-sidebar-dummy-page")
+        def _DummyPage(_: ComponentContext[None]):
+            return html.DIV({}, "dummy")
+
+        router = Router({"path": "/", "component": _DummyPage})
+        parent_scope = DIScope()
+        parent_scope.provide(_ROUTER_KEY, router)
+        parent_scope.provide(HISTORY_PORT_KEY, FakeHistoryPort())
+        with TestRenderer.render(DocsSidebar, parent_scope=parent_scope) as result:
+            group_items = [
+                li
+                for li in result.query_selector_all("li")
+                if "docs-sidebar-group" in (li.getAttribute("class") or "").split()
+            ]
+            assert [li.textContent for li in group_items] == [
+                "Realtime & RPC",
+                "Rendering & Performance",
+                "Architecture & Integration",
+            ]
+            assert all(li.getAttribute("role") == "presentation" for li in group_items)
 
 
 class TestPrevNext:

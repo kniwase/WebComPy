@@ -20,8 +20,9 @@ def test_pwa_page_toc(docs_page_on, assert_no_console_errors):
 
 
 @pytest.mark.e2e
-def test_pwa_page_is_last_page_no_next_pager(docs_page_on, assert_no_console_errors):
+def test_pwa_page_pager(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/advanced/pwa")
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
-    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC over WebSocket")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
+    expect(page.locator(".docs-pager-prev a")).to_have_text("Styling Deep Dive")
+    expect(page.locator(".docs-pager-next")).to_have_count(1)
+    expect(page.locator(".docs-pager-next a")).to_have_text("Custom Elements")

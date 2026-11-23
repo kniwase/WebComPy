@@ -81,4 +81,5 @@ ErrorBoundary(
 
 - Handle network and API errors inline with `use_async_result()` in [HTTP & Async](/documents/basic/http-and-async).
 - Render accessible inline status banners using `Alert` in [Disclosure & Feedback](/documents/basic/disclosure).
-- Advanced topics coming in Advanced Usage: SSR/SSG pre-render error policies, `WebComPyAppConfig.on_error`, and `@on_error_captured` lifecycle hooks.
+- See how SSR-tolerant boundaries vs SSG fail-fast builds behave in [SSR & SSG](/documents/advanced/ssr-and-ssg) and how `Suspense(error_fallback=...)` escalates to boundaries in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
+- Advanced topics coming in Advanced Usage: `WebComPyAppConfig.on_error` and `@on_error_captured` lifecycle hooks.
