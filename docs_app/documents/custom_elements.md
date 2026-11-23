@@ -7,7 +7,7 @@ description: Every WebComPy component is a Light DOM custom element with a deriv
 
 Every WebComPy component renders as a **Light DOM custom element**: a real DOM element with its own tag name, such as `<user-card>`. This gives every component a native DOM boundary, lets the template return multiple roots, and unlocks browser lifecycle hooks and attribute-based JavaScript interoperation.
 
-Custom elements in WebComPy are **Light DOM** elements. WebComPy does not use Shadow DOM, so the element's children remain ordinary DOM nodes and global styles apply as usual.
+Custom elements in WebComPy are **Light DOM** elements. WebComPy does not use Shadow DOM, so the element's children remain ordinary DOM nodes and global styles apply as usual. For everyday component syntax (props, slots, lifecycle hooks, static scoped CSS), start with [Components](/documents/basic/components).
 
 ## Defining a component
 
@@ -179,3 +179,8 @@ Watch for these behavior changes:
 - **Names are validated at definition time** (see [Naming rules](#naming-rules)): derived names that cannot form a valid custom element fail unless you pass an explicit tag.
 - **`lazy()` import paths** reference components as `"module:Attribute"` strings — update them when you rename a component.
 - **Transitions**: a component used as a `Transition` child needs a box-generating display, e.g. `display="block"`; see [The wrapper is layout-transparent by default](#the-wrapper-is-layout-transparent-by-default).
+
+## Next steps
+
+- Revisit everyday component props, slots, and hooks in [Components](/documents/basic/components).
+- Review cascade layers and `:host` styling in [Styling & Themes](/documents/basic/styling-and-themes).

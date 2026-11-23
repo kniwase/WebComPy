@@ -5,7 +5,7 @@ description: Hold externally-produced state as a read-only signal with use_reado
 
 # Read-only Signals and Events
 
-WebComPy's state primitives are **cells**: they hold *current state* and propagate changes, with an equality contract that suppresses same-value writes. When the state comes from outside your component — a window resize, a visibility change, a callback from non-WebComPy code — you want a value your UI can read reactively, but you do not want to hand out write access. `use_readonly_signal` gives you exactly that: a read-only signal whose **only** write path is the `update` function it returns.
+WebComPy's state primitives are **cells**: they hold *current state* and propagate changes, with an equality contract that suppresses same-value writes (covered in [Reactive State](/documents/basic/reactive-state)). When the state comes from outside your component — a window resize, a visibility change, a callback from non-WebComPy code — you want a value your UI can read reactively, but you do not want to hand out write access. `use_readonly_signal` gives you exactly that: a read-only signal whose **only** write path is the `update` function it returns.
 
 This page covers the primitive and the two convenience composables for browser state events. If your data is a stream of *occurrences* (chat messages, ticks, WebSocket events) where every arrival matters, see [Signals and Streams](/documents/advanced/signal-stream) instead — signal equality would silently drop duplicates.
 
@@ -94,3 +94,8 @@ def on_resize(event):
 host = ...  # your HostPort (e.g. via inject(HOST_PORT_KEY) inside an app scope)
 _remove = host.add_window_event_listener("resize", on_resize)
 ```
+
+## Next steps
+
+- Revisit core `Signal`, `Computed`, and `use_*` primitives in [Reactive State](/documents/basic/reactive-state).
+- Bridge occurrence-based async feeds in [Signals and Streams](/documents/advanced/signal-stream).
