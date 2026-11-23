@@ -136,16 +136,15 @@ def _normalize_hydration_text_runs(
                 j += 1
             parts = [c._get_text() for c in run]
             if len(run) == 1 and parts[0] != "":
-                if (
-                    dom_idx < parent_node.childNodes.length
-                    and parent_node.childNodes[dom_idx].nodeName.lower() == "#text"
-                ):
-                    text_nodes = _collect_consecutive_text_nodes(parent_node, dom_idx)
-                    if (
-                        len(text_nodes) > 1
-                        and "".join((text_node.textContent or "") for text_node in text_nodes) == parts[0]
-                    ):
-                        _coalesce_text_nodes(text_nodes, parts[0])
+                if dom_idx < parent_node.childNodes.length:
+                    node = parent_node.childNodes[dom_idx]
+                    if node.nodeName.lower() == "#text" and (node.textContent or "") != parts[0]:
+                        text_nodes = _collect_consecutive_text_nodes(parent_node, dom_idx)
+                        if (
+                            len(text_nodes) > 1
+                            and "".join((text_node.textContent or "") for text_node in text_nodes) == parts[0]
+                        ):
+                            _coalesce_text_nodes(text_nodes, parts[0])
                 dom_idx += 1
             else:
                 ok, dom_idx = _normalize_text_run(parts, parent_node, dom_idx, component_id)

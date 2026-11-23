@@ -633,3 +633,99 @@ class TestHydrationSplitTextCoalescing:
             assert span_child._node_cache is tail_span
         finally:
             _active_app_context.reset(token)
+
+    def test_multi_text_run_mismatched_split_nodes_report_joined_actual_and_halt_later_runs(self, fake_browser_full):
+        wrong_1 = FakeDOMNode("#text", text_content="xy")
+        wrong_1.__webcompy_prerendered_node__ = True
+        wrong_2 = FakeDOMNode("#text", text_content="z")
+        wrong_2.__webcompy_prerendered_node__ = True
+        span = FakeDOMNode("span")
+        span.__webcompy_prerendered_node__ = True
+        cd_node = FakeDOMNode("#text", text_content="cd")
+        cd_node.__webcompy_prerendered_node__ = True
+
+        el, _, records = _hydrate_with_reporter(
+            [
+                TextElement("a"),
+                TextElement("b"),
+                Element("span", {}, {}, None, None),
+                TextElement("c"),
+                TextElement("d"),
+            ],
+            [wrong_1, wrong_2, span, cd_node],
+        )
+
+        text_records = [(r.kind, r.expected, r.actual) for r in records if r.kind == "text"]
+        assert text_records[0] == ("text", "ab", "xyz")
+        assert ("text", "c", "cd") in text_records
+        assert el._children[3]._node_cache is cd_node
+        assert el._children[4]._node_cache is not None
+        assert el._children[4]._node_cache is not cd_node
+
+    def test_single_aligned_text_leaves_trailing_stray_empty_text_node_untouched(self):
+        n1 = FakeDOMNode("#text", text_content="a")
+        n1.__webcompy_prerendered_node__ = True
+        stray_empty = FakeDOMNode("#text", text_content="")
+        stray_empty.__webcompy_prerendered_node__ = True
+
+        child = TextElement("a")
+        _, dom, records = _hydrate_with_reporter([child], [n1, stray_empty])
+
+        assert n1.textContent_write_count == 0
+        assert child._node_cache is n1
+        assert [n.textContent for n in dom.childNodes] == ["a"]
+        assert [r.kind for r in records] == ["node-count"]
+
+    @pytest.mark.asyncio
+    async def test_single_aligned_text_does_not_absorb_sibling_fragment_empty_text(self, fake_browser_full):
+        ctx = _FakeHydrationCtx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            parent_node = parent._get_node()
+
+            prerendered = FakeDOMNode("div")
+            prerendered.__webcompy_prerendered_node__ = True
+            text_a = FakeDOMNode("#text", text_content="a")
+            text_a.__webcompy_prerendered_node__ = True
+            frag_empty = FakeDOMNode("#text", text_content="")
+            frag_empty.__webcompy_prerendered_node__ = True
+            prerendered.appendChild(text_a)
+            prerendered.appendChild(frag_empty)
+            parent_node.appendChild(prerendered)
+
+            t_a = TextElement("a")
+            frag_text = TextElement("")
+            frag = FragmentElement([frag_text])
+            el = Element("div", {}, {}, None, [t_a, frag])
+            el._parent = parent
+            el._node_idx = 0
+            el._hydrate_node()
+            await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+            assert ctx._hydration_reporter.records == []
+            assert text_a.textContent_write_count == 0
+            assert t_a._node_cache is text_a
+            assert frag_text._node_cache is frag_empty
+        finally:
+            _active_app_context.reset(token)
+
+    def test_split_text_without_any_prerendered_flag_is_not_adopted(self, fake_browser_full):
+        p1 = FakeDOMNode("#text", text_content='"')
+        p2 = FakeDOMNode("#text", text_content="you@example.com")
+        p3 = FakeDOMNode("#text", text_content='"')
+        for node in (p1, p2, p3):
+            node.__webcompy_node__ = False
+
+        child = TextElement('"you@example.com"')
+        _, dom, records = _hydrate_with_reporter([child], [p1, p2, p3])
+
+        assert getattr(p1, "__webcompy_prerendered_node__", False) is False
+        assert child._node_cache is not p1
+        assert child._node_cache.textContent == '"you@example.com"'
+        assert dom.childNodes.length == 0
+        assert [r.kind for r in records] == ["tag"]
+        assert records[0].expected == "TextElement"
+        assert records[0].actual == "#text"
