@@ -13,8 +13,8 @@ The `Basic Usage` section SHALL include, in manifest order, pages covering: comp
 
 #### Scenario: Split topics link to their Advanced half
 
-- **WHEN** a Basic page covers a topic that has an Advanced continuation (routing, forms, styling, storage, HTTP and async, error handling, components)
-- **THEN** the page's "Next steps" links to the corresponding Advanced page and the Advanced page links back
+- **WHEN** a Basic page covers a topic that has an Advanced continuation (routing, forms, styling, storage, HTTP and async, error handling, components, reactive state)
+- **THEN** the page's "Next steps" links to the corresponding Advanced page wherever that Advanced page exists in the manifest, and the Advanced page links back (upcoming Advanced topics whose pages are not yet in the manifest are described in plain text so no link fails manifest validation)
 
 ### Requirement: Docs pages shall follow the shared content conventions
 
