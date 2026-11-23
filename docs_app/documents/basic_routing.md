@@ -23,7 +23,7 @@ def HomePage(context: ComponentContext[RouterContext]):
     return html.DIV(
         {},
         html.H1({}, "Home"),
-        RouterLink(to="/users/{id}", text=["View User 42"], path_params=None),
+        RouterLink(to="/users/42", text=["View User 42"]),
     )
 
 

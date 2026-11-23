@@ -66,7 +66,7 @@ description: How to configure your project.
 # Getting Started
 ```
 
-- **TOML (`+++`)**: full `tomllib` syntax supporting nested tables, integers, booleans, and arrays.
+- **TOML (`+++`)**: delimited by three plus signs (`+++`) and parsed with stdlib `tomllib`, supporting nested tables, integers, booleans, and arrays.
 
 ```markdown
 +++

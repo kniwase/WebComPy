@@ -91,7 +91,7 @@ Validators are callables taking the value and returning `None` (valid) or an err
 
 | Validator | Signature | Checks |
 |---|---|---|
-| `required` | `required(message="This field is required")` | Non-empty (`None`, `""`, whitespace-only, `False`, empty collections fail) |
+| `required` | `required(message="This field is required")` | Rejects `None`, `False`, and empty/whitespace-only strings (`0` and `[]` pass) |
 | `min_length` | `min_length(n, message=None)` | `len(val) >= n` |
 | `max_length` | `max_length(n, message=None)` | `len(val) <= n` |
 | `min_value` | `min_value(n, message=None)` | `val >= n` |

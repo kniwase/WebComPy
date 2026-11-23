@@ -141,7 +141,7 @@ Special attribute prefixes connect HTML elements directly to Python behavior:
 |---|---|---|
 | `@click="handler"` (any `@<event>`) | Callable or `async def` handler | Registers DOM event listener receiving `DOMEvent` |
 | `:ref="input_ref"` | `DomNodeRef` instance | Captures the mounted DOM node in `input_ref` |
-| `:bind="text_signal"` | Writable `Signal` (or `Field`) | Two-way binds input/textarea/select value or checkbox/radio checked state |
+| `:bind="text_signal"` | Writable `Signal` (use Python `html.*` for `Field`) | Two-way binds input/textarea/select value or checkbox/radio checked state |
 
 ```python
 from webcompy.elements import DomNodeRef
