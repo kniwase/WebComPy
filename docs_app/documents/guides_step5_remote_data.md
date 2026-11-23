@@ -78,7 +78,7 @@ from webcompy.ports import (
 )
 ```
 
-Requests to `GET /api/tasks`, `POST /api/tasks`, and `PATCH /api/tasks/<id>` return a `Response(...)` built from the middleware's in-memory list without touching the network, while any other URL falls through with `return await next(request)`. See Advanced middleware documentation once available — or explore typed server APIs in [RPC](/documents/advanced/rpc) and [Server-Sent Events](/documents/advanced/event-source) — when you are ready to connect a real backend.
+Requests to `GET /api/tasks`, `POST /api/tasks`, and `PATCH /api/tasks/<id>` return a `Response(...)` built from the middleware's in-memory list without touching the network, while any other URL falls through with `return await next(request)`. See Advanced middleware documentation once available — or explore typed server APIs in [RPC Contracts](/documents/advanced/rpc-contracts) and [Server-Sent Events](/documents/advanced/event-source) — when you are ready to connect a real backend.
 
 ## Next steps
 

@@ -1,134 +1,365 @@
 ---
 title: RPC Contracts
-description: Declarative RPC contracts for typed HTTP and WebSocket calls — Procedure, StreamingProcedure, Subscription, RpcCall, batch, notify, and the schema-module convention.
+description: Primary entry point for typed WebComPy RPC — transport routing guide, shared Procedure/StreamingProcedure/Subscription contracts, batch and notify helpers, server binding, and middleware.
 ---
 
 # RPC Contracts
 
-Declarative, statically typed RPC contracts shared between server and browser. Define `Procedure`/`StreamingProcedure`/`Subscription` objects in a dependency-neutral schema module, bind implementations with `app.rpc.bind`, and invoke them from client code through `RpcTransport` (`RpcHttpClient` / `RpcWsClient`) via `RpcCall`, `batch`, and `notify`. Contracts give pyright full checking — nonexistent methods, wrong param types, and result mismatches are type errors — without code generation.
+Declarative RPC contracts are the primary way to build typed client-server APIs in WebComPy. You declare `Procedure`, `StreamingProcedure`, and `Subscription` objects once in a shared module, bind implementations on the server with `@app.rpc.bind(...)`, and invoke them from browser or SSR code through `RpcHttpClient` or `RpcWsClient` with end-to-end `pyright` type checking and zero code generation.
 
-## Schema module
+## Choosing the right transport
 
-Create a `my_app/rpc_schema.py` that imports only client-safe core:
+| Use case | API | Transport | Key behavior |
+|---|---|---|---|
+| Public REST endpoints, static JSON assets, third-party APIs | [`HttpClient` / `use_async_result`](/documents/basic/http-and-async) | Plain HTTP (`GET`/`POST`/...) | Arbitrary REST URLs, HTTP status codes, initial fetch baked during SSR |
+| One-way server push of text events | [`use_event_source`](/documents/advanced/event-source) | SSE (`GET` or streaming `fetch`) | Named events, shared per-URL connection, auto-reconnect + `Last-Event-ID`, browser-only |
+| Raw bidirectional text or custom JSON frames | [`use_websocket`](/documents/advanced/websocket) / [Typed Realtime](/documents/advanced/typed-realtime) | WebSocket | Shared `(url, protocols)` socket, backoff/jitter, optional dataclass frames, browser-only |
+| Typed request/response queries & mutations | `Procedure` + [`RpcHttpClient`](/documents/advanced/rpc) | HTTP `POST` (`/_webcompy-rpc`) | Strict dataclass schemas, `batch()`, `notify()`, middleware, SSR/SSG result baking |
+| Finite call-scoped typed streams | `StreamingProcedure` + [`RpcStream`](/documents/advanced/rpc-streaming) | HTTP SSE or WebSocket | `async for` over generator output, `stream.close()` cancels server generator |
+| Long-lived pub/sub + low-latency calls | `Subscription` / `Procedure` + [`RpcWsClient`](/documents/advanced/rpc-websocket) | WebSocket (`/_webcompy-rpc`) | Shared socket, auto-rejoin with cursor replay, heartbeat, browser-only |
+
+## When to use
+
+- **Need typed server procedures with compile-time checking** — start here with `Procedure`, `StreamingProcedure`, and `Subscription`.
+- **Configuring HTTP dispatcher routes or manual transport fallback** — see [RPC](/documents/advanced/rpc).
+- **Streaming finite server generator outputs per request** — see [RPC Streaming](/documents/advanced/rpc-streaming).
+- **Subscribing to shared cursor-replayed event feeds** — see [RPC over WebSocket](/documents/advanced/rpc-websocket).
+- **Calling existing REST endpoints outside WebComPy** — stick with [HTTP & Async](/documents/basic/http-and-async).
+
+## Setup
+
+Split an RPC feature across three pieces: a shared contracts module imported by both client and server, server-side bindings on `app.rpc`, and component calls using `RpcHttpClient` (or `RpcWsClient`).
 
 ```python
+# my_app/contracts.py — shared by server and browser
 from dataclasses import dataclass
-from webcompy.rpc import Procedure, StreamingProcedure, Subscription
+
+from webcompy.rpc import Procedure
+
 
 @dataclass
-class AddParams:
-    a: int
-    b: int = 0
+class GetUserParams:
+    id: int
 
-add = Procedure("add", AddParams, int)
 
 @dataclass
-class CountParams:
-    n: int
+class User:
+    id: int
+    name: str
+    role: str
 
-count_up = StreamingProcedure("count_up", CountParams, int)
 
-@dataclass
-class TickerParams:
-    ticker_id: str
-
-@dataclass
-class Tick:
-    seq: int
-
-ticker = Subscription("ticker", TickerParams, Tick, replay_size=256)
+get_user = Procedure("users.get", GetUserParams, User)
 ```
 
-Schema modules must not import `webcompy_server`, Starlette, or other server-only libraries. The app package is already shipped to the browser bundle, so importing the schema from both sides adds no extra dependency.
-
-## Binding
-
-Server implementations live in a separate server-only module that imports the schema and binds:
+Bind the server implementation in your app package and mount either via `webcompy start` (automatic whenever `app.rpc` has bindings) or an explicit Starlette host:
 
 ```python
-from collections.abc import AsyncIterator
+# my_app/server.py — Starlette / WebComPy server side
+from starlette.applications import Starlette
+from starlette.routing import Route
 
-from my_app.rpc_schema import AddParams, CountParams, TickerParams, Tick, add, count_up, ticker
+from webcompy import WebComPyApp
+from webcompy_server.rpc import create_dispatcher_app
+from my_app.contracts import GetUserParams, User, get_user
 
-def _add(p: AddParams) -> int:
-    return p.a + p.b
 
-app.rpc.bind(add, _add)
+def register_procedures(app: WebComPyApp) -> None:
+    @app.rpc.bind(get_user)
+    async def handle_get_user(params: GetUserParams) -> User:
+        return User(id=params.id, name="Ada Lovelace", role="admin")
 
-# decorator sugar
-@app.rpc.bind(count_up)
-async def _count_up(p: CountParams) -> AsyncIterator[int]:
-    for i in range(1, p.n + 1):
-        yield i
 
-@app.rpc.bind(ticker)
-async def _ticker(p: TickerParams) -> AsyncIterator[Tick]:
-    ...
+# Auto-mounted by `webcompy start` / `webcompy serve` at app.rpc.path (default "/_webcompy-rpc"),
+# or mounted explicitly inside an existing Starlette host:
+# host = Starlette(routes=[Route(app.rpc.path, create_dispatcher_app(app.rpc))])
 ```
 
-`bind(contract, impl)` validates at registration:
-
-- `Procedure`: `impl` must not be a generator, must take exactly one parameter whose annotation equals `params_type`, and must return `result_type`. Iterable-annotated non-generators are rejected.
-- `StreamingProcedure`: `impl` must be a generator with a subscripted `AsyncIterator[T]`/`Iterator[T]` etc., element `T` must equal `result_type`.
-- `Subscription`: `impl` must be an async generator with `AsyncIterator[T]` / `AsyncGenerator[T, None]`, `T` must equal `event_type`. `replay_size` from the contract flows to the subscription buffer.
-
-Name collisions and reserved `_webcompy.*` names are rejected. Drift between schema and implementation becomes a startup error.
-
-## Transports
-
-Contracts are transport-agnostic. Pass an explicit `RpcTransport`:
-
-- `RpcHttpClient()` — browser + SSR. `call`/`notify`/`stream` delegate to the HTTP JSON-RPC endpoint (`/_webcompy-rpc`). During SSR, `call` and `batch` dispatch in-process and are baked into the hydration payload (`batch` as a single `POST:/_webcompy-rpc:[...]` entry); `notify` is not baked (HTTP `204`). `subscribe` raises `RpcError`.
-- `RpcWsClient` — browser, shared auto-reconnecting WebSocket. Implements `call`/`notify`/`stream`/`subscribe`. In-flight calls fail with `RpcError` on disconnect; subscriptions heal via rejoin.
-
-## Calls, batch, notify
-
-`Procedure` is invoked as `proc(transport, params) -> RpcCall[P, R]` (`Awaitable[R]`). `await` performs the call:
+Invoke the same `get_user` contract in a component with `RpcHttpClient()`:
 
 ```python
-from webcompy.rpc import batch, notify
+# my_app/components/user_card.py — client / SSR component side
+from webcompy import use_computed
+from webcompy.components import ComponentContext, define_component, use_async_result
+from webcompy.elements import html
+from webcompy.rpc import RpcHttpClient
+from my_app.contracts import GetUserParams, get_user
+
+client = RpcHttpClient()
+
+
+@define_component()
+def UserCard(context: ComponentContext[None]):
+    user_req = use_async_result(lambda: get_user(client, GetUserParams(id=1)))
+
+    return html.P(
+        {},
+        use_computed(
+            lambda: f"{user_req.data.value.name} ({user_req.data.value.role})"
+            if user_req.data.value is not None
+            else "Loading..."
+        ),
+    )
+```
+
+## Recipes
+
+### Call a `Procedure` and handle `RpcError`
+
+Every bound procedure receives its validated dataclass parameter and returns the declared result type. Server errors surface on the client as `RpcError` with `.code`, `.message`, and optional `.data`:
+
+```python
+# Server registration
+from dataclasses import dataclass
+from webcompy.rpc import Procedure, RpcError
+
+
+@dataclass
+class DivideParams:
+    numerator: int
+    denominator: int
+
+
+@dataclass
+class Quotient:
+    value: float
+
+
+divide = Procedure("math.divide", DivideParams, Quotient)
+
+
+@app.rpc.bind(divide)
+def handle_divide(params: DivideParams) -> Quotient:
+    if params.denominator == 0:
+        raise RpcError(-32001, "Division by zero", data={"field": "denominator"})
+    return Quotient(value=params.numerator / params.denominator)
+```
+
+```python
+# Client call
+from webcompy.rpc import RpcError, RpcHttpClient
+
+client = RpcHttpClient()
+
+try:
+    res = await divide(client, DivideParams(numerator=10, denominator=0))
+except RpcError as err:
+    print(err.code, err.message, err.data)
+```
+
+### Batch multiple calls and send notifications
+
+Group independent `RpcCall` objects with `batch(...)` to send one JSON-RPC batch array over HTTP or WebSocket and unpack strongly typed results in order. Use `notify(...)` for fire-and-forget calls that omit request `id` and expect no response:
+
+```python
+# Server registration
+from dataclasses import dataclass
+from webcompy.rpc import Procedure
+
+
+@dataclass
+class EmptyParams:
+    pass
+
+
+@dataclass
+class AuditParams:
+    action: str
+
+
+@dataclass
+class EmptyResult:
+    ok: bool = True
+
+
+@dataclass
+class Stats:
+    users: int
+
+
+@dataclass
+class Notice:
+    text: str
+
+
+get_stats = Procedure("dashboard.stats", EmptyParams, Stats)
+get_notice = Procedure("dashboard.notice", EmptyParams, Notice)
+record_audit = Procedure("audit.record", AuditParams, EmptyResult)
+
+
+@app.rpc.bind(get_stats)
+async def handle_stats(_params: EmptyParams) -> Stats:
+    return Stats(users=42)
+
+
+@app.rpc.bind(get_notice)
+async def handle_notice(_params: EmptyParams) -> Notice:
+    return Notice(text="System healthy")
+
+
+@app.rpc.bind(record_audit)
+async def handle_audit(params: AuditParams) -> EmptyResult:
+    # persist audit event
+    return EmptyResult()
+```
+
+```python
+# Client batch + notify
+from webcompy.rpc import RpcError, RpcHttpClient, batch, notify
+
+client = RpcHttpClient()
+
+# Fail fast on first error (default return_exceptions=False)
+stats, notice = await batch(
+    get_stats(client, EmptyParams()),
+    get_notice(client, EmptyParams()),
+)
+
+# Or inspect per-entry errors individually
+results = await batch(
+    get_stats(client, EmptyParams()),
+    get_notice(client, EmptyParams()),
+    return_exceptions=True,
+)
+for entry in results:
+    if isinstance(entry, RpcError):
+        print("Call failed:", entry.message)
+
+# Fire-and-forget notification (HTTP 204, no response payload)
+await notify(record_audit(client, AuditParams(action="viewed_dashboard")))
+```
+
+### Add auth headers or test mocks with `RpcMiddleware`
+
+Install HTTP RPC middleware inside component setup (in the active render DI scope) via `add_rpc_middleware` to attach authorization headers or short-circuit requests with synthetic responses during local UI work. This mirrors the `add_fetch_middleware` pattern introduced in [Step 5: Remote Data](/documents/guides/todo-remote-data) (and dedicated Advanced middleware docs will cover composition in detail):
+
+```python
+# Server procedure using standard endpoint
+from dataclasses import dataclass
+from webcompy.rpc import Procedure
+
+
+@dataclass
+class SecretParams:
+    scope: str
+
+
+@dataclass
+class SecretData:
+    token: str
+
+
+read_secret = Procedure("auth.secret", SecretParams, SecretData)
+
+
+@app.rpc.bind(read_secret)
+async def handle_secret(params: SecretParams) -> SecretData:
+    return SecretData(token=f"scoped:{params.scope}")
+```
+
+```python
+# Client component installing auth header middleware
+from webcompy import use_computed
+from webcompy.components import ComponentContext, define_component, use_async_result
+from webcompy.elements import html
+from webcompy.rpc import RpcContext, RpcHttpClient, add_rpc_middleware
+
+client = RpcHttpClient()
+
+
+@define_component()
+def ProtectedPanel(context: ComponentContext[None]):
+    async def attach_bearer(ctx: RpcContext, next):
+        ctx.headers["Authorization"] = "Bearer demo-token"
+        return await next(ctx)
+
+    add_rpc_middleware(attach_bearer)
+    secret = use_async_result(lambda: read_secret(client, SecretParams(scope="read")))
+
+    return html.P(
+        {},
+        use_computed(
+            lambda: secret.data.value.token if secret.data.value is not None else "..."
+        ),
+    )
+```
+
+For `batch(...)`, `ctx.is_batch` is `True`, `ctx.method` is `""`, and `ctx.batch_entries` lists each `RpcBatchEntry` in order. In middleware tests or serverless previews, `return await next(response={"result": ...})` skips the network round trip while still enforcing contract schema validation.
+
+### Register custom types on the RPC registry
+
+Built-in codecs handle standard JSON primitives plus `datetime`, `date`, `time`, `timedelta`, `UUID`, `Decimal`, `bytes`, `set`, `frozenset`, `tuple`, `re.Pattern`, `Enum`, and nested dataclasses. Register domain types on `app.rpc` in shared setup so both server serialization and client deserialization allowlist the tag:
+
+```python
+# Shared contracts + codec registration (imported by server and client)
+from dataclasses import dataclass
+
+from webcompy import WebComPyApp
+from webcompy.rpc import Procedure
+
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
+
+
+@dataclass
+class MoveParams:
+    target: Point
+
+
+@dataclass
+class MoveResult:
+    location: Point
+
+
+move_marker = Procedure("map.move", MoveParams, MoveResult)
+
+
+def configure_rpc_types(app: WebComPyApp) -> None:
+    app.rpc.register_type_handler(
+        Point,
+        encoder=lambda p: {"x": p.x, "y": p.y},
+        decoder=lambda d: Point(x=d["x"], y=d["y"]),
+    )
+```
+
+```python
+# Server registration
+@app.rpc.bind(move_marker)
+async def handle_move(params: MoveParams) -> MoveResult:
+    return MoveResult(location=Point(x=params.target.x + 1.0, y=params.target.y))
+```
+
+```python
+# Client call (after configure_rpc_types(app) runs on bootstrap)
 from webcompy.rpc import RpcHttpClient
 
 client = RpcHttpClient()
-value: int = await add(client, AddParams(a=2, b=3))
+moved = await move_marker(client, MoveParams(target=Point(x=2.0, y=5.0)))
 ```
 
-`RpcCall` is usable in `batch` and `notify` before awaiting. Double-await raises `RuntimeError`; `bool(RpcCall)` and `len(RpcCall)` raise `TypeError`.
+## Behavior notes
 
-Typed batch over `RpcCall`:
+- **Binding validation at startup**: `app.rpc.bind(contract, impl)` verifies that the implementation has concrete type annotations matching `contract.params_type` and `contract.result_type` (or `AsyncIterator[E]` / `AsyncGenerator[E, None]` for `Subscription`). Generator functions must match `StreamingProcedure`, async generators match `StreamingProcedure` or `Subscription`, and `_webcompy.*` method names are rejected everywhere.
+- **Single-use `RpcCall` objects**: `contract(client, params)` returns an `RpcCall` (for `Procedure`) that can be awaited once or passed once to `batch(...)` / `notify(...)`. Awaiting or reusing the same `RpcCall` twice raises `RuntimeError`. Checking `bool(call)` or `len(call)` raises `TypeError` to catch a forgotten `await`.
+- **Transport capability matrix**:
+  - `RpcHttpClient`: supports `Procedure` (single, `batch`, `notify`) and `StreamingProcedure` (SSE over HTTP `POST`); calling a `Subscription` raises `RpcError`.
+  - `RpcWsClient`: supports `Procedure` (single, `batch`, `notify`), `StreamingProcedure`, and `Subscription`; fails with `RpcError` if called before the socket reaches `OPEN` or when disconnected.
+- **SSR and hydration**: During server rendering and `webcompy generate`, `RpcHttpClient` dispatches `Procedure` calls and `batch(...)` in-process and caches results in `<script id="__webcompy_data__">` (`batch(...)` caches a single array key under `POST:/_webcompy-rpc:[...]`). `notify(...)` executes without baking into the hydration cache. `RpcWsClient` logs a warning and performs no socket operations on the server.
 
-```python
-c1 = add(client, AddParams(a=1))
-c2 = add(client, AddParams(a=2))
-results: tuple[int, int] = await batch(c1, c2)  # one POST array / one WS frame
+## Pitfalls
 
-empty: tuple[()] = await batch()                # no I/O
+- **Importing server-only dependencies inside the contract module**: Your client wheel also executes the contracts module in PyScript. Keep database drivers, ORM models, and filesystem secrets strictly in server handler modules imported only on CPython.
+- **Forgetting `await` on `Procedure` calls**: `get_user(client, params)` returns a lazy `RpcCall`, not the result. Passing it directly into a reactive expression or `if` condition raises `TypeError` until awaited.
+- **Mixing transports inside one `batch(...)` or `notify(...)`**: All calls passed to a single `batch(...)` or `notify(...)` must share the same `RpcHttpClient` or `RpcWsClient` instance; mixing transports raises `RpcError`.
+- **Non-dataclass `params_type`**: `Procedure`, `StreamingProcedure`, and `Subscription` all require `params_type` to be a `@dataclass` class (use an empty dataclass such as `EmptyParams` when a method needs no fields).
+- **Returning from `RpcMiddleware` without calling `await next(...)`**: Middleware must delegate via `await next(...)` (or `await next(ctx, response=...)`); returning a bare value directly raises `RuntimeError` rather than bypassing result validation.
 
-with_errors: tuple[int | RpcError, int | RpcError] = await batch(
-    add(client, AddParams(a=1)),
-    add(client, AddParams(a=999)),  # unbound path -> RpcError entry
-    return_exceptions=True,
-)
-```
+## Next steps
 
-Each `RpcCall` is consumed once by `batch`/`notify` — reuse raises `RuntimeError`, so create fresh calls per statement.
-
-Fire-and-forget notify as an id-less array:
-
-```python
-await notify(add(client, AddParams(a=1)), add(client, AddParams(a=2)))
-await notify()  # no I/O
-```
-
-`batch`/`notify` require all calls to share the same transport instance; mixed transports raise `RpcError`. Streaming and subscription calls are rejected by both.
-
-## SSR semantics
-
-Contracts work in both environments; behavior is determined by the transport. `RpcHttpClient` during SSR/SSG bakes `call`/`batch` results; `notify` is dispatched but not baked. `RpcWsClient` in SSR emits a warning and is a no-op; subscriptions return a closed iterator.
-
-## Non-goals
-
-- No code generation — contracts are hand-written runtime objects with PEP 695 generics.
-- No per-parameter call syntax — params are a single dataclass object.
-- No changes to the JSON-RPC wire, `meta` codec, replay/rejoin, or `RpcStream`/`RpcSubscription` handles (`batch`/`notify` reuse the existing batch wire as an id-less array).
-- No `use_rpc` composable — transports are passed explicitly.
+- Inspect HTTP transport internals, custom endpoint paths, Starlette mounting, and the manual transport appendix in [RPC](/documents/advanced/rpc).
+- Stream finite request-scoped generator outputs in [RPC Streaming](/documents/advanced/rpc-streaming).
+- Run cursor-replayed pub/sub feeds and multiplexed calls over one socket in [RPC over WebSocket](/documents/advanced/rpc-websocket).
+- Review plain REST fetching and mock middleware in [HTTP & Async](/documents/basic/http-and-async) and [Step 5: Remote Data](/documents/guides/todo-remote-data).

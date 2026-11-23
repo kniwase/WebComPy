@@ -181,6 +181,21 @@ class TestManifestContent:
         assert paths[0] == "/documents/getting-started/what-is-webcompy"
         assert paths[-1] == "/documents/advanced/i18n"
 
+    def test_realtime_and_rpc_group_order(self) -> None:
+        advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")
+        realtime_paths = [page["path"] for page in advanced["pages"] if page.get("group") == "Realtime & RPC"]
+        assert realtime_paths == [
+            "/documents/advanced/readonly-signal",
+            "/documents/advanced/signal-stream",
+            "/documents/advanced/event-source",
+            "/documents/advanced/websocket",
+            "/documents/advanced/typed-realtime",
+            "/documents/advanced/rpc-contracts",
+            "/documents/advanced/rpc",
+            "/documents/advanced/rpc-websocket",
+            "/documents/advanced/rpc-streaming",
+        ]
+
     def test_rendering_and_performance_group_order(self) -> None:
         advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")
         rendering_paths = [page["path"] for page in advanced["pages"] if page.get("group") == "Rendering & Performance"]
@@ -201,7 +216,7 @@ class TestManifestContent:
         assert len(children) == len(pages)
 
         prev_p, next_p = prev_next("/documents/advanced/ssr-and-ssg")
-        assert prev_p is not None and prev_p["path"] == "/documents/advanced/rpc-websocket"
+        assert prev_p is not None and prev_p["path"] == "/documents/advanced/rpc-streaming"
         assert next_p is not None and next_p["path"] == "/documents/advanced/hydration-and-transfer"
 
         prev_pwa, next_pwa = prev_next("/documents/advanced/pwa")

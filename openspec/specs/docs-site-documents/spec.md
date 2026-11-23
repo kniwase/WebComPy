@@ -3,7 +3,9 @@
 ## Purpose
 
 The documentation section of the docs_app (`/documents`) presents framework documentation as static-looking pages: a manifest-driven route table, a nested-route shared layout with a sectioned sidebar and Prev/Next paging, thin async Markdown page wrappers over a shared template with a right-hand TOC, and a prose typography preset. A single manifest (`DOCS_SECTIONS` plus a `DOCS_INDEX` entry) is the single source of truth from which the routes, sidebar, Navbar "Documents" dropdown, and Prev/Next ordering all derive.
+
 ## Requirements
+
 ### Requirement: A manifest shall be the single source of truth for the docs structure
 
 docs_app SHALL define a `DOCS_SECTIONS` manifest in `docs_app/docs_manifest.py`: an ordered list of sections, each with a `title` and an ordered list of page entries. Each page entry SHALL have `label` (nav label) and `path` (absolute route path), MAY have a `group` label, and exactly one of `source` (Markdown resource path, relative to the app package) or `component` (`"module:Attr"` lazy reference). docs_app SHALL also define a `DOCS_INDEX` entry representing the `/documents` index route. The route children under `/documents` SHALL be generated from the manifest (the `DOCS_INDEX` entry first, then the section page entries in order). The docs sidebar, the Navbar "Documents" dropdown, and Prev/Next ordering SHALL be generated from the section page entries only — the index SHALL NOT appear in navigation or paging. Paths SHALL be unique across the manifest. Every page path SHALL equal the docs root (`DOCS_ROOT`) or be a path under it, so the manifest-owned routes always live inside the `/documents` subtree. Page paths SHALL additionally follow the category section model prefixes defined by that requirement.
@@ -254,4 +256,16 @@ The Advanced Usage category SHALL contain, within the `Rendering & Performance` 
 - **WHEN** the Advanced category has entries with groups `Realtime & RPC`, then `Rendering & Performance`
 - **THEN** the sidebar shows two sub-headers and Prev/Next walks all pages in manifest order ignoring groups
 
+### Requirement: The Advanced realtime and RPC pages shall be contract-first and uniformly structured
 
+The Advanced Usage realtime block SHALL present pages in this order: `readonly-signal`, `signal-stream`, `event-source`, `websocket`, `typed-realtime`, `rpc-contracts`, `rpc`, `rpc-websocket`, `rpc-streaming`. `rpc-contracts` SHALL be the primary RPC entry point teaching the declarative contract API (`Procedure`/`StreamingProcedure`/`Subscription`, `batch`/`notify`, `bind`), with the lower-level `ProcedureRegistry`/string-method transport confined to a clearly labeled appendix on the `rpc` page. Every RPC recipe SHALL show both the server-side registration and the client-side call. Each page SHALL follow the Advanced structure (lead, when-to-use, setup, recipes, behavior notes, pitfalls, next steps) and include a routing-table section (cell vs occurrence semantics on `signal-stream`; HTTP vs SSE vs WebSocket vs RPC on `rpc-contracts`).
+
+#### Scenario: Contract-first lead
+
+- **WHEN** a reader opens `rpc-contracts`
+- **THEN** the first examples define a `Procedure` and call it through a transport, and `register`/string-name `call` appears only in the labeled appendix on the `rpc` page
+
+#### Scenario: Server side present in RPC recipes
+
+- **WHEN** any RPC recipe page is read
+- **THEN** each recipe includes a server-side registration snippet alongside the client snippet

@@ -7,20 +7,23 @@ def test_websocket_page_renders_inside_layout(docs_page_on, assert_no_console_er
     page = docs_page_on("/documents/advanced/websocket")
     assert page.title() == "WebSocket - WebComPy Docs"
     expect(page.locator(".docs-sidebar")).to_be_visible()
-    expect(page.get_by_role("heading", name="WebSocket")).to_be_visible()
+    expect(page.get_by_role("heading", name="WebSocket", level=1)).to_be_visible()
 
 
 @pytest.mark.e2e
 def test_websocket_page_toc(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/advanced/websocket")
     expect(page.locator(".docs-toc")).to_be_visible()
-    expect(page.locator('.docs-toc a[href$="#connection-handle"]')).to_be_visible()
-    expect(page.locator('.docs-toc a[href$="#connection-sharing"]')).to_be_visible()
-    expect(page.locator('.docs-toc a[href$="#reconnection"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#when-to-use"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#setup"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#recipes"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#the-gaprefetch-recipe"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#behavior-notes"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#pitfalls"]')).to_be_visible()
 
 
 @pytest.mark.e2e
-def test_websocket_page_pager(docs_page_on, assert_no_console_errors):
+def test_websocket_page_pager_links_to_typed_realtime(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/advanced/websocket")
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
     expect(page.locator(".docs-pager-prev a")).to_have_text("Server-Sent Events")

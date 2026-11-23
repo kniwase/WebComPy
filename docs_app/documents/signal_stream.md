@@ -1,69 +1,172 @@
 ---
 title: Signals and Streams
-description: Convert realtime data streams into reactive state with to_signal, to_reactive_list, and to_async_iter.
+description: Bridge occurrence-based async streams and reactive cell state — choose between cells and occurrences, convert feeds with to_signal and to_reactive_list, and stream signal updates with to_async_iter.
 ---
 
 # Signals and Streams
 
-WebComPy state primitives are **cells**: `Signal`, `Computed`, and `ReactiveList` hold *current state* and propagate changes, with an equality contract that suppresses same-value writes (covered in [Reactive State](/documents/basic/reactive-state)). Realtime data (WebSocket/SSE messages, progress ticks) has **occurrence** semantics instead: every arrival matters, duplicates included. The `webcompy.aio` stream utilities bridge these two worlds.
+WebComPy distinguishes **cells** (`Signal`, `Computed`, `ReadonlySignal`) from **occurrence streams** (`AsyncIterable`, SSE, WebSocket, and streaming RPC feeds). Cells represent the latest value and collapse consecutive equal writes; occurrence streams deliver every event in order, duplicates included. The stream helpers in `webcompy.aio` (`to_signal`, `to_reactive_list`, `to_async_iter`) bridge the two models with automatic lifecycle cleanup.
 
-## to_signal: one-shot values
+## Choosing between cells and streams
 
-The `to_signal` utility pumps an `AsyncIterable` (or plain `Iterable`) into a `Signal`. The initial value is mandatory so the UI always has a renderable value before the first item arrives:
+| Primitive / helper | Model | Duplicate handling | Typical use |
+|---|---|---|---|
+| [`use_state`](/documents/basic/reactive-state) / `Signal` | Writable cell | Equal writes suppressed | UI toggles, counters, form fields (SSR-transferable) |
+| [`use_readonly_signal`](/documents/advanced/readonly-signal) / `use_window_event` | Read-only cell | Equal writes suppressed | Service status, viewport size, visibility state |
+| `to_signal(source, initial)` | Stream -> latest cell | Latest item stored in `.value` (cell semantics) | Progress indicators, latest telemetry reading |
+| `to_reactive_list(source, maxlen=...)` | Stream -> ordered list | Keeps every occurrence in arrival order | Chat logs, activity feeds, token buffers |
+| `to_async_iter(sig, emit_initial=False, maxlen=...)` | Cell -> async stream | Fires only when `sig` changes to a distinct value | Debounced API search, background worker queues |
+
+## When to use
+
+- **Need a component-owned value backed by an async feed** — use `to_signal` for a single latest reading or `to_reactive_list` for an accumulating history.
+- **Need an async loop to react whenever a signal updates** — use `to_async_iter(signal)` inside an async worker instead of polling or wiring manual callbacks.
+- **Directly opening network connections or RPC calls** — pair these helpers with [Server-Sent Events](/documents/advanced/event-source), [WebSocket](/documents/advanced/websocket), or [RPC Streaming](/documents/advanced/rpc-streaming).
+
+## Setup
+
+All three converters live in `webcompy.aio`. `to_signal` and `to_reactive_list` begin consuming the iterable immediately when called inside component setup and cancel automatically on component destroy:
 
 ```python
-from webcompy.aio import to_signal
+from webcompy import use_computed
+from webcompy.aio import to_reactive_list, to_signal
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html, repeat
+from webcompy.realtime import use_websocket
 
-result = to_signal(progress_ticks(), 0)
-# result.value: Signal[int]  — updated per item
-# result.error: Signal[Exception | None]
-# result.finished: Signal[bool]
+
+@define_component()
+def TelemetryPanel(context: ComponentContext[None]):
+    ws = use_websocket("/api/telemetry")
+    latest = to_signal(ws, initial="waiting...")
+    history = to_reactive_list(ws, maxlen=20)
+
+    return html.DIV(
+        {},
+        html.P({}, use_computed(lambda: f"Latest: {latest.value.value}")),
+        html.UL(
+            {},
+            repeat(history.items, lambda msg: html.LI({}, msg)),
+        ),
+    )
 ```
 
-Because the bridge target is a `Signal`, the cell equality contract applies: an item equal to the current value does not notify consumers. Use `to_reactive_list` or `to_async_iter` when every occurrence matters.
+## Recipes
 
-## to_reactive_list: accumulating feeds
+### Accumulate an SSE or WebSocket feed with a bounded window
 
-Chat logs, notification feeds, and event histories accumulate *every* item, duplicates included:
+`to_reactive_list(source, *, maxlen=None)` appends every emitted item to `.items` (`ReactiveList[T]`), preserving duplicates, and drops the oldest entry once `len(result.items) > maxlen`. You can also observe `.finished` and `.error`:
 
 ```python
+from webcompy import use_computed
 from webcompy.aio import to_reactive_list
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html, repeat
+from webcompy.realtime import use_event_source
 
-feed = to_reactive_list(ws_messages, maxlen=100)
-# feed.items: ReactiveList[str]  — newest 100 items
-# feed.error: Signal[Exception | None]
-# feed.finished: Signal[bool]
+
+@define_component()
+def AuditLog(context: ComponentContext[None]):
+    feed = to_reactive_list(use_event_source("/api/audit"), maxlen=50)
+
+    return html.DIV(
+        {},
+        html.P(
+            {},
+            use_computed(
+                lambda: f"Error: {feed.error.value}"
+                if feed.error.value is not None
+                else ("Stream closed" if feed.finished.value else "Streaming...")
+            ),
+        ),
+        html.UL(
+            {},
+            repeat(feed.items, lambda ev: html.LI({}, f"[{ev.event}] {ev.data}")),
+        ),
+    )
 ```
 
-Set `maxlen` to keep only the newest N items (drop-oldest). Without it the list grows unbounded, which is deliberate but SHALL be capped for long-lived streams. Each append and each trim triggers a reactive update, so a small `maxlen` on a high-frequency source increases notification churn; size `maxlen` to match the source rate.
+### Track the latest item and stream status with `to_signal()`
 
-## to_async_iter: consuming signal updates
-
-The `to_async_iter` utility bridges a `Signal`'s updates into an async iterator. Each item corresponds to a signal *update* (signal-level dedup applies upstream):
+`to_signal(source, initial)` updates `.value` (`Signal[T]`) as each item arrives, sets `.finished` (`Signal[bool]`) to `True` on normal exhaustion or error, and records any exception in `.error` (`Signal[Exception | None]`):
 
 ```python
+from webcompy import use_computed
+from webcompy.aio import to_signal
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+
+
+async def count_steps():
+    yield "Validating..."
+    yield "Uploading..."
+    yield "Done"
+
+
+@define_component()
+def JobProgress(context: ComponentContext[None]):
+    step = to_signal(count_steps(), initial="Idle")
+
+    return html.SPAN(
+        {},
+        use_computed(
+            lambda: f"{step.value.value} (done={step.finished.value})"
+        ),
+    )
+```
+
+### React to signal writes sequentially with `to_async_iter()`
+
+`to_async_iter(sig, *, emit_initial=False, maxlen=None)` turns writes to a `Signal` into an async iterator (`StreamAsyncIterator[T]`). Passing `emit_initial=True` yields the current `sig.value` first before waiting for subsequent updates:
+
+```python
+from webcompy import use_state
 from webcompy.aio import to_async_iter
+from webcompy.ajax import HttpClient
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.elements import html
 
-async for value in to_async_iter(count, emit_initial=True):
-    await handle(value)
+
+@define_component()
+def SearchWatcher(context: ComponentContext[None]):
+    query = use_state(lambda: "")
+    summary = use_state(lambda: "Type to search")
+
+    @on_mounted
+    async def watch_queries():
+        async for q in to_async_iter(query, emit_initial=False, maxlen=1):
+            if not q:
+                summary.value = "Type to search"
+                continue
+            resp = await HttpClient.get("/api/search", query_params={"q": q})
+            summary.value = resp.text if resp.ok else f"Error {resp.status_code}"
+
+    return html.DIV(
+        {},
+        html.INPUT({"@input": lambda ev: setattr(query, "value", ev.target.value)}),
+        html.P({}, summary),
+    )
 ```
 
-Items produced before subscription are not replayed; pass `emit_initial=True` to enqueue the current value first. `maxlen` caps the internal buffer with drop-oldest semantics for slow consumers.
+Notice `maxlen=1`: when the user types faster than HTTP requests finish, older queued queries are dropped so the loop always inspects the newest query next.
 
-## Queue policy and lifecycle
+## Behavior notes
 
-Buffers are unbounded by default; a slow consumer lets the queue grow, so long-lived streams should set `maxlen`. Bridges created inside component setup are torn down automatically on component destroy; standalone usage requires an explicit `aclose()` call:
+- **Queueing and eviction policy**:
+  - `to_reactive_list(..., maxlen=N)` appends arriving items in order and pops index `0` whenever length exceeds `N` (unbounded when `maxlen=None`).
+  - `to_async_iter(..., maxlen=N)` uses a bounded **drop-oldest** queue — if the consumer falls behind, oldest buffered values are evicted so the next iteration yields fresh state.
+- **Lifecycle and manual cleanup**: All three helpers register a chained `on_before_destroy` cleanup hook when called inside component setup, so tearing down a component stops background consumption and detaches signal listeners automatically. When calling `to_signal`, `to_reactive_list`, or `to_async_iter` outside component setup, hold onto the returned handle and call `await handle.aclose()` to release the task/subscription cleanly.
+- **Equality deduplication at cell boundaries**: `to_async_iter(signal)` listens to `on_after_updating`, which only fires when `signal.value = new` changes the signal according to equality. Likewise, assigning each streamed item to `StreamResult.value` in `to_signal` skips notifying dependents if the new item equals the previous one.
+- **SSR and hydration**: When fed from closed server handles (such as SSR `use_event_source` or `use_websocket`), `to_signal` and `to_reactive_list` see immediate exhaustion (`finished.value == True`). None of the three converters serialize stream state into the SSR hydration payload.
 
-```python
-result = to_signal(infinite_source(), 0)
-...
-await result.aclose()  # stop pumping
-```
+## Pitfalls
 
-Bridged values are derived client-side views and never participate in hydration transfer (same rule as `Computed`).
+- **Unbounded list growth**: Leaving `maxlen=None` on a long-lived `to_reactive_list(use_websocket(...))` chat or telemetry feed lets memory grow indefinitely during a session. Set `maxlen=` to a concrete UI cap.
+- **Expecting repeat triggers in `to_async_iter()`**: Writing `count.value = count.value` triggers no update on `to_async_iter(count)`. If every identical click or ping must fire an event, emit directly into an async queue or callback instead of writing to a `Signal`.
+- **Closing outside component setup**: Using `.close()` does not exist on `StreamResult`, `StreamListResult`, or `StreamAsyncIterator` — the cleanup method is `await handle.aclose()`.
 
 ## Next steps
 
-- Review cell-based `Signal`, `Computed`, and `use_state` basics in [Reactive State](/documents/basic/reactive-state).
-- See external callback signals in [Read-only Signals and Events](/documents/advanced/readonly-signal).
-- Pair stream utilities with [Server-Sent Events](/documents/advanced/event-source) or [WebSocket](/documents/advanced/websocket).
+- Expose external callbacks as read-only cells in [Read-only Signals and Events](/documents/advanced/readonly-signal).
+- Open shared SSE and WebSocket streams in [Server-Sent Events](/documents/advanced/event-source) and [WebSocket](/documents/advanced/websocket).
+- Review reactive primitives (`Signal`, `ReactiveList`, `use_state`) in [Reactive State](/documents/basic/reactive-state).
