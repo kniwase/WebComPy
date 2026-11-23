@@ -1,0 +1,44 @@
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for sharing an idea or feature request! Both English and Japanese are welcome.
+        Major features in WebComPy follow the OpenSpec workflow — see [Development Workflow](https://github.com/kniwase/WebComPy/blob/main/CONTRIBUTING.md#the-development-workflow) ([日本語ガイド](https://github.com/kniwase/WebComPy/blob/main/CONTRIBUTING.ja.md#%E9%96%8B%E7%99%BA%E3%83%AF%E3%83%BC%E3%82%AF%E3%83%95%E3%83%AD%E3%83%BC)).
+
+        機能要望やアイデアの投稿は英語・日本語のどちらでも構いません。
+        大きな機能追加や仕様変更は OpenSpec ワークフローに沿って進めます。詳しくは[開発ワークフロー](https://github.com/kniwase/WebComPy/blob/main/CONTRIBUTING.ja.md#%E9%96%8B%E7%99%BA%E3%83%AF%E3%83%BC%E3%82%AF%E3%83%95%E3%83%AD%E3%83%BC)をご覧ください。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / 解決したい課題
+      description: What problem or limitation are you trying to solve? / 解決したい課題や、現状で困っている点を記載してください
+      placeholder: "Describe the use case and why current WebComPy behavior falls short..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution / 提案内容
+      description: How should WebComPy address this? / 実現したい API や動作のイメージを記載してください
+      placeholder: "Describe the desired API, behavior, or CLI usage..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered / 検討した代替案
+      description: Any alternative approaches or workarounds you considered / 他に検討した方法や回避策があれば記載してください
+
+  - type: checkboxes
+    id: openspec
+    attributes:
+      label: OpenSpec Workflow / OpenSpec ワークフロー
+      description: Optional check for contributors planning to implement this idea / ご自身で実装や提案まで進める場合の確認項目（任意）
+      options:
+        - label: I am interested in creating an OpenSpec change proposal for this idea / この件について OpenSpec の変更提案の作成を検討している
+          required: false

@@ -9,7 +9,7 @@
 ## Related Resources
 
 - OpenSpec Change: `<type>-<description>` (if applicable)
-- Issues: `#<n>`
+- Discussions: `#<n>`
 - Specs affected: `openspec/specs/<name>/spec.md`
 
 ## Type of Change
