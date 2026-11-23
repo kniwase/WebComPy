@@ -186,15 +186,15 @@ DOCS_SECTIONS: list[DocsSection] = [
         "title": "Advanced Usage",
         "pages": [
             {
-                "label": "Signals and Streams",
-                "path": "/documents/advanced/signal-stream",
-                "source": "documents/signal_stream.md",
-                "group": "Realtime & RPC",
-            },
-            {
                 "label": "Read-only Signals and Events",
                 "path": "/documents/advanced/readonly-signal",
                 "source": "documents/readonly_signal.md",
+                "group": "Realtime & RPC",
+            },
+            {
+                "label": "Signals and Streams",
+                "path": "/documents/advanced/signal-stream",
+                "source": "documents/signal_stream.md",
                 "group": "Realtime & RPC",
             },
             {
@@ -216,21 +216,27 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "group": "Realtime & RPC",
             },
             {
-                "label": "RPC",
-                "path": "/documents/advanced/rpc",
-                "source": "documents/rpc.md",
-                "group": "Realtime & RPC",
-            },
-            {
                 "label": "RPC Contracts",
                 "path": "/documents/advanced/rpc-contracts",
                 "source": "documents/rpc_contracts.md",
                 "group": "Realtime & RPC",
             },
             {
+                "label": "RPC",
+                "path": "/documents/advanced/rpc",
+                "source": "documents/rpc.md",
+                "group": "Realtime & RPC",
+            },
+            {
                 "label": "RPC over WebSocket",
                 "path": "/documents/advanced/rpc-websocket",
                 "source": "documents/rpc_websocket.md",
+                "group": "Realtime & RPC",
+            },
+            {
+                "label": "RPC Streaming",
+                "path": "/documents/advanced/rpc-streaming",
+                "source": "documents/rpc_streaming.md",
                 "group": "Realtime & RPC",
             },
             {

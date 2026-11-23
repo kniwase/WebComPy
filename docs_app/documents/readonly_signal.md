@@ -1,101 +1,124 @@
 ---
 title: Read-only Signals and Events
-description: Hold externally-produced state as a read-only signal with use_readonly_signal, use_window_event, and use_document_event.
+description: Expose reactive state to consumers without letting them mutate it — use_readonly_signal, use_window_event, use_document_event, lifecycle chaining, and SSR behavior.
 ---
 
 # Read-only Signals and Events
 
-WebComPy's state primitives are **cells**: they hold *current state* and propagate changes, with an equality contract that suppresses same-value writes (covered in [Reactive State](/documents/basic/reactive-state)). When the state comes from outside your component — a window resize, a visibility change, a callback from non-WebComPy code — you want a value your UI can read reactively, but you do not want to hand out write access. `use_readonly_signal` gives you exactly that: a read-only signal whose **only** write path is the `update` function it returns.
+`use_readonly_signal()` gives you a signal whose value is readable by components and computed derivations, but writable only through an explicit internal callback. Built on top of it, `use_window_event()` and `use_document_event()` turn browser state changes such as viewport size, network status, and page visibility into clean read-only signals.
 
-This page covers the primitive and the two convenience composables for browser state events. If your data is a stream of *occurrences* (chat messages, ticks, WebSocket events) where every arrival matters, see [Signals and Streams](/documents/advanced/signal-stream) instead — signal equality would silently drop duplicates.
+## When to use
 
-## use_readonly_signal: an external-only write path
+- **Need consumer-writable component or app state** — use [`use_state`](/documents/basic/reactive-state) (or `Signal`) when consumers may assign `.value` directly.
+- **Want to broadcast state owned by a service or browser API** — use `use_readonly_signal`, `use_window_event`, or `use_document_event` so UI code can read reactively without mutating the source.
+- **Consuming an ordered feed where duplicate values still matter** — use [Signals and Streams](/documents/advanced/signal-stream) instead, because signals collapse consecutive equal writes.
 
-```python
-from webcompy import use_readonly_signal
+## Setup
 
-view, update = use_readonly_signal(0)
-# view: ReadonlySignal[int] — readable, but has no setter
-# update(...) is the ONLY way to change it
-```
-
-- The returned signal is a `ReadonlySignal` (`from webcompy.signal import ReadonlySignal` for annotations): it exposes `.value` and nothing else — no `set_value`, no value setter.
-- `update` mirrors the signal equality contract: passing a value equal to the current one does not notify consumers (a resized width that did not change stays silent).
-- It is **context-free**: call it in a standalone script, at module level, or inside another composable — no component setup required, no warning emitted.
-- Values are client-side derived state: they never participate in hydration transfer, and SSR renders `initial` unchanged.
-
-Bridging an external callback:
+Call `use_readonly_signal(initial)` to create a `(view, update)` pair. `view` is a `ReadonlySignal[T]` exposing `.value` (readable anywhere, including `@use_computed`), while `update` is a private callable that sets the next value and returns it:
 
 ```python
-from webcompy import use_readonly_signal
+from webcompy import use_computed, use_readonly_signal
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+from webcompy.signal import ReadonlySignal
 
-view, update = use_readonly_signal(0)
-
-def on_pressure(value):
-    update(value)
-
-pressure_sensor.subscribe(on_pressure)
-```
-
-## use_window_event: window state events
-
-`use_window_event(event_type, initial, *, transform=None)` bridges a window-level state event into a read-only signal. Call it inside a component's setup: the listener is attached immediately and **automatically removed when the component is destroyed** — no orphaned listener or browser proxy.
-
-```python
-from webcompy import use_window_event
 
 @define_component()
-def EventPage(context):
-    width, _ = use_window_event("resize", 0, transform=lambda e: e.target.innerWidth)
-    return html.DIV({}, str(width.value))
-```
+def StatusBanner(context: ComponentContext[None]):
+    online, set_online = use_readonly_signal(True)
+    status_label = use_computed(lambda: "Online" if online.value else "Offline")
 
-- `transform: Callable[[Any], T] | None` converts the raw event into the signal's value type; when omitted, the raw event object is stored as-is.
-- An exception raised inside `transform` is logged and swallowed — the signal keeps its previous value and the browser's event dispatch is not interrupted.
-- Inside component setup with a resolvable `HostPort`, the listener is registered and unregistered on `on_before_destroy`. The composable occupies the component's single destroy-hook slot, so register your own `on_before_destroy` hook **before** calling it — a hook registered later would overwrite the cleanup and leak the listener.
-- Outside component setup a `UserWarning` is emitted and **nothing is attached** (leak-free). During SSR/SSG the server port is a no-op, so the page renders `initial` and hydration is unaffected.
-
-## use_document_event: document state events
-
-`use_document_event` is the same composable for document-level events (e.g. `visibilitychange`, pointer state), registered through `DOMPort.add_document_event_listener`:
-
-```python
-from webcompy import use_document_event
-
-@define_component()
-def EventPage(context):
-    hidden, _ = use_document_event(
-        "visibilitychange",
-        False,
-        transform=lambda e: bool(e.target.hidden),
+    return html.DIV(
+        {},
+        html.SPAN({}, status_label),
+        html.BUTTON({"@click": lambda _ev: set_online(not online.value)}, "Toggle"),
     )
-    return html.DIV({}, "hidden" if hidden.value else "visible")
 ```
 
-Lifecycle and error semantics are identical to `use_window_event`.
+`view` has no `.value =` setter — assigning to `online.value` raises `AttributeError`. When annotating helper signatures, import `ReadonlySignal` from `webcompy.signal`.
 
-## State events, not occurrence events
+## Recipes
 
-Signal equality means `update(v)` where `v` equals the current value produces **no notification**. That is exactly right for state: the window did not change size, the tab did not change visibility. It is wrong for occurrence streams — a duplicate message or a repeated tick would be silently swallowed. For those, use `to_reactive_list` (accumulate every item) or `to_async_iter` (consume every update) from `webcompy.aio`, or a plain callable event handler.
+### Track window events with `use_window_event()`
 
-## Standalone usage
+Use `use_window_event(event_type, initial, transform=...)` inside component setup to mirror a `window` property into a read-only signal and automatically remove the listener when the component is destroyed:
 
-The composables deliberately refuse to attach listeners outside component setup. If you need a window/document listener at module level or in a script, register it yourself and pair it with the primitive:
+```python
+from webcompy import use_computed, use_window_event
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+
+
+@define_component()
+def ViewportIndicator(context: ComponentContext[None]):
+    width, _set_width = use_window_event(
+        "resize",
+        1024,
+        transform=lambda ev: int(ev.target.innerWidth),
+    )
+    layout = use_computed(lambda: "mobile" if width.value < 768 else "desktop")
+
+    return html.P({}, use_computed(lambda: f"{width.value}px ({layout.value})"))
+```
+
+### Track document state with `use_document_event()`
+
+`use_document_event(event_type, initial, transform=...)` attaches a document-level listener using the same contract. Returning the update callback lets you also react programmatically or override initial state in tests:
+
+```python
+from webcompy import use_computed, use_document_event
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+
+
+@define_component()
+def VisibilityBadge(context: ComponentContext[None]):
+    visibility, _ = use_document_event(
+        "visibilitychange",
+        "visible",
+        transform=lambda ev: str(ev.target.visibilityState),
+    )
+
+    return html.SPAN({}, use_computed(lambda: f"Tab: {visibility.value}"))
+```
+
+### Share module-level external state without a component context
+
+`use_readonly_signal()` has no context requirement. Call it at module scope or inside a service class and export only the read-only view (or a `ReadonlySignal` factory) to components:
 
 ```python
 from webcompy import use_readonly_signal
+from webcompy.signal import ReadonlySignal
 
-view, update = use_readonly_signal(0)
+auth_user, _set_auth_user = use_readonly_signal[str | None](None)
 
-def on_resize(event):
-    update(event.target.innerWidth)
 
-# browser-only setup; remove the listener yourself
-host = ...  # your HostPort (e.g. via inject(HOST_PORT_KEY) inside an app scope)
-_remove = host.add_window_event_listener("resize", on_resize)
+def on_session_changed(username: str | None) -> None:
+    _set_auth_user(username)
+
+
+def current_user() -> ReadonlySignal[str | None]:
+    return auth_user
 ```
+
+If an external service needs direct DOM or timer callbacks that start outside component setup, pair `use_readonly_signal()` with your service's own start/stop methods and trigger updates via `set_value`.
+
+## Behavior notes
+
+- **Deduplication**: `ReadonlySignal` wraps an internal `Signal` and inherits its equality check. Writing a value equal to the current `.value` skips downstream notifications.
+- **Chained cleanup hooks**: Both `use_window_event()` and `use_document_event()` register their listener teardown via chained destroy hooks, so calling multiple event composables (or defining your own `on_before_destroy` handler) in the same component runs every cleanup function on destroy without overwriting earlier ones.
+- **Resilient transforms**: If `transform(event)` raises an exception, WebComPy logs a warning and leaves the signal at its previous value rather than crashing the browser event dispatch loop.
+- **SSR and hydration**: During server rendering and static generation (`webcompy generate`), `use_window_event()` and `use_document_event()` detect the no-op server port, attach no listeners, and leave the signal at `initial`. Neither `use_readonly_signal()` nor the DOM event composables transfer state into `<script id="__webcompy_data__">`; listeners attach only once the browser boots.
+
+## Pitfalls
+
+- **Silently dropped duplicates**: Using `use_readonly_signal` for an event log where repeated identical messages (e.g. `"ping"`, `"ping"`) must each trigger work will lose every repeat after the first. Use [Signals and Streams](/documents/advanced/signal-stream) (`to_reactive_list`) for occurrence streams.
+- **In-place mutation of mutable values**: Mutating a list or dict inside `update(current)` keeps the same identity or equality reference and can bypass updates. Always pass a fresh object to `update(...)`.
+- **Calling DOM event composables outside setup**: Calling `use_window_event()` or `use_document_event()` at module import time or inside an event handler outside component setup emits a `UserWarning` and returns `(view, update)` with no DOM listener attached.
 
 ## Next steps
 
-- Revisit core `Signal`, `Computed`, and `use_*` primitives in [Reactive State](/documents/basic/reactive-state).
-- Bridge occurrence-based async feeds in [Signals and Streams](/documents/advanced/signal-stream).
+- Convert between occurrence streams and signals in [Signals and Streams](/documents/advanced/signal-stream).
+- Revisit writable component state and `Computed` derivations in [Reactive State](/documents/basic/reactive-state).
+- Handle inline element event handlers (`@click`, `@input`) in [Elements & Events](/documents/basic/elements-and-events).

@@ -55,7 +55,7 @@ def test_advanced_sidebar_shows_group_headers_on_wide_viewport(docs_page_on, ass
 @pytest.mark.e2e
 def test_pager_walks_across_group_boundaries(docs_page_on, assert_no_console_errors) -> None:
     page = docs_page_on("/documents/advanced/ssr-and-ssg")
-    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC over WebSocket")
+    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC Streaming")
     expect(page.locator(".docs-pager-next a")).to_have_text("Hydration & Data Transfer")
 
     page = docs_page_on("/documents/advanced/styling-deep-dive")

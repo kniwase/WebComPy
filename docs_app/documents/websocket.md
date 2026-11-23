@@ -1,140 +1,163 @@
 ---
 title: WebSocket
-description: Open bidirectional text connections with use_websocket — connection sharing, reconnection with backoff, close introspection, and disconnected send policy.
+description: Open bidirectional text connections with use_websocket — connection sharing, exponential backoff with jitter, close introspection, disconnected send buffering, and gap recovery.
 ---
 
 # WebSocket
 
-WebSockets give you a bidirectional, full-duplex text channel between the browser and a server. WebComPy exposes them through the `use_websocket` composable, which returns a connection handle that is itself an async iterator of text messages.
+`use_websocket()` gives components a full-duplex text channel over WebSockets. Each call returns a `WebSocketHandle` that is both an `AsyncIterator[str]` of incoming text frames and a sender via `.send(text)`. Multiple components connecting to the same URL and subprotocols inside one app share a single underlying socket with automatic reconnection and clean lifecycle detach.
 
-Like SSE messages, WebSocket messages have *occurrence* semantics: every frame matters, duplicates included, and nothing is suppressed.
+## When to use
 
-## Basic usage
+- **Need custom bidirectional raw text messaging or binary/wire control** — use `use_websocket()`.
+- **Want dataclass schemas and typed metadata (`datetime`, `UUID`, `Decimal`, `Enum`) checked automatically** — use [Typed Realtime](/documents/advanced/typed-realtime).
+- **Only need one-way server-to-client streaming** — prefer [Server-Sent Events](/documents/advanced/event-source).
+- **Need request/response calls, batching, or cursor-replayed pub/sub streams** — use [RPC over WebSocket](/documents/advanced/rpc-websocket).
+
+## Setup
+
+Call `use_websocket(url)` in component setup, monitor `.state` with `ConnectionState`, and iterate incoming frames inside `@on_mounted`:
 
 ```python
+from webcompy import ConnectionState, use_computed
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.elements import html, repeat
 from webcompy.realtime import use_websocket
+from webcompy.signal import use_reactive_list
 
-@define_component(custom_element_name="live-chat")
-def Chat(context):
+
+@define_component()
+def ChatRoom(context: ComponentContext[None]):
     ws = use_websocket("/api/chat")
+    messages = use_reactive_list(lambda: [])
 
     @on_mounted
-    async def consume():
-        async for message in ws:
-            print(message)  # each received text frame
+    async def listen():
+        async for text in ws:
+            messages.append(text)
+
+    return html.DIV(
+        {},
+        html.P({}, use_computed(lambda: f"Socket: {ws.state.value.value}")),
+        html.BUTTON(
+            {"@click": lambda _ev: ws.send("hello!")},
+            "Send",
+        ),
+        html.UL({}, repeat(messages, lambda m: html.LI({}, m))),
+    )
 ```
 
-`ws.send(data)` sends one text frame. Combined, the handle gives you a full round trip:
+## Recipes
+
+### Share connections by `(url, protocols)`
+
+Calls to `use_websocket()` with matching `url` and `protocols` within the same app DI scope reuse one underlying socket. Each handle has its own FIFO queue (`max_queue`), and closing one handle only detaches that caller:
 
 ```python
-ws.send("hello")          # send a text frame
-async for message in ws:  # receive text frames
-    ...
+chat_a = use_websocket("/api/chat", protocols=("chat.v2",), max_queue=100)
+chat_b = use_websocket("/api/chat", protocols=("chat.v2",))  # shares socket with chat_a
+
+other = use_websocket("/api/chat")  # different protocols -> separate socket
 ```
 
-The `protocols` parameter passes subprotocols to the server (see [Connection sharing](#connection-sharing)):
+### Configure reconnection backoff and inspect `CloseInfo`
+
+By default (`reconnect=True`), unexpected drops switch `.state.value` to `ConnectionState.RECONNECTING` and reconnect with jittered exponential backoff. `.last_close` holds a `CloseInfo(code, reason, was_clean)` signal (or `None` before the first close):
 
 ```python
-ws = use_websocket("/api/chat", protocols=("chat.v2",))
+from webcompy import use_computed
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+from webcompy.realtime import use_websocket
+
+
+@define_component()
+def ReconnectingClient(context: ComponentContext[None]):
+    ws = use_websocket(
+        "/api/live",
+        reconnect_base_delay=1.0,
+        reconnect_max_delay=30.0,
+        reconnect_max_attempts=8,
+    )
+
+    @use_computed
+    def close_summary():
+        info = ws.last_close.value
+        if info is None:
+            return "Connected cleanly"
+        return f"Last close {info.code} (clean={info.was_clean}): {info.reason}"
+
+    return html.P({}, close_summary)
 ```
 
-Binary frames sent by the server are ignored with a warning; only text frames are delivered.
+Clean closes with code `1000` stop the loop and move `.state.value` to `ConnectionState.CLOSED` instead of reconnecting.
 
-## Connection handle
+### Buffer sends while connecting or reconnecting
 
-The handle exposes four surfaces:
-
-- **Iteration** — `async for message in ws:` yields every received text message in arrival order.
-- `.state` — a `Signal[ConnectionState]` (`CONNECTING` / `OPEN` / `RECONNECTING` / `CLOSED`) reflecting the underlying connection.
-- `.last_close` — a `Signal[CloseInfo | None]` holding a frozen `CloseInfo` for the most recent close event, or `None` if the connection has never closed.
-- `.send(data)` — sends one text frame (see [Sending while disconnected](#sending-while-disconnected)).
-- `.close()` — detaches **only your own subscription**; it never tears down a connection that other subscribers still use.
-
-| `CloseInfo` field | Meaning |
-|---|---|
-| `code` | The WebSocket close code (e.g., `1000` normal, `1006` abnormal, `1011` server error) |
-| `reason` | The close reason string sent by the server |
-| `was_clean` | Whether the close handshake completed cleanly |
-
-`.last_close` is updated on *every* close of the underlying connection — including closures that reconnection later recovers — and is **not** reset when the connection reopens. It is the reliable way to inspect why the socket dropped:
+By default (`buffer_while_disconnected=False`), calling `.send(data)` while `.state.value` is `CONNECTING`, `RECONNECTING`, or `CLOSED` emits a `UserWarning` and discards the frame. Set `buffer_while_disconnected=True` to queue outbound text frames FIFO and flush them automatically on reopen (once `CLOSED` permanently, sends still warn and discard):
 
 ```python
-effect(lambda: handle_last_close(ws.last_close.value))
+ws = use_websocket("/api/chat", buffer_while_disconnected=True)
+ws.send('{"action": "subscribe"}')  # queued while CONNECTING, flushed on OPEN
 ```
-
-## Connection sharing
-
-Within one app, `use_websocket` calls with the same URL **and the same `protocols`** share a single underlying socket. The first subscriber opens the connection; the last subscriber's close detaches it. Each subscriber receives its own FIFO queue, so a slow consumer never blocks another:
-
-```python
-# These two calls share ONE underlying socket to /api/chat
-chat_a = use_websocket("/api/chat")
-chat_b = use_websocket("/api/chat")
-```
-
-Different `protocols` values select different application protocols, so they never share:
-
-```python
-one = use_websocket("/api/chat", protocols=("chat.v2",))
-two = use_websocket("/api/chat")  # a separate socket
-```
-
-Reconnection settings (`reconnect`, the backoff delays, `reconnect_max_attempts`, `buffer_while_disconnected`) are properties of the shared connection, not of individual subscribers: the **first** call's settings win, and later calls with the same URL and protocols reuse that connection's settings. If a later call specifies different reconnection settings, a `UserWarning` is emitted and the existing connection's settings remain in effect.
-
-## Reconnection
-
-Unlike the native `EventSource`, a native `WebSocket` does **not** reconnect automatically — the framework owns the reconnect loop. When the underlying socket closes abnormally (any close other than a clean `1000` or a user `.close()`), the shared connection schedules a reconnect with exponential backoff and jitter:
-
-```python
-ws = use_websocket("/api/chat", reconnect_base_delay=1.0, reconnect_max_delay=30.0)
-```
-
-The delay before attempt *n* is `min(max_delay, base_delay * 2 ** (n-1))` seconds multiplied by a random jitter factor in `[0.5, 1.0]` (so the first retry lands in `[0.5, 1.0]` s, the second in `[1.0, 2.0]` s, then `2–4`, `4–8`, capped at the max). During a backoff wait or in-flight attempt, `.state` is `RECONNECTING`; on success it returns to `OPEN` and iteration continues transparently.
-
-| Parameter | Default | Meaning |
-|---|---|---|
-| `reconnect` | `True` | Set `False` to fail once and stop |
-| `reconnect_base_delay` | `1.0` | Base backoff in seconds |
-| `reconnect_max_delay` | `30.0` | Backoff cap in seconds |
-| `reconnect_max_attempts` | `None` | `None` = unlimited; an `int` stops after that many failed attempts with `.state == CLOSED` |
-
-No reconnect happens after a **user-initiated `.close()`**, after a **clean `1000` close**, or when `reconnect=False` (a single failure transitions to `CLOSED`). If you want a shared connection to reconnect on every drop, have the server close with a non-`1000` code.
-
-## Sending while disconnected
-
-`ws.send(data)` while the connection is not `OPEN` warns and discards the message by default — the framework refuses to silently queue data during an outage:
-
-```python
-ws.send("hello")  # while RECONNECTING → warns and drops, unless buffering is enabled
-```
-
-With `buffer_while_disconnected=True`, disconnected sends are buffered FIFO (unbounded — a long outage queues as much memory as you send) and flushed in order on the next transition to `OPEN`. The buffer is discarded if the connection reaches a terminal `CLOSED`. If ordering matters, wait for `.state == OPEN` before sending.
 
 ## The gap/refetch recipe
 
-Reconnection does **not** replay messages missed while disconnected (server-side replay is opt-in and out of scope). When `.state` returns to `OPEN`, re-pull the authoritative state yourself — exactly as with SSE:
+`use_websocket()` makes no attempt to buffer or replay server events missed while offline. Instead, combine `ConnectionState` tracking with an HTTP snapshot fetch whenever a socket transitions from `RECONNECTING` back to `OPEN`:
 
 ```python
-from webcompy.realtime import ConnectionState
-from webcompy.signal import effect
+from webcompy import ConnectionState
+from webcompy.ajax import HttpClient
+from webcompy.components import ComponentContext, define_component
+from webcompy.realtime import use_websocket
 
-def refetch():
-    ...  # re-pull the authoritative state, e.g. a fresh HTTP request
 
-effect(lambda: refetch() if ws.state.value == ConnectionState.OPEN else None)
+@define_component()
+def ResyncableFeed(context: ComponentContext[None]):
+    ws = use_websocket("/api/events")
+    was_reconnecting = False
+
+    @ws.state.on_after_updating
+    async def on_state_change(new_state: ConnectionState):
+        nonlocal was_reconnecting
+        if new_state == ConnectionState.RECONNECTING:
+            was_reconnecting = True
+        elif new_state == ConnectionState.OPEN and was_reconnecting:
+            was_reconnecting = False
+            snapshot = await HttpClient.get("/api/events/snapshot")
+            # merge snapshot.json() into local state
 ```
 
-## Bridging to signals
+If you want server-backed cursor catch-up without writing gap recovery yourself, use `Subscription` and `RpcWsClient` from [RPC over WebSocket](/documents/advanced/rpc-websocket).
 
-Because `use_websocket` yields an async iterable, the `signal-stream` utilities integrate directly. Accumulate messages into a `ReactiveList`, or collapse to a single latest value with `to_signal`:
+### Bridge WebSocket frames with signal streams
+
+Pass a `WebSocketHandle` directly into `to_reactive_list` or `to_signal`:
 
 ```python
-feed = to_reactive_list(use_websocket("/api/chat"), maxlen=50)
-# feed.items: ReactiveList[str]
+from webcompy.aio import to_reactive_list
+from webcompy.realtime import use_websocket
+
+ws = use_websocket("/api/chat")
+log = to_reactive_list(ws, maxlen=100)
 ```
 
-See [Signals and Streams](/documents/advanced/signal-stream).
+## Behavior notes
 
-## Server-side rendering
+- **Reconnection math**: Delay before attempt $n$ (`attempt >= 1`) is `min(reconnect_max_delay, reconnect_base_delay * 2 ** (attempt - 1)) * random.uniform(0.5, 1.0)`. `attempts` resets to `0` once a connection reaches `ConnectionState.OPEN`.
+- **Binary frames**: `use_websocket()` only accepts text frames; arriving binary frames emit a `UserWarning` and are ignored.
+- **Per-app DI scoping**: Inside an active app DI scope, connection handles are shared across components using the `(url, protocols)` key and automatically detached on component destroy via chained destroy hooks. Outside a DI scope, `use_websocket()` warns and creates an isolated connection.
+- **SSR and hydration**: During SSR and `webcompy generate`, `use_websocket()` logs a warning, returns an already-closed empty handle with `.state.value == ConnectionState.CLOSED` and `.last_close.value is None` whose `.send()` warns and discards, and embeds nothing in `<script id="__webcompy_data__">`.
 
-During SSR/SSG there is no browser connection: `use_websocket` returns an immediately-finished empty handle whose `.state` is `CLOSED`, whose `.last_close` is `None`, and whose `.send()` warns and discards, and emits a warning. No connection state, close info, or messages are transferred into the hydration payload.
+## Pitfalls
+
+- **Inconsistent `protocols` tuple**: Omitting `protocols` in one component while passing `protocols=("chat.v2",)` in another opens **two** independent sockets, and passing a bare string like `protocols="chat.v2"` raises `TypeError`.
+- **Conflicting options on a shared socket**: Only the **first** subscriber's `reconnect`, `reconnect_base_delay`, `reconnect_max_delay`, `reconnect_max_attempts`, and `buffer_while_disconnected` settings take effect for a `(url, protocols)` key. Subsequent subscribers with different values trigger a `UserWarning` and inherit the existing connection's settings.
+- **Unbuffered sends before `OPEN`**: Calling `ws.send(...)` immediately inside component setup without `buffer_while_disconnected=True` warns and drops the message because the handshake has not finished yet.
+
+## Next steps
+
+- Add schema checking and automatic field serialization in [Typed Realtime](/documents/advanced/typed-realtime).
+- Step up to structured RPC calls and cursor-backed subscriptions in [RPC over WebSocket](/documents/advanced/rpc-websocket).
+- Accumulate or collapse message streams in [Signals and Streams](/documents/advanced/signal-stream).
+- Compare one-way push transport in [Server-Sent Events](/documents/advanced/event-source).

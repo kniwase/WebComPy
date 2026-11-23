@@ -1,122 +1,152 @@
 ---
 title: Typed Realtime
-description: Send and receive dataclass-typed WebSocket messages with use_websocket — metadata-typed fields, strict reconstruction, skip-on-error handling, and custom type registration.
+description: Send and receive dataclass-typed WebSocket messages with use_websocket(message_type=...) — metadata-typed fields, strict reconstruction, error signals, and custom allowlisted codecs.
 ---
 
 # Typed Realtime
 
-Raw WebSocket messages are text frames; realtime applications almost always exchange structured messages. Pass a dataclass to `use_websocket` as `message_type` and the handle becomes an `AsyncIterator[T]` whose `.send()` accepts `T` instances — metadata-typed fields (`datetime`, `UUID`, `Decimal`, `Enum`, registered custom types) round-trip with full type fidelity on top of the same shared connection, reconnection, and lifecycle behavior as the raw handle.
+Passing `message_type=YourDataclass` to `use_websocket()` turns raw text frames into validated Python objects. You send `YourDataclass` instances with `ws.send(msg)` and iterate typed `YourDataclass` values from `async for msg in ws:`, including metadata-typed fields (`datetime`, `UUID`, `Decimal`, `Enum`, `bytes`) and custom codecs registered on both sides.
 
-## Typed messages
+## When to use
+
+- **Exchanging structured messages over a plain WebSocket endpoint** — pass `message_type=` to `use_websocket()`.
+- **Passing raw strings or binary-free custom protocols** — use plain [WebSocket](/documents/advanced/websocket).
+- **Want typed procedures, batching, streaming generators, or cursor-replayed subscriptions** — use [RPC Contracts](/documents/advanced/rpc-contracts) and [RPC over WebSocket](/documents/advanced/rpc-websocket).
+
+## Setup
+
+Define a `@dataclass` message schema in a shared module and pass it as `message_type=` to `use_websocket()`. The returned handle is a `TypedWebSocketHandle[T]`:
 
 ```python
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from uuid import UUID
+
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.elements import html, repeat
 from webcompy.realtime import use_websocket
+from webcompy.signal import use_reactive_list
+
 
 @dataclass
 class ChatMessage:
+    id: UUID
     user: str
     text: str
+    sent_at: datetime
 
-ws = use_websocket("/api/chat", message_type=ChatMessage)
 
-async for message in ws:
-    print(message.user, message.text)  # dataclass instances, not strings
+@define_component()
+def TypedChat(context: ComponentContext[None]):
+    ws = use_websocket("/api/chat", message_type=ChatMessage)
+    messages = use_reactive_list(lambda: [])
 
-ws.send(ChatMessage(user="ada", text="hi"))  # sends one JSON text frame
+    @on_mounted
+    async def receive():
+        async for msg in ws:
+            messages.append(msg)
+
+    return html.UL(
+        {},
+        repeat(
+            messages,
+            lambda m: html.LI({}, f"[{m.sent_at:%H:%M}] {m.user}: {m.text}"),
+        ),
+    )
 ```
 
-`message_type` must be a dataclass; any other target raises a descriptive `TypeError` at call time. Without `message_type` (the default) the handle behaves exactly like the raw text handle. All other parameters (`protocols`, reconnection settings, `buffer_while_disconnected`, `.state`, `.last_close`, `.close()`, connection sharing) are unchanged — typing is a codec layer over the transport.
+## Recipes
 
-## The wire envelope
+### Inspect decode failures via `.last_error`
 
-Each frame is a single JSON object: the payload fields plus a `__webcompy_transfer_meta__` member that records metadata-typed fields by JSON Pointer path (the typed-response body wire mode):
-
-```json
-{
-  "user": "ada",
-  "text": "hi",
-  "sent_at": "2026-08-05T12:34:56",
-  "__webcompy_transfer_meta__": {"/sent_at": "datetime"}
-}
-```
-
-On send, metadata-typed fields are encoded and tagged automatically. On receive, the member is split off, validated, and applied before schema-driven reconstruction:
+Malformed frames (invalid JSON, schema mismatches, or rejected metadata tags) never crash the receive loop or close the socket. Instead, WebComPy skips the bad frame, logs a warning, and stores the exception on `ws.last_error` (`Signal[Exception | None]`):
 
 ```python
-@dataclass
-class Event:
-    name: str
-    at: datetime
+from webcompy import use_computed
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+from webcompy.realtime import use_websocket
 
-ws = use_websocket("/api/events", message_type=Event)
-async for event in ws:
-    print(event.at)  # a datetime instance, never a string
+
+@define_component()
+def MonitoredFeed(context: ComponentContext[None]):
+    ws = use_websocket("/api/events", message_type=ChatMessage)
+
+    return html.P(
+        {},
+        use_computed(
+            lambda: f"Last frame error: {ws.last_error.value}"
+            if ws.last_error.value is not None
+            else "All frames valid"
+        ),
+    )
 ```
 
-A frame without the meta member is still reconstructed schema-driven (ISO-8601 strings for `datetime`/`date`/`time`/`UUID` are coerced by the annotations alone).
+### Allow extra server fields with `strict=False`
 
-## Strict reconstruction
-
-Reconstruction is strict by default: a frame with unknown extra fields or missing required fields is **skipped** (see [Error handling](#error-handling)). This catches schema drift loudly at the boundary — realtime peers are usually deployed together. If a peer is allowed to be forward-compatible with your schema, opt into lenient coercion:
+By default (`strict=True`), unexpected extra fields or missing required fields reject the incoming frame. Set `strict=False` when deploying additive server schema updates ahead of browser clients:
 
 ```python
 ws = use_websocket("/api/chat", message_type=ChatMessage, strict=False)
 ```
 
-With `strict=False`, unknown fields are ignored and values are coerced leniently. Type-tag validation is strict regardless of this parameter: a frame referencing a type tag outside the closed builtin set and your registered custom types is always skipped, and a tag is **never** resolved to a class by name.
+### Register custom types on both client and server
 
-## Error handling
-
-A frame that fails JSON parsing, type-tag validation, or schema reconstruction is skipped — it is never yielded, the subscription and the underlying connection survive, and subsequent valid frames are delivered normally. The failure is surfaced on `.last_error: Signal[Exception | None]` and a warning is logged. A subsequent successful frame resets `.last_error` to `None`.
-
-Only these three categories are treated as malformed frames. A genuine programming error in the decode path — for example a custom decoder raising an unrelated exception — is not swallowed: it propagates to the consumer so it cannot hide behind `.last_error`.
-
-Render an error badge from the signal so failures are visible instead of silent:
+Built-in codecs handle standard JSON types plus `datetime`, `date`, `time`, `timedelta`, `UUID`, `Decimal`, `bytes`, `set`, `frozenset`, `tuple`, `re.Pattern`, `Enum`, and nested dataclasses. To send domain value objects such as `Money`, call `register_realtime_type_handler(cls, encoder, decoder)` inside an active app DI scope on **both** client setup and server handling:
 
 ```python
-from webcompy.signal import use_computed, use_state
+from dataclasses import dataclass
 
-error_text = use_computed(lambda: "" if ws.last_error.value is None else str(ws.last_error.value))
-```
+from webcompy.components import ComponentContext, define_component
+from webcompy.realtime import register_realtime_type_handler, use_websocket
 
-Because one malformed message must not tear down every consumer of a shared connection, the error never kills the stream — but an unobserved `.last_error` can hide a poison frame, so keep the badge or monitor the signal.
 
-## Custom types
-
-Register encoder/decoder pairs for your own types within the app DI scope; qualified-name tags follow the json-rpc allowlist pattern and the registry is app-scoped (no module-level globals, no cross-app leakage). Builtin tags (`datetime`, `date`, `time`, `set`, `frozenset`, `bytes`, `decimal`, `tuple`, `path`, `uuid`) always work without registration.
-
-```python
-from decimal import Decimal
-from webcompy.realtime import register_realtime_type_handler
-
-@dataclass
+@dataclass(frozen=True)
 class Money:
-    amount: str
+    cents: int
+    currency: str
 
-def encode_money(money: Money) -> str:
-    return money.amount
 
-def decode_money(value: str) -> Money:
-    return Money(amount=value)
+def register_domain_codecs() -> None:
+    register_realtime_type_handler(
+        Money,
+        encoder=lambda m: {"cents": m.cents, "currency": m.currency},
+        decoder=lambda d: Money(cents=d["cents"], currency=d["currency"]),
+    )
+
 
 @dataclass
-class Payment:
-    user: str
-    money: Money
+class PaymentEvent:
+    order_id: str
+    amount: Money
 
-with app.di_scope():
-    register_realtime_type_handler(Money, encode_money, decode_money)
 
-ws = use_websocket("/api/payments", message_type=Payment)
-async for payment in ws:
-    print(payment.money)  # a Money instance
+@define_component()
+def PaymentTicker(context: ComponentContext[None]):
+    register_domain_codecs()
+    ws = use_websocket("/api/payments", message_type=PaymentEvent)
+    ...
 ```
 
-Calling `register_realtime_type_handler` outside an app DI scope emits a `UserWarning` and is a no-op; without a registry, decoding accepts only builtin tags.
+Type tags use qualified class names and are strictly allowlisted: only built-in tags and tags explicitly registered via `register_realtime_type_handler()` are decoded.
 
-## Notes and limits
+## Behavior notes
 
-- **Dataclass targets only** — the body wire mode requires a top-level JSON object; wrap collections and scalars in a dataclass.
-- **No hydration transfer** — typed messages, `.last_error`, and registrations never enter the SSR/SSG hydration payload; outside the browser the typed handle behaves like the raw handle's empty closed fallback.
-- **No replay** — reconnection does not replay missed typed messages; re-pull authoritative state when `.state` returns to `OPEN` (see the raw WebSocket [gap/refetch recipe](/documents/advanced/websocket#the-gaprefetch-recipe)).
+- **Wire envelope format**: Sending an instance serializes its dataclass fields into a JSON object alongside the `__webcompy_transfer_meta__` member mapping field paths to registered type tags. Incoming frames strip `__webcompy_transfer_meta__`, apply metadata decoders strictly against the allowlist, and reconstruct `message_type` via `from_json(..., strict=strict)`.
+- **Skip-on-error recovery**: When a frame raises `ValueError` or `TypeError` during JSON parsing, metadata validation, or schema reconstruction, `ws.last_error.value` captures the error, a warning is emitted, and the iterator skips directly to the next frame without tearing down the shared socket. A subsequent valid frame resets `ws.last_error.value` back to `None`.
+- **Inherited transport semantics**: Sharing by `(url, protocols)`, reconnection backoff, `.state`, `.last_close`, `buffer_while_disconnected`, component-destroy cleanup, and SSR/SSG no-op degradation work identically to plain `use_websocket()` (returning a `TypedWebSocketHandle[T]` whose `.send()` warns and discards and whose iterator ends immediately outside the browser).
+- **Allowlist security**: WebComPy never dynamically imports classes named inside incoming frames; unregistered metadata tags fail frame decoding and land on `.last_error`.
+
+## Pitfalls
+
+- **Registering on only one side**: If the browser encodes a `Money` field with `register_realtime_type_handler()` but the server does not (or vice versa), the receiving side rejects the metadata tag as unregistered. Keep dataclass models and codec registration in a shared package imported by both server and client.
+- **Calling `register_realtime_type_handler()` outside an app DI scope**: Calling it at bare module import time before a render/app DI scope exists emits a `UserWarning` and becomes a no-op.
+- **Expecting missed-message replay on reconnect**: Like raw WebSockets, typed handles do not replay frames dropped while offline. Refetch authoritative state when `.state` returns to `OPEN` using the [gap/refetch recipe](/documents/advanced/websocket#the-gaprefetch-recipe).
+- **Passing a non-dataclass `message_type`**: Supplying `dict`, a plain class, or `str` raises `TypeError` — `message_type` must be a `@dataclass` type.
+
+## Next steps
+
+- Review connection sharing, backoff math, and gap recovery in [WebSocket](/documents/advanced/websocket).
+- Move up to declarative server/client contracts in [RPC Contracts](/documents/advanced/rpc-contracts).
+- Get built-in cursor replay on reconnect in [RPC over WebSocket](/documents/advanced/rpc-websocket).
+- Collect typed events into reactive lists in [Signals and Streams](/documents/advanced/signal-stream).

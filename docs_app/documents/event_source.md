@@ -1,149 +1,152 @@
 ---
 title: Server-Sent Events
-description: Receive server-pushed events in WebComPy with use_event_source — connection sharing, queue policy, and reconnection recipes.
+description: Stream unidirectional server events into WebComPy components with use_event_source — shared registries, named event filtering, POST streaming, Last-Event-ID resumption, and SSR degradation.
 ---
 
 # Server-Sent Events
 
-Server-Sent Events (SSE) let a server push messages to the browser over a long-lived HTTP connection. WebComPy exposes them through the `use_event_source` composable, which returns a connection handle that is itself an async iterator of `SSEvent` occurrences.
+Server-Sent Events (SSE) push a continuous stream of text events from your server over standard HTTP. `use_event_source()` returns an `EventSourceHandle` that behaves as an `AsyncIterator[SSEvent]`, shares connections cleanly across components in the same app, supports both browser-native `EventSource` (`GET`) and streaming `fetch` requests (`POST`), and degrades safely during SSR and static generation.
 
-Unlike state (`Signal`) which has cell semantics, SSE messages have *occurrence* semantics: every arrival matters, duplicates included, and nothing is suppressed. `use_event_source` is the network-side counterpart of the `signal-stream` utilities — it yields the raw occurrence stream, and you decide whether to bridge the values into cells.
+## When to use
 
-## Basic usage
+- **Need server-to-client push with automatic reconnect and named events** — use `use_event_source()`.
+- **Need bidirectional client-to-server messaging as well** — use [WebSocket](/documents/advanced/websocket) (or [Typed Realtime](/documents/advanced/typed-realtime)).
+- **Running a finite, single-request typed RPC generator (such as LLM token generation for one prompt)** — use [RPC Streaming](/documents/advanced/rpc-streaming).
+- **Performing a one-shot JSON fetch** — use [`HttpClient` and `use_async_result`](/documents/basic/http-and-async).
+
+## Setup
+
+Call `use_event_source(url)` in component setup and bridge it with `to_reactive_list` (or iterate in `@on_mounted`):
 
 ```python
+from webcompy import ConnectionState, use_computed
+from webcompy.aio import to_reactive_list
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html, repeat
 from webcompy.realtime import use_event_source
 
-@define_component(custom_element_name="sse-alerts")
-def Alerts(context):
-    alerts = use_event_source("/api/alerts")
+
+@define_component()
+def EventFeed(context: ComponentContext[None]):
+    es = use_event_source("/api/events")
+    feed = to_reactive_list(es, maxlen=50)
+
+    return html.DIV(
+        {},
+        html.P({}, use_computed(lambda: f"State: {es.state.value.value}")),
+        html.UL(
+            {},
+            repeat(feed.items, lambda ev: html.LI({}, ev.data)),
+        ),
+    )
+```
+
+Each yielded `SSEvent` is a frozen dataclass with three string attributes: `event` (defaults to `"message"`), `data`, and `last_event_id`.
+
+## Recipes
+
+### Subscribe to named event types and track connection state
+
+Pass `events=(...)` as a non-empty tuple of event names and observe `es.state.value` against `ConnectionState` (`CONNECTING`, `OPEN`, `RECONNECTING`, `CLOSED`):
+
+```python
+from webcompy import ConnectionState, use_computed
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.elements import html
+from webcompy.realtime import use_event_source
+from webcompy.signal import use_state
+
+
+@define_component()
+def DeployMonitor(context: ComponentContext[None]):
+    es = use_event_source("/api/deploy/stream", events=("progress", "done"))
+    status = use_state(lambda: "Waiting")
 
     @on_mounted
-    async def consume():
-        async for event in alerts:
-            print(event)  # SSEvent(event="message", data=..., last_event_id=...)
+    async def read_events():
+        async for ev in es:
+            if ev.event == "progress":
+                status.value = f"Step: {ev.data}"
+            elif ev.event == "done":
+                status.value = f"Finished ({ev.data}) [id={ev.last_event_id}]"
+                es.close()
+
+    return html.DIV(
+        {},
+        html.SPAN(
+            {},
+            use_computed(lambda: "Live" if es.state.value == ConnectionState.OPEN else es.state.value.value),
+        ),
+        html.P({}, status),
+    )
 ```
 
-Each yielded item is a frozen `SSEvent` dataclass:
+### Share one connection across components
 
-| Field | Meaning |
-|---|---|
-| `event` | The SSE event type (`"message"` by default) |
-| `data` | The event payload as text |
-| `last_event_id` | The `id:` field sent by the server, if any |
-
-The `events` parameter selects which named SSE event types are delivered; anything else is filtered out:
+Inside the same app DI scope, multiple `use_event_source("/api/events")` calls share a single underlying connection. Each caller gets its own `EventSourceHandle` and independent FIFO queue (`max_queue`), so a slow consumer never blocks another:
 
 ```python
-es = use_event_source("/events", events=("status", "progress"))
+# In StatusWidget
+status_es = use_event_source("/api/stream", events=("status",), max_queue=32)
+
+# In MetricsWidget mounted in the same app
+metrics_es = use_event_source("/api/stream", events=("metrics",))
 ```
 
-By default only `("message",)` events are delivered.
+For `GET` connections, when a second subscriber requests an event name not yet subscribed (`"metrics"`), the shared browser connection automatically reopens listening to the union `("status", "metrics")`. Calling `status_es.close()` detaches only `status_es` and keeps the shared socket open until `metrics_es` also closes or unmounts.
 
-`events` must be a non-empty tuple of non-empty strings — a bare string (`events="message"`), an empty tuple, or a non-string element is rejected with a `TypeError`/`ValueError` before any connection is opened.
+### Stream `POST` SSE endpoints (e.g., AI prompts or filtered queries)
 
-## POST requests
-
-`use_event_source` opens through the browser-native `EventSource` API by default, which cannot send a request body. Pass `method` (any non-empty string other than `"GET"`), `body`, and `headers` to open a **fetch-based** SSE connection that sends the request body and headers:
+Pass `method="POST"` along with `body=` and `headers=` to use WebComPy's streaming `FetchPort` transport instead of the browser's GET-only `EventSource` API:
 
 ```python
-es = use_event_source(
-    "/query",
-    method="POST",
-    body='{"q":"x"}',
-    headers={"Content-Type": "application/json"},
-    events=("result",),
-)
+import json
+
+from webcompy.aio import to_reactive_list
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html, repeat
+from webcompy.realtime import use_event_source
+
+
+@define_component()
+def SummaryStream(context: ComponentContext[None]):
+    es = use_event_source(
+        "/api/summarize",
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        body=json.dumps({"doc_id": 42}),
+        events=("token", "done"),
+    )
+    tokens = to_reactive_list(es)
+
+    return html.DIV(
+        {},
+        repeat(tokens.items, lambda ev: html.SPAN({}, ev.data)),
+    )
 ```
 
-Fetch-based connections send the given URL unchanged (relative URLs resolve against the document) and parse the `text/event-stream` response incrementally. `body`/`headers` together with `method="GET"` raise a `ValueError` before any connection is opened; a `method` that is not a non-empty string raises a `TypeError`. Non-GET connections require a running event loop (the browser or an `asyncio` context); calling them in a synchronous server context raises a `RuntimeError`.
+Fetch-based SSE connections are keyed in the shared registry by `(url, method, body, normalized_headers)` (with lowercased header names) and filter `events` per subscriber on the client without reopening the request when another subscriber asks for another event type.
 
-### Fetch-based reconnection
+## Behavior notes
 
-Fetch-based connections follow EventSource-style auto-reconnect: if the request fails to open, the response status is not successful, the body is not `text/event-stream`, or the body stream ends, the connection transitions to `RECONNECTING` and retries with an exponential backoff (1s base, 30s cap, with jitter) until explicitly closed. Reconnect requests carry the `Last-Event-ID` header once any `id:` has been received, so a server that honors it can resume from where the client left off. Only `.close()` (or the equivalent detachment/component-destroy path) terminates the loop.
+- **Reconnection and `Last-Event-ID`**:
+  - With `method="GET"`, native browser `EventSource` manages automatic reconnection and sends the `Last-Event-ID` header automatically after a drop.
+  - With non-`GET` methods (e.g. `POST`), WebComPy reconnects automatically using exponential backoff with random jitter (`min(30.0, 1.0 * 2 ** (attempt - 1)) * random.uniform(0.5, 1.0)`), carrying the most recent non-empty `id:` field in the `Last-Event-ID` header.
+- **Lifecycle cleanup**: When called inside component setup, `use_event_source()` registers a chained `on_before_destroy` hook calling `handle.close()`. Only the last remaining subscriber closes the underlying browser connection.
+- **Testing & standalone usage**: Outside a component context, `.close()` can still be called explicitly, and a `weakref.finalize` fallback detaches abandoned handles on GC. When called outside an active app DI scope, `use_event_source()` warns and opens an unshared connection.
+- **SSR and hydration**: On the server and during `webcompy generate`, `ServerEventSourcePort` (for `GET`) and `ServerFetchPort` return an immediately exhausted handle with `state.value == ConnectionState.CLOSED`, emit a warning, and transfer nothing into `<script id="__webcompy_data__">`.
 
-### Sharing and filtering for fetch-based connections
+## Pitfalls
 
-Fetch-based connections are keyed by `(url, method, body, normalized headers)`, so identical requests (same body and headers, with header names compared case-insensitively) share a single underlying connection while different bodies or headers never do. The full event stream is read once and each subscriber's requested `events` set is filtered per subscriber — a new subscriber asking for additional event types does **not** reopen the underlying connection.
+- **Passing `body` or `headers` with `method="GET"`**: `use_event_source()` raises `ValueError` immediately if `body` or `headers` is supplied alongside `method="GET"`, because native `EventSource` cannot carry custom headers or a request body.
+- **Passing a bare string for `events=`**: `events="message"` raises `TypeError` — always pass a tuple such as `events=("message",)`.
+- **Expecting `Last-Event-ID` replay without server support**: Reconnection only replays missed events if your server assigns `id:` fields on emitted SSE frames and honors the incoming `Last-Event-ID` header.
+- **Proxy buffering stalling delivery**: Reverse proxies and CDNs often buffer small HTTP chunks until compressed or flushed. Serve SSE endpoints with `Content-Type: text/event-stream`, disable compression on that route, and include `X-Accel-Buffering: no` where needed.
+- **Closing a handle cancels only your subscription**: Calling `.close()` inside one component does not force-close the server stream if another component still holds a subscription to the same shared connection.
 
-### Non-goals
+## Next steps
 
-- There is no typed SSE composable (`use_typed_event_source` does not exist).
-- Reconnection parameters are fixed (1s base / 30s cap); the server's `retry:` field is not honored.
-- Events missed during a disconnect are not replayed beyond what `Last-Event-ID` enables server-side.
-- There is no server-side SSE endpoint helper; mount your own endpoint (e.g. via `asgi-mount`).
-
-## Connection handle
-
-The handle exposes three surfaces:
-
-- **Iteration** — `async for ev in es:` yields every received event in order.
-- `.state` — a `Signal[ConnectionState]` (`CONNECTING` / `OPEN` / `CLOSED`) reflecting the underlying connection.
-- `.close()` — detaches **only your own subscription**; it never tears down a connection that other subscribers still use (see below).
-
-## Connection sharing
-
-Within one app, `use_event_source` calls with the same URL share a single underlying native `EventSource`. The first subscriber opens the connection; the last subscriber's close detaches it. Each subscriber receives its own FIFO queue, so a slow consumer never blocks another, and is also free to iterate at its own pace:
-
-```python
-# These two calls share ONE underlying connection to /events
-feed_a = use_event_source("/events")
-feed_b = use_event_source("/events")
-```
-
-Sharing matters in practice: browsers enforce a per-domain cap on HTTP/1.1 connections, so a dozen components subscribing to the same endpoint should not open a dozen sockets.
-
-Two calls with the same URL but **different `events` sets** do not share silently: the second call reopens the shared connection with the union of both event types. Events arriving in that close-and-reopen window are lost, and the browser's `Last-Event-ID` resumption starts fresh on the reopened connection — use consistent `events` tuples for a URL to keep the connection stable.
-
-## Queues and slow consumers
-
-Subscriber queues are unbounded by default: events arriving before your code reaches the next `await` accumulate until consumed. For long-lived high-frequency streams, cap a subscriber's backlog with `max_queue`, which keeps only the newest events (drop-oldest):
-
-```python
-es = use_event_source("/events", max_queue=100)
-```
-
-Capping is per subscriber — one capped consumer does not affect others on the same connection.
-
-`max_queue` must be `None` or an integer greater than or equal to 1; other values raise before any connection is opened.
-
-## Closing
-
-Call `.close()` when the component no longer needs the stream (component-destroy hooks detach automatically for subscriptions created inside component setup; abandoned iterators are cleaned up by the runtime):
-
-```python
-es.close()  # idempotent; detaches only this caller
-```
-
-## Reconnection and the gap/refetch recipe
-
-The browser's native `EventSource` reconnects automatically and resumes via `Last-Event-ID` where the server supports it. During the outage the handle keeps iterating transparently; `.state` exposes the transitions (`OPEN` → `CONNECTING` → `OPEN`).
-
-SSE does not replay the events missed while disconnected. When `.state` returns to `OPEN`, re-pull the authoritative state yourself:
-
-```python
-from webcompy.realtime import ConnectionState
-from webcompy.signal import effect
-
-def refetch():
-    ...  # re-pull the authoritative state, e.g. a fresh HTTP request
-
-effect(lambda: refetch() if es.state.value == ConnectionState.OPEN else None)
-```
-
-Treat `.state` as the signal that a server round-trip is eligible again; keep in-stream events as the incremental updates on top.
-
-## Bridging to signals
-
-Because `use_event_source` yields an async iterable, the `signal-stream` utilities integrate directly. Accumulate every occurrence into a wider `ReactiveList`, or collapse to a single latest value with `to_signal`:
-
-```python
-feed = to_reactive_list(use_event_source("/events"), maxlen=50)
-# feed.items: ReactiveList[SSEvent]
-```
-
-This is the intended path when occurrence semantics are not what the UI needs — see [Signals and Streams](/documents/advanced/signal-stream).
-
-## Server-side rendering
-
-During SSR/SSG there is no browser connection: `use_event_source` returns an immediately-finished empty handle whose `.state` is `CLOSED`, and emits a warning. No connection state or received events are transferred into the hydration payload.
+- Use full-duplex text channels in [WebSocket](/documents/advanced/websocket) or schema-validated frames in [Typed Realtime](/documents/advanced/typed-realtime).
+- Convert SSE streams into UI state in [Signals and Streams](/documents/advanced/signal-stream).
+- Stream finite, request-scoped generator outputs via [RPC Streaming](/documents/advanced/rpc-streaming).
+- Review basic request/response fetching in [HTTP & Async](/documents/basic/http-and-async).

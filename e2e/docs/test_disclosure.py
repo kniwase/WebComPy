@@ -16,7 +16,7 @@ def test_disclosure_page_pager(docs_page_on, assert_no_console_errors):
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
     expect(page.locator(".docs-pager-prev a")).to_have_text("Overlay Components")
     expect(page.locator(".docs-pager-next")).to_have_count(1)
-    expect(page.locator(".docs-pager-next a")).to_have_text("Signals and Streams")
+    expect(page.locator(".docs-pager-next a")).to_have_text("Read-only Signals and Events")
 
 
 @pytest.mark.e2e

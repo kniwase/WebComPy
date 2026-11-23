@@ -1,163 +1,291 @@
 ---
 title: RPC over WebSocket
-description: Run typed JSON-RPC calls and server subscriptions over a shared, auto-reconnecting WebSocket with RpcWsClient — contracts, cursors, catch-up on reconnect, resync_required, and heartbeat tuning.
+description: Run typed RPC calls, batches, notifications, and cursor-replayed subscriptions over a single shared auto-reconnecting WebSocket with RpcWsClient.
 ---
 
 # RPC over WebSocket
 
-`RpcWsClient` runs the same typed JSON-RPC machinery as the HTTP module over a persistent, shared, auto-reconnecting WebSocket via declarative contracts. Define `Procedure`/`Subscription`/`StreamingProcedure` objects in a shared schema module and invoke them through the transport.
+`RpcWsClient` brings the contract API (`Subscription`, `Procedure`, `StreamingProcedure`, `batch`, and `notify`) onto a single shared, auto-reconnecting WebSocket connection. It pairs FIFO per-subscription ordering and automatic cursor catch-up after network drops with optional application-level heartbeats to detect half-open connections.
+
+## When to use
+
+- **Need live server-pushed feeds that resume cleanly across network drops** — use `Subscription` + `RpcWsClient`.
+- **Running one-shot queries or pre-rendered SSR fetches** — use [`RpcHttpClient`](/documents/advanced/rpc) (and [RPC Contracts](/documents/advanced/rpc-contracts)).
+- **Need finite call-scoped streams (over either HTTP or WebSocket)** — see [RPC Streaming](/documents/advanced/rpc-streaming).
+- **Exchanging ad-hoc messages without RPC procedures or cursor replay** — use [WebSocket](/documents/advanced/websocket) or [Typed Realtime](/documents/advanced/typed-realtime).
+
+## Setup
+
+Define a `Subscription` contract, bind an `async def` generator (`AsyncIterator[Event]`) on `app.rpc`, and mount `create_rpc_ws_endpoint(app.rpc)` (done automatically by `webcompy start` / `webcompy serve` at `/_webcompy-rpc` whenever `app.rpc.has_procedures` is `True`):
 
 ```python
-from webcompy.rpc import RpcWsClient
+# Shared contracts + server setup + Starlette mount
+import asyncio
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
-client = RpcWsClient()
+from starlette.applications import Starlette
+from starlette.routing import WebSocketRoute
+
+from webcompy import WebComPyApp
+from webcompy.rpc import Subscription
+from webcompy_server.rpc import create_rpc_ws_endpoint
+
+
+@dataclass
+class RoomParams:
+    room: str
+
+
+@dataclass
+class RoomMessage:
+    sender: str
+    text: str
+
+
+room_events = Subscription("chat.events", RoomParams, RoomMessage, replay_size=256)
+
+# On server app (webcompy start mounts this automatically at app.rpc.path):
+# @app.rpc.bind(room_events)
+# async def stream_room(params: RoomParams) -> AsyncIterator[RoomMessage]:
+#     async for msg in room_bus.subscribe(params.room):
+#         yield msg
+#
+# When embedding inside a custom Starlette host:
+# host = Starlette(routes=[WebSocketRoute(app.rpc.path, create_rpc_ws_endpoint(app.rpc))])
 ```
 
-## Typed calls via contracts
-
-Define a `Procedure` contract and invoke it through the transport via `RpcCall`:
+On the client, instantiate `RpcWsClient()` inside component setup and pass it to `room_events(client, params)` — subscriptions started while connecting are queued automatically and sent as soon as the handshake finishes:
 
 ```python
+# Client component consuming the subscription
+from webcompy import ConnectionState, use_computed
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.elements import html, repeat
+from webcompy.rpc import RpcWsClient
+from webcompy.signal import use_reactive_list
+
+
+@define_component()
+def RoomFeed(context: ComponentContext[None]):
+    client = RpcWsClient()
+    sub = room_events(client, RoomParams(room="general"))
+    messages = use_reactive_list(lambda: [])
+
+    @on_mounted
+    async def read_room():
+        async for msg in sub:
+            messages.append(msg)
+
+    return html.DIV(
+        {},
+        html.P({}, use_computed(lambda: f"WS: {client.state.value.value} / sub: {sub.state.value.value}")),
+        html.UL({}, repeat(messages, lambda m: html.LI({}, f"{m.sender}: {m.text}"))),
+    )
+```
+
+## Recipes
+
+### Recover cleanly with cursor rejoin and `RESYNC_REQUIRED`
+
+Every delivered event updates `sub.last_cursor` (`Signal[int | None]`). When the underlying socket reconnects, `RpcWsClient` automatically re-subscribes carrying `last_cursor` so the server replays missed events from its ring buffer (`replay_size`). If the client stayed disconnected too long and events were evicted, `sub.state.value` transitions to `RpcSubscriptionState.RESYNC_REQUIRED` — refetch an authoritative snapshot via `Procedure` and open a fresh subscription:
+
+```python
+# Server: snapshot Procedure + event Subscription
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+
+from webcompy.rpc import Procedure, Subscription
+
+
+@dataclass
+class FeedParams:
+    channel: str
+
+
+@dataclass
+class FeedSnapshot:
+    items: list[str]
+
+
+@dataclass
+class FeedItem:
+    id: str
+    body: str
+
+
+get_snapshot = Procedure("feed.snapshot", FeedParams, FeedSnapshot)
+watch_feed = Subscription("feed.watch", FeedParams, FeedItem, replay_size=500)
+
+
+@app.rpc.bind(get_snapshot)
+async def handle_snapshot(params: FeedParams) -> FeedSnapshot:
+    return FeedSnapshot(items=[])
+
+
+@app.rpc.bind(watch_feed)
+async def handle_watch(params: FeedParams) -> AsyncIterator[FeedItem]:
+    async for item in alert_bus.subscribe(params.channel):
+        yield item
+```
+
+```python
+# Client: monitor RESYNC_REQUIRED -> refetch via HTTP + resubscribe
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
+from webcompy.rpc import RpcHttpClient, RpcSubscriptionState, RpcWsClient
+
+http_client = RpcHttpClient()
+
+
+@define_component()
+def ResyncableSubscription(context: ComponentContext[None]):
+    ws_client = RpcWsClient()
+    sub = watch_feed(ws_client, FeedParams(channel="alerts"))
+
+    @sub.state.on_after_updating
+    async def handle_state(state: RpcSubscriptionState):
+        if state == RpcSubscriptionState.RESYNC_REQUIRED:
+            snapshot = await get_snapshot(http_client, FeedParams(channel="alerts"))
+            sub.close()
+            # Replace UI list from snapshot.items and open a new watch_feed(ws_client, ...)
+
+    return html.DIV({}, "Subscribed")
+```
+
+### Multiplex `Procedure`, `batch`, and `notify` over `RpcWsClient`
+
+Once `client.state.value == ConnectionState.OPEN`, pass the same `RpcWsClient` instance to `Procedure` calls, `batch(...)`, and `notify(...)`:
+
+```python
+# Server registration
 from dataclasses import dataclass
 from webcompy.rpc import Procedure
 
-@dataclass
-class AddParams:
-    a: int
-    b: int = 0
-
-add = Procedure("add", AddParams, int)
-
-value: int = await add(client, AddParams(a=2, b=3))  # -> 5
-```
-
-- Responses are correlated by `id`; error responses raise `RpcError` with `code`, `message`, and `data`.
-- A call issued while the connection is not `OPEN` fails fast with `RpcError`.
-- Calls **in flight when the connection drops fail** with `RpcError` — they are never silently retried.
-- Fire-and-forget `notify` is available as `await notify(add(client, AddParams(a=1)))` — an id-less envelope, no response.
-
-`batch` sends several `RpcCall`s as a single array frame:
-
-```python
-from webcompy.rpc import batch
-
-c1 = add(client, AddParams(a=1))
-c2 = add(client, AddParams(a=2))
-results: tuple[int, int] = await batch(c1, c2)
-```
-
-The underlying socket is the **shared, reference-counted, auto-reconnecting** connection from `use_websocket`. Multiple `RpcWsClient` instances in one app share a single connection.
-
-## Subscriptions via contracts
-
-Register a subscription procedure on the server as an **async generator** bound to a `Subscription` contract:
-
-```python
-from webcompy.rpc import Subscription
 
 @dataclass
-class TickerParams:
-    ticker_id: str
+class SendMsgParams:
+    room: str
+    text: str
+
 
 @dataclass
-class Tick:
-    seq: int
+class Ack:
+    ok: bool
 
-ticker = Subscription("ticker", TickerParams, Tick)
 
-async def _ticker(p: TickerParams) -> AsyncIterator[Tick]:
-    import asyncio, itertools
-    for i in itertools.count(1):
-        await asyncio.sleep(0.1)
-        yield Tick(seq=i)
+send_message = Procedure("chat.send", SendMsgParams, Ack)
 
-app.rpc.bind(ticker, _ticker)
+
+@app.rpc.bind(send_message)
+async def handle_send(params: SendMsgParams) -> Ack:
+    return Ack(ok=True)
 ```
 
-Subscribe from the client through the contract:
-
 ```python
-sub = ticker(client, TickerParams(ticker_id="a"))
+# Client usage on an OPEN RpcWsClient
+from webcompy import ConnectionState
+from webcompy.rpc import RpcError, RpcWsClient, batch, notify
 
-async for event in sub:   # each decoded Tick, in cursor order
-    print(event.seq)
+# Inside an async handler when client.state.value == ConnectionState.OPEN:
+async def post_messages(ws_client: RpcWsClient) -> None:
+    try:
+        ack = await send_message(ws_client, SendMsgParams(room="general", text="hi"))
+        a1, a2 = await batch(
+            send_message(ws_client, SendMsgParams(room="general", text="one")),
+            send_message(ws_client, SendMsgParams(room="general", text="two")),
+        )
+        await notify(send_message(ws_client, SendMsgParams(room="general", text="silent")))
+    except RpcError as err:
+        print("WS RPC failed:", err.code, err.message)
 ```
 
-- `event_type` is decoded with the same typed codec as realtime messages (`from_json` + transfer `meta`).
-- `sub` is an `AsyncIterator[E]` and also exposes:
-  - `.state` — a `Signal[RpcSubscriptionState]` (`PENDING` / `ACTIVE` / `RESYNC_REQUIRED` / `CLOSED`).
-  - `.last_cursor` — a `Signal[int | None]` tracking the last received server cursor.
-- `sub.close()` sends an `_webcompy.unsubscribe` notification and finishes the iterator. Subscriptions are also detached automatically when the owning component is destroyed.
+### Tune heartbeat and reconnection backoff
 
-Create the `RpcWsClient` inside component setup so the subscriptions and the shared socket are released automatically on component destroy. When the client is held outside a component (e.g. a module-level service), call `client.close()` explicitly to release the connection.
-
-## Reconnect, catch-up, and resync
-
-Each event carries a server-assigned monotonic `cursor`. When the connection drops:
-
-1. The client automatically **re-subscribes every live subscription with its last received cursor** (a subscription that has not received any event yet rejoins with cursor `0`).
-2. The server **replays buffered events** (`cursor > last_cursor`) before resuming live delivery — nothing within the replay window is lost, and nothing is delivered twice.
-3. If the client's cursor is **older than the server's bounded replay buffer** (default 256 events, configurable via `Subscription(..., replay_size=...)`), the server answers `resync_required` instead of silently skipping: the client sets `sub.state` to `RESYNC_REQUIRED` and the iterator ends.
+`RpcWsClient` shares `use_websocket()` reconnection options and layers an application-level ping/pong heartbeat on top (`ping` every `heartbeat_interval` seconds; if no frame arrives within `heartbeat_timeout` seconds while `OPEN`, WebComPy forces an abnormal close with code `4000` so reconnection engages):
 
 ```python
-async for event in sub:
-    ...
-if sub.state.value == RpcSubscriptionState.RESYNC_REQUIRED:
-    await refetch_snapshot()
-    sub = ticker(client, TickerParams(ticker_id="a"))
+# Server WS endpoint stays unchanged (handles _webcompy.ping / _webcompy.pong automatically)
+# Host custom endpoint: WebSocketRoute(app.rpc.path, create_rpc_ws_endpoint(app.rpc))
 ```
 
-The replay buffer is bounded per stream to keep server memory in check; overflow is always signalled honestly — never a silent gap. Subscription streams are shared per `(method, params)` and kept alive for a grace period after the last subscriber leaves, so catch-up works across short outages.
-
-## Server-driven reconnection
-
-Send the reserved `_webcompy.close` notification to ask the server to close the socket abnormally (code `1011`), which engages the reconnect loop — useful for rolling restarts. Use the low-level transport `notify` for this reserved method (outside contracts):
-
 ```python
-await client.notify("_webcompy.close")
-```
+# Client configuration
+from webcompy.rpc import RpcWsClient
 
-Reserved `_webcompy.*` method names cannot be registered as user procedures.
-
-## Heartbeat
-
-`RpcWsClient` sends a `_webcompy.ping` notification every `heartbeat_interval` (default `30.0`s) and expects any server frame within `heartbeat_timeout` (default `10.0`s). If none arrives, it force-closes the socket abnormally so the reconnect loop engages.
-
-```python
 client = RpcWsClient(
-    heartbeat_interval=30.0,
-    heartbeat_timeout=10.0,
+    heartbeat_interval=20.0,  # set None to disable heartbeat pings
+    heartbeat_timeout=5.0,
+    reconnect_base_delay=1.0,
+    reconnect_max_delay=30.0,
+    reconnect_max_attempts=10,
+    max_queue=256,
 )
 ```
 
-Pass `heartbeat_interval=None` to disable the heartbeat. The server always answers `_webcompy.ping` with `_webcompy.pong`.
+### Run finite `StreamingProcedure` calls over WebSocket
 
-## Streaming calls via contracts
-
-Streaming procedures — generator functions annotated `-> AsyncIterator[T]` / `AsyncIterable[T]` (async) or `-> Iterator[T]` / `Iterable[T]` (sync) — also work over the WebSocket when exposed as a `StreamingProcedure` contract. A call with `"stream": true` is answered with a `stream_id`, and each element is delivered as a `_webcompy.event` frame.
+Passing an `RpcWsClient` to a `StreamingProcedure` multiplexes call-scoped stream items (`stream_id`) over the open socket without blocking concurrent calls or subscriptions:
 
 ```python
+# Server registration
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+
 from webcompy.rpc import StreamingProcedure
 
-count_up = StreamingProcedure("count_up", CountUpParams, int)
 
-stream_handle = count_up(client, CountUpParams(n=5))
+@dataclass
+class BuildParams:
+    target: str
 
-async for item in stream_handle:
-    print(item)
+
+@dataclass
+class BuildLine:
+    text: str
+
+
+stream_build = StreamingProcedure("build.stream", BuildParams, BuildLine)
+
+
+@app.rpc.bind(stream_build)
+async def handle_build(params: BuildParams) -> AsyncIterator[BuildLine]:
+    yield BuildLine(text=f"Building {params.target}...")
+    yield BuildLine(text="Done")
 ```
 
-`StreamingProcedure` invocation returns the same `RpcStream` as the HTTP case — an `AsyncIterator[T]` with `.state` (`OPEN` / `CLOSED` / `FAILED`), idempotent `.close()`, and `async with` support. `.close()` sends a `_webcompy.stream_cancel` notification that stops the server-side generator.
+```python
+# Client iteration over an OPEN RpcWsClient
+stream = stream_build(client, BuildParams(target="docs"))
+async for step in stream:
+    print(step.text)
+```
 
-Per-call streams are never shared, replayed, or rejoined: each call runs its own generator instance. If the connection drops, an active stream **fails** with `RpcError` from iteration. Streams are not supported in batch requests and notifications targeting streaming procedures are not executed.
+See [RPC Streaming](/documents/advanced/rpc-streaming) for lifecycle states, early cancellation, and SSR degradation.
 
-## SSR / SSG
+## Behavior notes
 
-`RpcWsClient` is browser-runtime-only. During SSR/SSG it emits a warning and performs **no socket work**; SSR-time RPC continues to use `RpcHttpClient` and the transfer cache. No subscription state, cursors, or in-flight calls are transferred in the hydration payload.
+- **Shared socket & ordering**: `RpcWsClient` delegates its transport to [`use_websocket()`](/documents/advanced/websocket) targeting `url or app.rpc.endpoint_url`, so multiple clients in one app reuse a single connection. Server writes pass through a single per-connection FIFO queue, guaranteeing strict `subscribe ack -> buffered replay -> live events` delivery order.
+- **Subscription lifecycle (`RpcSubscriptionState`)**:
+  - `PENDING` — waiting for server confirmation.
+  - `ACTIVE` — confirmed and delivering events (`sub.last_cursor` tracks the latest cursor).
+  - `RESYNC_REQUIRED` — replay buffer overflowed on reconnect (`sub.last_cursor` exceeded retention).
+  - `CLOSED` — unsubscribed or client closed (`sub.close()` is idempotent and sends unsubscribe).
+- **No silent call retries**: Unlike `Subscription` auto-rejoin, in-flight `Procedure` calls never silently retry across disconnects — if the socket drops mid-call, pending calls reject immediately with `RpcError` so mutations cannot accidentally run twice.
+- **Malformed/invalid frames**: Decode failures or malformed control frames update `client.last_error` (`Signal[Exception | None]`) instead of tearing down active subscriptions.
+- **Lifecycle cleanup & standalone usage**: Creating `RpcWsClient` or calling `.subscribe()` / `sub(client, params)` inside component setup chains cleanup automatically onto `on_before_destroy`. If you instantiate `RpcWsClient()` at module scope or in a long-lived service, call `client.close()` explicitly on teardown.
+- **SSR and hydration**: `RpcWsClient` is browser-runtime-only. During SSR and `webcompy generate`, constructing `RpcWsClient()` emits a `UserWarning`, performs no socket work (`state.value == ConnectionState.CLOSED`), returns closed empty iterators for subscriptions/streams, and fails any `call()`/`notify()` with `RpcError`. Never embed `RpcWsClient` data calls for SSR pre-rendering; use [`RpcHttpClient`](/documents/advanced/rpc) for SSR-baked initial data.
 
-## See also
+## Pitfalls
 
-- [RPC Contracts](/documents/advanced/rpc-contracts) — the declarative contract layer.
-- [RPC](/documents/advanced/rpc) — HTTP transport via `RpcHttpClient`.
-- [WebSocket](/documents/advanced/websocket) — the underlying `use_websocket` transport.
-- [Typed Realtime](/documents/advanced/typed-realtime) — the typed message codec used for events.
+- **Calling `.call()` / `.notify()` / `.stream()` before `OPEN`**: While `sub(client, params)` queues safely during `CONNECTING`, calling `await proc(client, params)` before `client.state.value == ConnectionState.OPEN` raises `RpcError` immediately.
+- **Using `RpcWsClient` for initial SSR data**: SSR will emit a warning and skip all socket calls. Load initial state via `RpcHttpClient` (`Procedure`) and subscribe with `RpcWsClient` for live updates afterward.
+- **Small `replay_size` without `RESYNC_REQUIRED` handling**: Once a burst exceeds `replay_size` while a client is offline, events are gone from the server buffer; always handle `RpcSubscriptionState.RESYNC_REQUIRED` by refetching state via `Procedure`.
+- **Leaking module-level clients**: Always call `client.close()` when instantiating `RpcWsClient` outside component setup, otherwise the shared socket, reader task, and heartbeat loop stay alive until app teardown.
+
+## Next steps
+
+- Learn finite call-scoped RPC streams in [RPC Streaming](/documents/advanced/rpc-streaming).
+- Review declarative contracts and server binding rules in [RPC Contracts](/documents/advanced/rpc-contracts).
+- Compare HTTP transport and SSR caching in [RPC](/documents/advanced/rpc).
+- Understand the underlying socket registry and typed wire codecs in [WebSocket](/documents/advanced/websocket) and [Typed Realtime](/documents/advanced/typed-realtime).
