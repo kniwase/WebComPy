@@ -55,6 +55,31 @@ def _safe_component_id(element: ElementAbstract) -> str:
         return ""
 
 
+def _collect_consecutive_text_nodes(parent_node: DOMNode, dom_idx: int) -> list[DOMNode]:
+    nodes = parent_node.childNodes
+    text_nodes: list[DOMNode] = []
+    k = dom_idx
+    while k < nodes.length:
+        candidate = nodes[k]
+        if candidate.nodeName.lower() != "#text":
+            break
+        text_nodes.append(candidate)
+        k += 1
+    return text_nodes
+
+
+def _coalesce_text_nodes(text_nodes: list[DOMNode], merged_text: str) -> DOMNode:
+    primary = text_nodes[0]
+    if len(text_nodes) > 1:
+        was_prerendered = any(getattr(n, "__webcompy_prerendered_node__", False) for n in text_nodes)
+        primary.textContent = merged_text
+        if was_prerendered:
+            primary.__webcompy_prerendered_node__ = True
+        for extra in reversed(text_nodes[1:]):
+            extra.remove()
+    return primary
+
+
 def _normalize_text_run(
     parts: list[str],
     parent_node: DOMNode,
@@ -73,13 +98,15 @@ def _normalize_text_run(
 
         record_mismatch("tag", "#text", getattr(node, "nodeName", None), component_id)
         return False, dom_idx
-    content = node.textContent or ""
+    text_nodes = _collect_consecutive_text_nodes(parent_node, dom_idx)
+    joined = "".join((n.textContent or "") for n in text_nodes)
     expected = "".join(parts)
-    if content != expected:
+    if joined != expected:
         from webcompy.hydration import record_mismatch
 
-        record_mismatch("text", expected, content, component_id)
+        record_mismatch("text", expected, joined, component_id)
         return False, dom_idx
+    node = _coalesce_text_nodes(text_nodes, expected)
     remainder: DOMNode = node
     for part in parts[:-1]:
         remainder = remainder.splitText(_utf16_length(part))
@@ -101,11 +128,24 @@ def _normalize_hydration_text_runs(
         if isinstance(child, TextElement):
             run: list[TextElement] = []
             j = i
-            while j < n and isinstance(children[j], TextElement):
-                run.append(children[j])
+            while j < n:
+                next_child = children[j]
+                if not isinstance(next_child, TextElement):
+                    break
+                run.append(next_child)
                 j += 1
             parts = [c._get_text() for c in run]
             if len(run) == 1 and parts[0] != "":
+                if (
+                    dom_idx < parent_node.childNodes.length
+                    and parent_node.childNodes[dom_idx].nodeName.lower() == "#text"
+                ):
+                    text_nodes = _collect_consecutive_text_nodes(parent_node, dom_idx)
+                    if (
+                        len(text_nodes) > 1
+                        and "".join((text_node.textContent or "") for text_node in text_nodes) == parts[0]
+                    ):
+                        _coalesce_text_nodes(text_nodes, parts[0])
                 dom_idx += 1
             else:
                 ok, dom_idx = _normalize_text_run(parts, parent_node, dom_idx, component_id)

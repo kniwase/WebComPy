@@ -5,11 +5,13 @@ from typing import Any
 import pytest
 
 from tests.conftest import FakeDOMNode
+from webcompy.components._component import _active_app_context
 from webcompy.di import inject
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import NewLine, RawHTMLElement, TextElement
+from webcompy.hydration._report import HydrationReporter
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy.signal import ReactiveDict
 
@@ -415,3 +417,219 @@ class TestKeyedReactiveDictHydrationReconcile:
         assert all(getattr(n, "__webcompy_prerendered_node__", False) for n in parent_node.childNodes), (
             "reconcile must not leave newly created or stray nodes"
         )
+
+
+class _FakeHydrationCtx:
+    def __init__(self) -> None:
+        self._hydration_in_progress = True
+        self._hydration_reporter = HydrationReporter()
+
+
+def _hydrate_with_reporter(children: list[Any], dom_children: list[FakeDOMNode]):
+    ctx = _FakeHydrationCtx()
+    token = _active_app_context.set(ctx)
+    try:
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        prerendered = FakeDOMNode("div")
+        prerendered.__webcompy_prerendered_node__ = True
+        for node in dom_children:
+            prerendered.appendChild(node)
+        parent_node.appendChild(prerendered)
+        el = Element("div", {}, {}, None, children)
+        el._parent = parent
+        el._node_idx = 0
+        el._hydrate_node()
+        return el, prerendered, ctx._hydration_reporter.records
+    finally:
+        _active_app_context.reset(token)
+
+
+class TestHydrationSplitTextCoalescing:
+    def test_single_text_element_coalesces_split_dom_text_nodes(self):
+        quote_open = FakeDOMNode("#text", text_content='"')
+        quote_open.__webcompy_prerendered_node__ = True
+        decoded = FakeDOMNode("#text", text_content="you@example.com")
+        quote_close = FakeDOMNode("#text", text_content='"')
+        quote_close.__webcompy_prerendered_node__ = True
+
+        child = TextElement('"you@example.com"')
+        _, dom, records = _hydrate_with_reporter([child], [quote_open, decoded, quote_close])
+
+        assert records == []
+        assert dom.childNodes.length == 1
+        assert dom.childNodes[0] is quote_open
+        assert dom.childNodes[0].textContent == '"you@example.com"'
+        assert getattr(dom.childNodes[0], "__webcompy_prerendered_node__", False) is True
+        assert child._node_cache is quote_open
+
+    def test_single_text_element_preserves_prerendered_flag_from_trailing_text_node(self):
+        decoded = FakeDOMNode("#text", text_content="you@example.com")
+        trailing = FakeDOMNode("#text", text_content='"')
+        trailing.__webcompy_prerendered_node__ = True
+
+        child = TextElement('you@example.com"')
+        _, dom, records = _hydrate_with_reporter([child], [decoded, trailing])
+
+        assert records == []
+        assert dom.childNodes.length == 1
+        assert dom.childNodes[0] is decoded
+        assert dom.childNodes[0].textContent == 'you@example.com"'
+        assert getattr(decoded, "__webcompy_prerendered_node__", False) is True
+        assert child._node_cache is decoded
+
+    def test_single_text_element_mismatched_split_nodes_not_coalesced(self):
+        quote_open = FakeDOMNode("#text", text_content='"')
+        quote_open.__webcompy_prerendered_node__ = True
+        wrong = FakeDOMNode("#text", text_content="other@example.com")
+        quote_close = FakeDOMNode("#text", text_content='"')
+        quote_close.__webcompy_prerendered_node__ = True
+
+        child = TextElement('"you@example.com"')
+        _, _, records = _hydrate_with_reporter([child], [quote_open, wrong, quote_close])
+
+        text_records = [r for r in records if r.kind == "text"]
+        count_records = [r for r in records if r.kind == "node-count"]
+        assert len(text_records) == 1
+        assert text_records[0].expected == '"you@example.com"'
+        assert text_records[0].actual == '"'
+        assert len(count_records) == 1
+        assert count_records[0].expected == 1
+        assert count_records[0].actual == 3
+
+    def test_multi_text_run_coalesces_split_nodes_then_resplits(self):
+        prefix = FakeDOMNode("#text", text_content="Contact: ")
+        prefix.__webcompy_prerendered_node__ = True
+        decoded = FakeDOMNode("#text", text_content="you@example.com")
+
+        c1 = TextElement("Contact:")
+        c2 = TextElement(" ")
+        c3 = TextElement("you@example.com")
+        _, dom, records = _hydrate_with_reporter([c1, c2, c3], [prefix, decoded])
+
+        assert records == []
+        assert [n.textContent for n in dom.childNodes] == ["Contact:", " ", "you@example.com"]
+        assert c1._node_cache is dom.childNodes[0]
+        assert c2._node_cache is dom.childNodes[1]
+        assert c3._node_cache is dom.childNodes[2]
+
+    def test_multi_text_run_fast_path_leaves_trailing_stray_text_node_untouched(self):
+        n1 = FakeDOMNode("#text", text_content="a")
+        n1.__webcompy_prerendered_node__ = True
+        n2 = FakeDOMNode("#text", text_content="b")
+        n2.__webcompy_prerendered_node__ = True
+        stray = FakeDOMNode("#text", text_content="extra")
+        stray.__webcompy_prerendered_node__ = True
+
+        c1 = TextElement("a")
+        c2 = TextElement("b")
+        _, dom, records = _hydrate_with_reporter([c1, c2], [n1, n2, stray])
+
+        assert n1.textContent_write_count == 0
+        assert n2.textContent_write_count == 0
+        assert c1._node_cache is n1
+        assert c2._node_cache is n2
+        assert [n.textContent for n in dom.childNodes] == ["a", "b"]
+        assert [r.kind for r in records] == ["node-count"]
+
+    def test_single_text_coalescing_keeps_following_sibling_element_aligned(self):
+        quote_open = FakeDOMNode("#text", text_content='"')
+        quote_open.__webcompy_prerendered_node__ = True
+        decoded = FakeDOMNode("#text", text_content="you@example.com")
+        quote_close = FakeDOMNode("#text", text_content='"')
+        quote_close.__webcompy_prerendered_node__ = True
+        sibling_span = FakeDOMNode("span")
+        sibling_span.__webcompy_prerendered_node__ = True
+        sibling_text = FakeDOMNode("#text", text_content="ok")
+        sibling_text.__webcompy_prerendered_node__ = True
+        sibling_span.appendChild(sibling_text)
+
+        text_child = TextElement('"you@example.com"')
+        span_child = Element("span", {}, {}, None, [TextElement("ok")])
+        _, dom, records = _hydrate_with_reporter(
+            [text_child, span_child],
+            [quote_open, decoded, quote_close, sibling_span],
+        )
+
+        assert records == []
+        assert dom.childNodes.length == 2
+        assert text_child._node_cache is quote_open
+        assert span_child._node_cache is sibling_span
+
+    def test_multiple_split_runs_in_same_container_are_both_coalesced(self):
+        q1_open = FakeDOMNode("#text", text_content='"')
+        q1_open.__webcompy_prerendered_node__ = True
+        dec_1 = FakeDOMNode("#text", text_content="a@example.com")
+        q1_close = FakeDOMNode("#text", text_content='"')
+        q1_close.__webcompy_prerendered_node__ = True
+        mid_span = FakeDOMNode("span")
+        mid_span.__webcompy_prerendered_node__ = True
+        mid_text = FakeDOMNode("#text", text_content="mid")
+        mid_text.__webcompy_prerendered_node__ = True
+        mid_span.appendChild(mid_text)
+        q2_open = FakeDOMNode("#text", text_content='"')
+        q2_open.__webcompy_prerendered_node__ = True
+        dec_2 = FakeDOMNode("#text", text_content="b@example.com")
+        q2_close = FakeDOMNode("#text", text_content='"')
+        q2_close.__webcompy_prerendered_node__ = True
+
+        t1 = TextElement('"a@example.com"')
+        span_child = Element("span", {}, {}, None, [TextElement("mid")])
+        t2 = TextElement('"b@example.com"')
+        _, dom, records = _hydrate_with_reporter(
+            [t1, span_child, t2],
+            [q1_open, dec_1, q1_close, mid_span, q2_open, dec_2, q2_close],
+        )
+
+        assert records == []
+        assert dom.childNodes.length == 3
+        assert t1._node_cache is q1_open
+        assert span_child._node_cache is mid_span
+        assert t2._node_cache is q2_open
+        assert [n.textContent for n in dom.childNodes] == ['"a@example.com"', "mid", '"b@example.com"']
+
+    @pytest.mark.asyncio
+    async def test_dynamic_fragment_coalesces_split_text_at_nonzero_start_idx(self, fake_browser_full):
+        ctx = _FakeHydrationCtx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            parent_node = parent._get_node()
+
+            prefix_span = FakeDOMNode("span")
+            prefix_span.__webcompy_prerendered_node__ = True
+            quote_open = FakeDOMNode("#text", text_content='"')
+            quote_open.__webcompy_prerendered_node__ = True
+            decoded = FakeDOMNode("#text", text_content="you@example.com")
+            quote_close = FakeDOMNode("#text", text_content='"')
+            quote_close.__webcompy_prerendered_node__ = True
+            tail_span = FakeDOMNode("span")
+            tail_span.__webcompy_prerendered_node__ = True
+            tail_text = FakeDOMNode("#text", text_content="ok")
+            tail_text.__webcompy_prerendered_node__ = True
+            tail_span.appendChild(tail_text)
+
+            for node in (prefix_span, quote_open, decoded, quote_close, tail_span):
+                parent_node.appendChild(node)
+
+            text_child = TextElement('"you@example.com"')
+            span_child = Element("span", {}, {}, None, [TextElement("ok")])
+            frag = FragmentElement([text_child, span_child])
+            frag._parent = parent
+            frag._node_idx = 1
+            frag._hydrate_node()
+            await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+            assert ctx._hydration_reporter.records == []
+            assert parent_node.childNodes.length == 3
+            assert parent_node.childNodes[0] is prefix_span
+            assert text_child._node_cache is quote_open
+            assert quote_open.textContent == '"you@example.com"'
+            assert getattr(quote_open, "__webcompy_prerendered_node__", False) is True
+            assert span_child._node_cache is tail_span
+        finally:
+            _active_app_context.reset(token)
