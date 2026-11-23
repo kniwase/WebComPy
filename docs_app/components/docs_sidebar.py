@@ -3,7 +3,30 @@ from webcompy.elements import html
 from webcompy.router import RouterLink
 from webcompy.signal import Signal, use_computed
 
-from ..docs_manifest import DOCS_SECTIONS
+from ..docs_manifest import DOCS_SECTIONS, DocsPageEntry
+
+
+def _render_section_items(pages: list[DocsPageEntry]):
+    items = []
+    current_group: str | None = None
+    for page in pages:
+        group = page.get("group")
+        if group is not None and group != current_group:
+            current_group = group
+            items.append(html.LI({"class": "docs-sidebar-group", "role": "presentation"}, current_group))
+        elif group is None:
+            current_group = None
+        items.append(
+            html.LI(
+                {},
+                RouterLink(
+                    to=page["path"],
+                    text=[page["label"]],
+                    active_class="docs-sidebar-active",
+                ),
+            )
+        )
+    return tuple(items)
 
 
 @define_component()
@@ -38,17 +61,7 @@ def DocsSidebar(_: ComponentContext[None]):
                         lambda idx=idx: f"display: {'block' if _section_state(idx).value else 'none'};"
                     ),
                 },
-                *tuple(
-                    html.LI(
-                        {},
-                        RouterLink(
-                            to=page["path"],
-                            text=[page["label"]],
-                            active_class="docs-sidebar-active",
-                        ),
-                    )
-                    for page in section["pages"]
-                ),
+                *_render_section_items(section["pages"]),
             ),
         )
         for idx, section in enumerate(DOCS_SECTIONS)
@@ -86,6 +99,19 @@ DocsSidebar.scoped_style = {
     },
     " .docs-sidebar-links li": {
         "margin": "0",
+    },
+    " .docs-sidebar-links li.docs-sidebar-group": {
+        "margin-top": "var(--space-3)",
+        "margin-bottom": "var(--space-1)",
+        "padding": "var(--space-1) var(--space-2)",
+        "font-size": "0.75rem",
+        "font-weight": "600",
+        "text-transform": "uppercase",
+        "letter-spacing": "0.05em",
+        "color": "var(--color-fg-muted)",
+    },
+    " .docs-sidebar-links li.docs-sidebar-group:first-child": {
+        "margin-top": "var(--space-1)",
     },
     " .docs-sidebar-links a": {
         "display": "block",

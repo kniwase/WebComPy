@@ -133,5 +133,6 @@ With `immediate=True` (the default), WebComPy launches the operation right after
 ## Next steps
 
 - Wrap async views with fallback recovery in [Error Handling](/documents/basic/error-handling).
+- Learn how resolved `AsyncResult` data and fetches transfer across SSR and hydration (including `transfer=False`) in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Coordinate `async def` setups, `Suspense`, `ClientOnly`, and the async scheduler in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - For server-pushed streams or typed RPC calls, explore [Server-Sent Events](/documents/advanced/event-source) and [RPC](/documents/advanced/rpc).
-- Advanced topics coming in Advanced Usage: `watch` signal dependencies, opting out of SSR transfer (`transfer=False`), and scheduler scoping.
