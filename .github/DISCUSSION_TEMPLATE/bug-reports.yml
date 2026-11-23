@@ -1,0 +1,93 @@
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Both English and Japanese are welcome.
+        Please search existing [Discussions](https://github.com/kniwase/WebComPy/discussions) before opening a new report.
+
+        バグ報告は英語・日本語のどちらでも構いません。
+        投稿前に、既存の [Discussions](https://github.com/kniwase/WebComPy/discussions) に同様の報告がないかご確認ください。
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment / 実行環境
+      description: Where does the bug occur? / 不具合が発生した環境を選択してください
+      options:
+        - Browser (PyScript runtime)
+        - Server (CLI / dev server / SSG)
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: webcompy-version
+    attributes:
+      label: WebComPy Version / WebComPy バージョン
+      description: Installed version of WebComPy / 使用中の WebComPy のバージョン
+      placeholder: "e.g., 0.0.13"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version / Python バージョン
+      description: Host or runtime Python version / 使用中の Python のバージョン
+      placeholder: "e.g., 3.14"
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser & OS (if browser issue) / ブラウザ・OS（ブラウザ環境の場合）
+      description: Browser name/version and OS if applicable / ブラウザ環境の場合はブラウザ名・バージョン・OS
+      placeholder: "e.g., Chrome 131 / Ubuntu 24.04"
+
+  - type: input
+    id: pyscript-version
+    attributes:
+      label: PyScript & Pyodide Version (if browser issue) / PyScript・Pyodide バージョン（ブラウザ環境の場合）
+      description: PyScript / Pyodide version if applicable / ブラウザ環境の場合は PyScript・Pyodide のバージョン
+      placeholder: "e.g., PyScript 2026.7.3, Pyodide 314.0.3"
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce / 再現手順
+      description: Minimal code snippet or commands to reproduce the issue / 再現に必要な最小限のコードや手順を記載してください
+      placeholder: |
+        1. Run '...'
+        2. Navigate to '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior / 期待する動作
+      description: What did you expect to happen? / 本来想定していた動作を記載してください
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior / 実際の動作
+      description: What actually happened? / 実際に起きた現象を記載してください
+
+  - type: textarea
+    id: relevant-spec
+    attributes:
+      label: Relevant OpenSpec (optional) / 関連する OpenSpec（任意）
+      description: Reference any spec under `openspec/specs/` if known / 関連する仕様が分かる場合は記載してください
+      placeholder: "e.g., openspec/specs/reactive/spec.md"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Output & Console Logs / エラー出力・コンソールログ
+      description: Paste relevant terminal output or browser console errors / ターミナル出力やブラウザのコンソールエラーがあれば貼り付けてください
+      render: shell

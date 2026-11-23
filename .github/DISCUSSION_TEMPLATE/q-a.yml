@@ -1,0 +1,38 @@
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about using or developing with WebComPy? Both English and Japanese are welcome!
+        Please check the [WebComPy Docs](https://webcompy.net/) and existing [Q&A Discussions](https://github.com/kniwase/WebComPy/discussions/categories/q-a) first.
+
+        WebComPy の使い方や開発に関する質問は、英語・日本語のどちらでも構いません。
+        投稿前に [WebComPy Docs](https://webcompy.net/) や既存の [Q&A](https://github.com/kniwase/WebComPy/discussions/categories/q-a) もご確認ください。
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment / 対象環境
+      description: Which part of WebComPy does your question relate to? / 質問の対象となる環境を選択してください
+      options:
+        - Browser (PyScript runtime)
+        - Server (CLI / dev server / SSG)
+        - Both
+        - General / Not environment-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / 質問内容
+      description: What would you like to know? / 知りたいことや、つまずいている点を記載してください
+      placeholder: "Describe what you are trying to accomplish and where you got stuck..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Code (optional) / 背景・コード・環境情報（任意）
+      description: Versions (e.g., WebComPy 0.0.13, Python 3.14), relevant code, or error messages / バージョン情報、関連コード、エラーメッセージなどがあれば記載してください

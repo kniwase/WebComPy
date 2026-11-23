@@ -77,7 +77,7 @@ WebComPy は [OpenSpec](https://github.com/fission-ai/openspec) によるスペ�
 
 - [Discussions](https://github.com/kniwase/WebComPy/discussions) で質問する
 - `openspec/specs/` 以下の既存スペックを確認する
-- 関連する Issue や PR を確認する
+- 関連する Discussion や PR を確認する
 - `/opsx-explore`（OpenCode / Claude Code）または `/openspec-explore`（Antigravity / Claude Code）を実行する
 
 ### 提案（Propose）
@@ -198,7 +198,7 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 - AI エージェントとのコミュニケーションは**日本語で問題ありません**
 - AI エージェントは内部処理を英語で行いますが、日本語での指示を理解します
 - コードや公式ドキュメントは英語です（AGENTS.md の言語ルールに従う）
-- Issue や PR の記述言語は日本語でも英語でも構いません
+- Discussions への投稿は英語・日本語のどちらでも構いません（PR のタイトル・本文は英語で記述します）
 
 ### レビューの仕組み
 
@@ -302,18 +302,23 @@ AI アシストによるコミットでは、使用したコーディングハ�
 
 ---
 
-## Issue の報告
+## バグ報告・機能要望・質問
 
-[Issue テンプレート](.github/ISSUE_TEMPLATE/) を参照してください:
+このリポジトリでは GitHub Issues を無効化しています。バグ報告・機能要望・質問は
+[GitHub Discussions](https://github.com/kniwase/WebComPy/discussions)
+をご利用ください（投稿言語は英語・日本語のどちらでも構いません。テンプレート定義は
+[.github/DISCUSSION_TEMPLATE/](.github/DISCUSSION_TEMPLATE/) にあります）。
 
-- **バグ報告**: バグ報告フォームを使用。環境（ブラウザ/サーバー）、バージョン、再現手順を明記してください。
-  日本語での報告も歓迎します。
-- **機能要望**: 機能要望フォームを使用。主要な機能は OpenSpec ワークフローを通じた提案を期待しています。
+- **バグ報告**（[`Bug Reports`](https://github.com/kniwase/WebComPy/discussions/new?category=bug-reports)）:
+  環境（ブラウザ／サーバー）、バージョン、再現手順を明記してください。
+- **機能要望・アイデア**（[`Ideas`](https://github.com/kniwase/WebComPy/discussions/new?category=ideas)）:
+  解決したい課題と提案内容を記載してください。大きな機能追加は OpenSpec ワークフローに沿って進めます。
+- **質問**（[`Q&A`](https://github.com/kniwase/WebComPy/discussions/new?category=q-a)）:
+  使い方や環境構築、設計に関する質問を投稿してください。
 
 ---
 
 ## ヘルプ
 
-- [Discussions](https://github.com/kniwase/WebComPy/discussions) — 質問、アイデア、議論
-- [Issues](https://github.com/kniwase/WebComPy/issues) — バグ報告と機能要望
+- [Discussions](https://github.com/kniwase/WebComPy/discussions) — バグ報告、機能要望・アイデア、Q&A、お知らせ、事例紹介
 - [WebComPy Docs](https://webcompy.net/) — フレームワークのドキュメントとデモ

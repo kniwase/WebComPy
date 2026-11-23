@@ -139,9 +139,15 @@ def HomeContent(_: ComponentContext[None]):
                     "text": "Source Code",
                 }
             ),
+            DocsLink(
+                {
+                    "href": "https://github.com/kniwase/WebComPy/discussions",
+                    "text": "Discussions",
+                }
+            ),
             html.SPAN(
                 {"class": "footer-note"},
-                "WebComPy is developed in the open — issues and pull requests are welcome.",
+                "WebComPy is developed in the open — discussions and pull requests are welcome.",
             ),
         ),
     )
@@ -174,6 +180,7 @@ HomeContent.scoped_style = {
     },
     ".footer-strip": {
         "display": "flex",
+        "flex-wrap": "wrap",
         "gap": "var(--space-3)",
         "align-items": "center",
         "justify-content": "center",

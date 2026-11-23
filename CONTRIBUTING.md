@@ -78,7 +78,7 @@ Investigate problems, compare approaches, clarify requirements.
 
 - Ask questions in [Discussions](https://github.com/kniwase/WebComPy/discussions)
 - Search existing specs under `openspec/specs/`
-- Review related issues and PRs
+- Review related discussions and PRs
 - Run `/opsx-explore` (OpenCode / Claude Code) or `/openspec-explore` (Antigravity / Claude Code)
 
 ### Propose
@@ -397,19 +397,24 @@ uv run python -m webcompy inspect pyexec --repl              # REPL over stdin l
 
 ---
 
-## Issue Reporting
+## Bug Reports, Feature Requests & Questions
 
-See [Issue Templates](.github/ISSUE_TEMPLATE/):
+GitHub Issues is disabled on this repository. Please submit bug reports,
+feature ideas, and questions through
+[GitHub Discussions](https://github.com/kniwase/WebComPy/discussions)
+(see [Discussion Templates](.github/DISCUSSION_TEMPLATE/)):
 
-- **Bug report**: Use the bug report form. Specify environment (browser/server),
-  versions, and reproduction steps.
-- **Feature request**: Use the feature request form. Major features are expected
-  to go through the OpenSpec workflow.
+- **Bug report** ([`Bug Reports`](https://github.com/kniwase/WebComPy/discussions/new?category=bug-reports)):
+  Specify the environment (browser/server), versions, and reproduction steps.
+- **Feature request / Idea** ([`Ideas`](https://github.com/kniwase/WebComPy/discussions/new?category=ideas)):
+  Describe the problem and proposed solution. Major features are expected to go
+  through the OpenSpec workflow.
+- **Question** ([`Q&A`](https://github.com/kniwase/WebComPy/discussions/new?category=q-a)):
+  Ask usage, setup, or architecture questions.
 
 ---
 
 ## Getting Help
 
-- [Discussions](https://github.com/kniwase/WebComPy/discussions) — Questions, ideas, general discussion
-- [Issues](https://github.com/kniwase/WebComPy/issues) — Bug reports and feature requests
+- [Discussions](https://github.com/kniwase/WebComPy/discussions) — Bug reports, feature ideas, Q&A, announcements, and showcase
 - [WebComPy Docs](https://webcompy.net/) — Framework documentation and demos
