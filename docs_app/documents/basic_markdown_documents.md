@@ -57,28 +57,28 @@ Use `load_markdown_document()` when loading a resource file via `ResourcePort`. 
 
 - **Flat key-value (`---`)**: lightweight `key: value` string pairs (whitespace trimmed). Malformed lines without `:` raise `WebComPyException`.
 
-```markdown
----
-title: Getting Started
-description: How to configure your project.
----
+  ```markdown
+  ---
+  title: Getting Started
+  description: How to configure your project.
+  ---
 
-# Getting Started
-```
+  # Getting Started
+  ```
 
 - **TOML (`+++`)**: delimited by three plus signs (`+++`) and parsed with stdlib `tomllib`, supporting nested tables, integers, booleans, and arrays.
 
-```markdown
-+++
-title = "Getting Started"
-order = 1
+  ```markdown
+  +++
+  title = "Getting Started"
+  order = 1
 
-[author]
-name = "Alice"
-+++
+  [author]
+  name = "Alice"
+  +++
 
-# Getting Started
-```
+  # Getting Started
+  ```
 
 ## `MarkdownDocument` and table of contents (`toc`)
 
