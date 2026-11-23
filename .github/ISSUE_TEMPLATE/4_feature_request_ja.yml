@@ -1,20 +1,19 @@
 name: 機能要望 (Feature Request)
-description: WebComPy への機能提案や改善アイデア
+description: 機能追加の要望や改善アイデアを共有する
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        機能提案ありがとうございます。日本語での提案も歓迎します。
-        大規模な機能については [OpenSpec ワークフロー](CONTRIBUTING.ja.md#開発ワークフロー)
-        による構造化された提案・設計・実装計画を推奨します。
+        機能要望やアイデアの投稿は英語・日本語のどちらでも構いません。
+        大きな機能追加や仕様変更は [OpenSpec ワークフロー](CONTRIBUTING.ja.md#開発ワークフロー) に沿って進めます。
 
   - type: textarea
     id: problem
     attributes:
       label: 解決したい課題 (Problem Statement)
-      description: この機能はどのような問題を解決しますか？どのようなユースケースがありますか？
+      description: 解決したい課題や具体的なユースケースを記載してください
       placeholder: |
         X を構築する際に Y をしたいのですが、現在は ... という回避策が必要です
     validations:
@@ -24,7 +23,7 @@ body:
     id: solution
     attributes:
       label: 提案する解決策 (Proposed Solution)
-      description: どのように動作することを期待しますか？
+      description: 実現したい API や動作のイメージを記載してください
     validations:
       required: true
 
@@ -32,12 +31,12 @@ body:
     id: alternatives
     attributes:
       label: 検討した代替案 (Alternatives Considered)
-      description: 試した回避策や代わりのアプローチがあれば記載してください
+      description: 他に検討した方法や回避策があれば記載してください
 
   - type: checkboxes
     id: openspec
     attributes:
       label: OpenSpec 提案
-      description: OpenSpec ワークフローでこの機能を正式化することに興味がありますか？
+      description: ご自身で実装や提案まで進める場合の確認項目（任意）
       options:
-        - label: この機能の OpenSpec 提案作成に協力できます
+        - label: この件について OpenSpec の変更提案の作成を検討している

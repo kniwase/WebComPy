@@ -1,18 +1,18 @@
 name: バグ報告 (Bug Report)
-description: バグを报告して WebComPy の改善にご協力ください
+description: 不具合・バグを報告する
 title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        バグ報告ありがとうございます。日本語での報告も歓迎します。
+        バグ報告は英語・日本語のどちらでも構いません。
 
   - type: dropdown
     id: environment
     attributes:
       label: 環境 (Environment)
-      description: バグが発生した環境を選択してください
+      description: 不具合が発生した環境を選択してください
       options:
         - ブラウザ (Browser / PyScript)
         - サーバー (Server / CLI / SSG)
@@ -40,7 +40,7 @@ body:
     id: browser-version
     attributes:
       label: ブラウザ (該当する場合)
-      description: バグが発生したブラウザとバージョン
+      description: 不具合が発生したブラウザとバージョン
       placeholder: "例: Chrome 125, Firefox 128"
 
   - type: input
@@ -53,7 +53,7 @@ body:
     id: steps-to-reproduce
     attributes:
       label: 再現手順 (Steps to Reproduce)
-      description: バグを再現するための明確な手順を記載してください
+      description: 再現に必要な最小限の手順やコードを記載してください
       placeholder: |
         1. コンポーネントを作成し ...
         2. 関数を呼び出すと ...
@@ -65,24 +65,24 @@ body:
     id: expected
     attributes:
       label: 期待する動作 (Expected Behavior)
-      description: 本来どう動作すべきか
+      description: 本来想定していた動作を記載してください
 
   - type: textarea
     id: actual
     attributes:
       label: 実際の動作 (Actual Behavior)
-      description: 実際にどう動作したか
+      description: 実際に起きた現象を記載してください
 
   - type: textarea
     id: relevant-spec
     attributes:
       label: 関連スペック (任意)
-      description: 影響を受けると思われる OpenSpec スペックがあればリンクを記載
+      description: 関連する OpenSpec の仕様が分かる場合はパスやリンクを記載してください
       placeholder: "例: openspec/specs/reactive/spec.md"
 
   - type: textarea
     id: logs
     attributes:
       label: コンソールログ / スクリーンショット
-      description: コンソール出力、エラーメッセージ、スクリーンショットなどを貼り付けてください
-      placeholder: ブラウザのコンソールやサーバーの標準出力などをここに貼り付け
+      description: コンソール出力、エラーメッセージ、スクリーンショットなどがあれば貼り付けてください
+      placeholder: ブラウザのコンソールエラーやサーバーの標準出力などを貼り付けてください

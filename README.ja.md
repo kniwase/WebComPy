@@ -5,8 +5,8 @@
 
 ## WebComPy とは
 
-[WebComPy](https://github.com/kniwase/WebComPy) は [PyScript](https://github.com/pyscript/pyscript) のための Python フロントエンドフレームワークです。
-リアクティブなコンポーネントモデルをブラウザ上で — すべて Python で — 実現します。
+[WebComPy](https://github.com/kniwase/WebComPy) は [PyScript](https://github.com/pyscript/pyscript) 上で動作する Python フロントエンドフレームワークです。
+リアクティブなコンポーネントモデルを、すべて Python だけでブラウザ上に実現します。
 
 ### 機能
 
@@ -14,13 +14,13 @@
 - **リアクティブな状態管理** — `Signal`、`Computed`、`ReactiveList`、`ReactiveDict` による自動 DOM 差分更新
 - **ビルトインルーター** — History モード / Hash モード、パスパラメータ対応
 - **依存性注入** — `provide()` / `inject()` パターンによるスコープ付きサービス管理
-- **非同期レンダリングパイプライン** — `async` ライフサイクルフック、`AsyncResult`、コンポーザブルな非同期データ取得
+- **非同期レンダリングパイプライン** — `async` ライフサイクルフック、`AsyncResult`、コンポーザブルによる非同期データ取得
 - **HTTP クライアント** — ブラウザネイティブ fetch の async/await ラッパー
 - **プラグインシステム** — `WebComPyPlugin` 基底クラスによる機能拡張
 - **UI ツールキット** — テーマシステム（ライト/ダーク）、`CodeBlock` コンポーネント、CSS デザイントークン
-- **テストモジュール** — `TestRenderer` とフェイクポートによるブラウザレスコンポーネントテスト — `webcompy-testing` が必要
+- **テストモジュール** — `TestRenderer` とフェイクポートによる、ブラウザを使わないコンポーネントテスト。`webcompy-testing` パッケージが必要
 - **インスペクタ CLI** — ヘッドレスブラウザでのスクリーンショット、コンソールログ、DOM クエリ、クリック、ナビゲーション
-- **CLI ツール** — プロジェクトスキャフォールディング (`init`)、開発サーバー (`start`)、静的サイトジェネレーター (`generate`) — `webcompy-cli` が必要
+- **CLI ツール** — プロジェクトのひな形生成（`init`）、開発サーバー（`start`）、静的サイト生成（`generate`）。`webcompy-cli` パッケージが必要
 - **型アノテーション** — `.pyi` スタブによる完全な型ヒント
 
 ## はじめ方
@@ -68,7 +68,7 @@
 ```
 
 任意の HTTP サーバーでファイルを配信し、ブラウザで開いてください。
-マシンに Python のインストールは不要です — PyScript がブラウザ上で全てを実行します。
+手元の環境に Python をインストールする必要はありません。PyScript がブラウザ上ですべて実行します。
 
 ### CLI で開発する
 
@@ -239,4 +239,4 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
 
 ## ライセンス
 
-このプロジェクトは MIT ライセンスの下で提供されます。詳細は LICENSE.txt を参照してください。
+このプロジェクトは MIT ライセンスで公開されています。詳細は LICENSE.txt を参照してください。

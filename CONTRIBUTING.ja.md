@@ -1,10 +1,10 @@
 # WebComPy コントリビューションガイド
 
-## ようこそ
+## はじめに
 
 WebComPy は PyScript 上で動作する Python フロントエンドフレームワークです。
 このプロジェクトでは AI エージェントを活用した開発を前提としています。
-コントリビューター（人間・AI エージェントを問いません）は同じワークフローを通じて協業します。
+人間・AI エージェントを問わず、すべてのコントリビューターが同じワークフローで協業します。
 
 **AI エージェントへ**: 技術的な詳細（コマンド、フレームワークの不変条件、ファイル→スペックマッピング、Git 規約）については [AGENTS.md](AGENTS.md)（英語）を参照してください。
 
@@ -84,62 +84,57 @@ WebComPy は [OpenSpec](https://github.com/fission-ai/openspec) によるスペ�
 
 変更提案を作成し、設計・スペック・タスクを定義します。
 
-1. **変更に名前をつける**: `<type>-<short-description>`（例: `feat-list-reconciliation`）。
-   タイプは `feat`、`fix`、`refactor`、`docs`、`chore`、`test`、`perf` のいずれか。
-2. **アーティファクトを作成する** OpenSpec スキルを使い `openspec/changes/<name>/` 以下に:
-   - `openspec-new-change` で変更ディレクトリをスキャフォールド
-   - `openspec-propose` で各アーティファクトを順に作成（または `openspec-ff-change`
-     で全アーティファクトを一度に作成）
-   - `proposal.md` — 動機、スコープ、非目標、既知の課題
+1. **変更に名前を付ける**: `<type>-<short-description>` 形式（例: `feat-list-reconciliation`）。
+   タイプは `feat`、`fix`、`refactor`、`docs`、`chore`、`test`、`perf` のいずれかを使用します。
+2. **アーティファクトを作成する**: OpenSpec スキルを使って `openspec/changes/<name>/` 配下に各ファイルを作成します。
+   - `openspec-new-change` で変更用ディレクトリのひな形を作成
+   - `openspec-propose` で各アーティファクトを順に作成（または `openspec-ff-change` で一括作成）
+   - `proposal.md` — 背景・動機、スコープ、対象外（Non-goals）、既知の課題
    - `design.md` — 技術的アプローチと設計判断
    - `specs/` — 開発者視点での振る舞い定義
-   - `tasks.md` — 実装タスク（各 2 時間以内）
-3. **アーティファクトをコミットする** `git add` と `git commit` をコミットメッセージ規約
-   （`<type>: <description>`）に従って実行。
+   - `tasks.md` — 実装タスク（各 2 時間以内の粒度）
+3. **アーティファクトをコミットする**: コミットメッセージ規約（`<type>: <description>`）に従い、`git add` と `git commit` を実行します。
 
 ### 実装（Apply Changes）
 
 `openspec-apply-change` スキルを使って提案のタスクを実装します。
 
-- `tasks.md` の順にタスクを進め、1 タスク 1 コミットを目安にする
-- 全タスク完了で change の status が `complete` になる
-- combined PR（プロポーザルと実装を 1 つの PR）の場合、Apply Changes は
-  同じブランチで Sync Specs より前に行う
-- プロポーザル単独 PR の場合、Apply Changes はプロポーザル PR マージ後に開始
+- `tasks.md` の順にタスクを進め、1 タスク 1 コミットを目安にします
+- すべてのタスクが完了すると、変更のステータスが `complete` になります
+- プロポーザルと実装を 1 つの PR にまとめる場合、同じブランチ上で「仕様同期」より前に実装を行います
+- プロポーザル単独 PR の場合、プロポーザル PR がマージされてから実装を開始します
 
 ### 仕様同期（Sync Specs）
 
-実装 PR 提出前（change の status が `complete` の場合）に必ず実行:
+実装 PR を提出する前（変更のステータスが `complete` になった後）に必ず実行します:
 
-1. `openspec-sync-specs` で delta specs を `openspec/changes/<name>/specs/` から
-   メインスペック `openspec/specs/<capability>/spec.md` にマージ
-2. `openspec/specs/` 配下の変更をコミットメッセージ規約に従ってコミット
+1. `openspec-sync-specs` で差分スペック（delta specs）を `openspec/changes/<name>/specs/` から
+   メインスペック `openspec/specs/<capability>/spec.md` にマージします
+2. `openspec/specs/` 配下の変更をコミットメッセージ規約に従ってコミットします
 
-プロポーザル単独 PR には適用されません（status は `in-progress` のまま）。
+プロポーザル単独 PR では不要です（ステータスは `in-progress` のままにします）。
 
 ### アーカイブ（Archive）
 
-実装 PR 提出前（change の status が `complete` の場合）に必ず実行:
+実装 PR を提出する前（変更のステータスが `complete` になった後）に必ず実行します:
 
-1. `openspec-archive-change` で変更を `openspec/changes/<name>/` から
-   `openspec/changes/archive/YYYY-MM-DD-<name>/` に移動
-2. 移動をコミットメッセージ規約に従ってコミット
+1. `openspec-archive-change` で変更ディレクトリを `openspec/changes/<name>/` から
+   `openspec/changes/archive/YYYY-MM-DD-<name>/` に移動します
+2. 移動をコミットメッセージ規約に従ってコミットします
 
-CI の `openspec-check` ジョブは `complete` な変更が未アーカイブだとマージを
-ブロックするため、PR 提出前にこのステップを完了させる必要があります。
+完了済み（`complete`）の変更がアーカイブされていない場合、CI の `openspec-check` ジョブによってマージがブロックされます。PR 提出前に必ずアーカイブを完了してください。
 
-プロポーザル単独 PR には適用されません（status は `in-progress` のまま）。
+プロポーザル単独 PR では不要です（ステータスは `in-progress` のままにします）。
 
-PR 提出の mechanics については **プルリクエストプロセス** セクションを参照。
+PR 提出の具体的な手順については、**プルリクエストプロセス** セクションを参照してください。
 
 ### スペック記述ガイドライン
 
-- **開発者またはエンドユーザの視点**から書く（実装の視点ではない）
-- `## Purpose` で目的と解決する問題を説明
-- `## Requirements` に `### Requirement:` と `#### Scenario:` ブロックを
-  `WHEN/THEN/AND` 形式で記述
-- **観測可能な振る舞い**を記述（クラス階層やメソッドシグネチャではない）
-- 内部リファクタリング（ユーザー視点の変更なし）はスペック変更不要
+- **開発者またはエンドユーザーの視点**から記述します（内部実装の詳細ではなく利用側の視点）
+- `## Purpose` で目的と解決する課題を説明します
+- `## Requirements` に `### Requirement:` と `#### Scenario:` ブロックを `WHEN/THEN/AND` 形式で記述します
+- クラス階層やメソッドシグネチャではなく、**外から観測できる振る舞い**を記述します
+- ユーザー視点の挙動が変わらない内部リファクタリングでは、スペックの変更は不要です
 
 ---
 
@@ -158,7 +153,7 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 
 ### 利用可能なスキルとエージェント
 
-スキル（対応ハーネスが description 一致で自動ロード、または直接呼び出し）:
+スキル（対応ハーネスが `description` に応じて自動で読み込みます。直接呼び出すことも可能です）:
 
 | スキル | 用途 |
 |---|---|
@@ -167,7 +162,7 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 | `webcompy-browser-development` | ブラウザサイドランタイム（reactive、elements、router、browser API） |
 | `webcompy-server-development` | サーバーサイド（CLI、開発サーバー、SSG） |
 | `webcompy-component-development` | UI コンポーネントと docs_app |
-| `webcompy-docs-development` | docs_app のドキュメンテーションサイト |
+| `webcompy-docs-development` | docs_app のドキュメントサイト |
 | `webcompy-local-ci` | ローカルでの lint / typecheck / ユニットテスト実行 |
 
 エージェント（権限サンドボックス付き、対応スキルをロード）:
@@ -238,9 +233,10 @@ AI アシストによるコミットでは、使用したコーディングハ�
 
 - Python 3.12+、型アノテーション必須
 - `uv` によるパッケージ管理（`uv add` + `uv lock`）
-- コード内コメント禁止（明示的に要求された場合を除く）
+- コード内コメント禁止（明示的に指示された場合を除く）
 - コンポーネントクラスは `@component_template`、`@on_before_rendering` を使用
 - リアクティブ状態のプリミティブは `openspec/specs/reactive/spec.md` と `openspec/specs/composables/spec.md` で規定
+
 重要な不変条件（デュアル環境アーキテクチャ、DI スコープルール、リアクティブ契約など）については
 [openspec/SPEC_INDEX.md](openspec/SPEC_INDEX.md#framework-invariants)（英語）を参照してください。
 
@@ -263,23 +259,15 @@ AI アシストによるコミットでは、使用したコーディングハ�
 
 ### PR 提出（Submit）
 
-- **テンプレート**: `.github/PULL_REQUEST_TEMPLATE.md`（すべての PR で唯一のテンプレート）
-- **PR タイトルと本文の言語**: PR タイトルと本文（Description、Related Resources、
-  チェックリストの説明など）は `AGENTS.md` の Language Rules に従い **必ず英語で**
-  作成すること。ユーザーのチャット上の設定言語に関わらず、AI エージェントが PR を
-  ドラフトする場合は英語を出力すること。
-- **PR タイトルプレフィックス**で CI の挙動が変わる:
-  - `chore:` — code check（lint、typecheck、test、E2E）をスキップ。CI は
-    OpenSpec 検証と AI レビューのみ実行。プロポーザル単独 PR に適する。
-  - `feat:`、`fix:`、`refactor:`、`docs:`、`chore:`、`test:`、`style:`、`perf:` —
-    すべてのチェックを実行。実装 PR に適する。
-- **PR の形**（プロポーザル単独か、実装と組み合わせるか）は PR 作成時点で判断:
-  - 大規模または要議論な変更 → `chore:` で先行提案し、プロポーザル PR マージ後に
-    実装 PR を出す
-  - 小規模または自己完結的な変更 → プロポーザルと実装を 1 つの PR にまとめる
-- **PR ライフサイクルのプロポーザル側**では、PR タイトルが `chore:` で始まる場合、
-  コード変更がないため CI は OpenSpec バリデーションと AI レビューのみ実行し、
-  lint/typecheck/test はスキップされる。
+- **テンプレート**: `.github/PULL_REQUEST_TEMPLATE.md`（すべての PR で共通）
+- **PR タイトルと本文の言語**: `AGENTS.md` の Language Rules に従い、PR のタイトルと本文（Description、Related Resources、チェックリストの説明など）は **必ず英語で** 作成してください。AI エージェントが PR を下書きする場合も、チャット上の使用言語にかかわらず英語で出力します。
+- **PR タイトルのプレフィックス**によって CI の挙動が変わります:
+  - `chore:` — コードチェック（lint、typecheck、test、E2E）をスキップし、CI は OpenSpec 検証と AI レビューのみを実行します。プロポーザル単独 PR に適しています。
+  - `feat:`、`fix:`、`refactor:`、`docs:`、`chore:`、`test:`、`style:`、`perf:` — すべてのチェックを実行します。実装 PR に適しています。
+- **PR の構成**（プロポーザル単独にするか、実装とまとめるか）は PR 作成時に判断します:
+  - 大規模または議論が必要な変更 → `chore:` で先にプロポーザル PR を出し、マージ後に実装 PR を作成します
+  - 小規模または単体で完結する変更 → プロポーザルと実装を 1 つの PR にまとめます
+- **プロポーザル単独 PR の CI 挙動**: PR タイトルが `chore:` で始まりコード変更を含まない場合、lint・typecheck・test はスキップされ、OpenSpec 検証と AI レビューのみが実行されます。
 
 ### プッシュ前の確認
 
@@ -288,17 +276,17 @@ AI アシストによるコミットでは、使用したコーディングハ�
 
 ### PR のライフサイクル
 
-1. `.github/PULL_REQUEST_TEMPLATE.md` を使って PR を開く
-2. CI がバリデーションと code check を実行（`chore:` PR は code check をスキップ）
-3. AI レビューが PR コメントとして結果を投稿
-4. レビュー指摘に対応
-5. すべてのチェックが通ったらマージ
+1. `.github/PULL_REQUEST_TEMPLATE.md` を使って PR を作成します
+2. CI がバリデーションとコードチェックを実行します（`chore:` PR はコードチェックをスキップ）
+3. AI レビューが PR コメントとして結果を投稿します
+4. レビュー指摘に対応します
+5. すべてのチェックが通ったらマージします
 
 ### マージ条件
 
-- 全 CI チェック通過
-- AI レビュー承認（または指摘対応済み）
-- 完了済みで未アーカイブの OpenSpec 変更がないこと（CI で確認）
+- すべての CI チェックを通過していること
+- AI レビューによる承認を得ていること（または指摘への対応が完了していること）
+- 完了済みで未アーカイブの OpenSpec 変更が残っていないこと（CI で確認）
 
 ---
 
