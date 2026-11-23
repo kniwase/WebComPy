@@ -1,18 +1,13 @@
 import asyncio
 import importlib.util
-import json
 from pathlib import Path
 
 import pytest
 
-from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
-from webcompy.di._keys import _ROUTER_KEY
 from webcompy.di._scope import DIScope
-from webcompy.ports._fetch import FetchPort, Response
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY, FETCH_PORT_KEY, HISTORY_PORT_KEY
-from webcompy.ports._middleware import FetchMiddlewareRegistry, FetchRequest, _MiddlewareFetchPort
-from webcompy.router import Router
+from webcompy.ports._fetch import Response
+from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import FakeFetchPort, TestRenderer, mock_app_run
 
@@ -302,7 +297,12 @@ def test_matplotlib_image_rendered():
             assert src.startswith("data:image/png;base64,")
 
 
-def _make_router_scope(mod_router: Router, path: str = "/") -> tuple[DIScope, MockHistoryPort]:
+def _make_router_scope(mod_router, path: str = "/") -> tuple[DIScope, object]:
+    from tests.conftest import MockHistoryPort
+    from webcompy.di._keys import _ROUTER_KEY
+    from webcompy.ports._keys import HISTORY_PORT_KEY
+    from webcompy.router import Router
+
     hist = MockHistoryPort()
     hist.navigate(path, None)
     test_router = Router(*mod_router.__pages__, default=mod_router._default, history=hist, preload=False)
@@ -312,16 +312,21 @@ def _make_router_scope(mod_router: Router, path: str = "/") -> tuple[DIScope, Mo
     return scope, hist
 
 
-class _FailingFetchPort(FetchPort):
-    async def fetch(
-        self,
-        url: str,
-        *,
-        method: str = "GET",
-        headers: dict[str, str] | None = None,
-        body: str | bytes | None = None,
-    ) -> Response:
-        raise AssertionError(f"Unexpected network call: {method} {url}")
+def _make_failing_fetch_port():
+    from webcompy.ports._fetch import FetchPort
+
+    class _FailingFetchPort(FetchPort):
+        async def fetch(
+            self,
+            url: str,
+            *,
+            method: str = "GET",
+            headers: dict[str, str] | None = None,
+            body: str | bytes | None = None,
+        ) -> Response:
+            raise AssertionError(f"Unexpected network call: {method} {url}")
+
+    return _FailingFetchPort()
 
 
 def test_todo_tutorial_step1_renders_and_filters():
@@ -364,7 +369,10 @@ def test_todo_tutorial_step3_navigation():
         from static._demos.todo_tutorial.step3.app import TodoApp as App
         from static._demos.todo_tutorial.step3.app import router as mod_router
 
+        from tests.conftest import MockHistoryPort
+
         scope, hist = _make_router_scope(mod_router, "/")
+        assert isinstance(hist, MockHistoryPort)
         with TestRenderer.render(App, parent_scope=scope) as result:
             assert len(result.query_selector_all("li")) == 3
             hist.navigate("/active", None)
@@ -379,6 +387,8 @@ def test_todo_tutorial_step3_navigation():
 
 @pytest.mark.asyncio
 async def test_todo_tutorial_step4_add_task_form():
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
     with mock_app_run():
         from static._demos.todo_tutorial.step4.app import TodoApp as App
         from static._demos.todo_tutorial.step4.app import router as mod_router
@@ -401,6 +411,10 @@ async def test_todo_tutorial_step4_add_task_form():
 
 @pytest.mark.asyncio
 async def test_todo_tutorial_step5_middleware_direct():
+    import json
+
+    from webcompy.ports._middleware import FetchRequest
+
     with mock_app_run():
         from static._demos.todo_tutorial.step5.app import create_tasks_api
 
@@ -449,6 +463,9 @@ async def test_todo_tutorial_step5_middleware_direct():
 
 @pytest.mark.asyncio
 async def test_todo_tutorial_step5_renders_with_middleware():
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY
+    from webcompy.ports._middleware import FetchMiddlewareRegistry, _MiddlewareFetchPort
+
     with mock_app_run():
         from static._demos.todo_tutorial.step5.app import TodoApp as App
         from static._demos.todo_tutorial.step5.app import router as mod_router
@@ -456,7 +473,7 @@ async def test_todo_tutorial_step5_renders_with_middleware():
         scope, _ = _make_router_scope(mod_router, "/")
         registry = FetchMiddlewareRegistry()
         scope.provide(FETCH_MIDDLEWARE_KEY, registry)
-        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_FailingFetchPort(), registry))
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_make_failing_fetch_port(), registry))
 
         with TestRenderer.render(App, parent_scope=scope) as result:
             await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
@@ -478,6 +495,9 @@ async def test_todo_tutorial_step5_renders_with_middleware():
 
 @pytest.mark.asyncio
 async def test_todo_tutorial_step6_renders_with_error_boundary():
+    from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
+    from webcompy.ports._middleware import FetchMiddlewareRegistry, _MiddlewareFetchPort
+
     with mock_app_run():
         from static._demos.todo_tutorial.step6.app import TodoApp as App
         from static._demos.todo_tutorial.step6.app import router as mod_router
@@ -485,7 +505,7 @@ async def test_todo_tutorial_step6_renders_with_error_boundary():
         scope, _ = _make_router_scope(mod_router, "/")
         registry = FetchMiddlewareRegistry()
         scope.provide(FETCH_MIDDLEWARE_KEY, registry)
-        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_FailingFetchPort(), registry))
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_make_failing_fetch_port(), registry))
 
         with TestRenderer.render(App, parent_scope=scope) as result:
             await asyncio.sleep(0)
