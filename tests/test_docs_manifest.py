@@ -158,7 +158,12 @@ class TestManifestContent:
         assert DOCS_INDEX["path"] not in [page["path"] for page in flatten_pages()]
 
     def test_sections_are_categories_in_order(self) -> None:
-        assert [section["title"] for section in DOCS_SECTIONS] == ["Getting Started", "Basic Usage", "Advanced Usage"]
+        assert [section["title"] for section in DOCS_SECTIONS] == [
+            "Getting Started",
+            "Guides",
+            "Basic Usage",
+            "Advanced Usage",
+        ]
 
     def test_boundary_pages(self) -> None:
         paths = [page["path"] for page in flatten_pages()]
