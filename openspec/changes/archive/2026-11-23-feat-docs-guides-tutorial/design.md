@@ -34,21 +34,20 @@ Ordering rationale: step 3 before 4 so navigation demos the router while forms (
 
 `docs_app/static/_demos/todo_tutorial/step1/...step6/app.py` — six self-contained files (no cross-imports; PyScript iframe can't share modules). Duplication across steps is intentional: each page shows the complete app at that step. A small `scripts/` guard isn't warranted; review checks step N+1 = step N + declared additions.
 
-- Step 5's mock: a `FetchMiddleware` registered in the demo's `AppConfig` (via a tiny plugin or `provide` in setup) answering `GET/POST /api/tasks` from memory — identical behavior on dev and static; also serves as the middleware teaching moment with a one-paragraph pointer to Advanced middleware docs.
-- `standard.html` package map gains `todo_tutorial_stepN: []` entries (webcompy wheel only).
+- Step 5's mock: a `FetchMiddleware` registered via `add_fetch_middleware(...)` inside root component (`TodoApp`) setup answering `GET`, `POST`, and `PATCH` requests for `/api/tasks` from memory — identical behavior on dev and static; also serves as the middleware teaching moment with a pointer to Advanced middleware topics.
+- `standard.html` package map gains `"todo_tutorial/step1": []` … `"todo_tutorial/step6": []` entries (webcompy wheel only), matching `standard.html`'s `/_demos/<app>/app.py` path resolution.
 
 ### 4. Page shape
 
 ```
 frontmatter: title "Step N — <name>", description
 lead: what the step adds; time estimate
-demo iframe (DemoDisplay pattern) of the step app
 narrative sections mirroring the code (H2s = TOC)
-full source CodeBlock at the end (single tab, ~<120 lines per step kept)
-"Next step" / "Previous step" links (relies on Prev/Next too)
+"Next steps" links (alongside Prev/Next pager)
+live demo & full source (DemoDisplay below narrative via extra_content)
 ```
 
-Markdown body can embed `render_template`-resolved component tags? Not needed: pages use the standard `docs_page_template`, and the demo iframe is inserted by the wrapper component around the rendered markdown via a slot — the page component composes `DemoDisplay(...)` above `doc.content`. No new rendering machinery.
+Markdown body does not need `render_template` component embeds: pages use the standard `docs_page_template`, and the wrapper component passes `DemoDisplay(...)` as `extra_content=` so it renders below the Markdown narrative (`doc.content`) with zero new rendering machinery.
 
 ### 5. Manifest placement
 
@@ -56,7 +55,7 @@ Markdown body can embed `render_template`-resolved component tags? Not needed: p
 
 ## Risks / Trade-offs
 
-- [Step code duplication across 6 apps] → accepted for pedagogy; a shared "final app" drift check test compares step 6 to a golden file.
+- [Step code duplication across 6 apps] → accepted for pedagogy; per-step unit tests in `tests/test_docs_demos.py` verify each standalone app boots and passes its feature checks.
 - [Tutorial pages grow stale faster than reference pages] → tie E2E (demo loads, mocked fetch returns) to the CI docs group so breakage surfaces.
 - [Iframe apps can't import docs_app code] → duplication above; no helper extraction attempted.
 
