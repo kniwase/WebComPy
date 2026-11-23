@@ -1,13 +1,18 @@
 import asyncio
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
 
+from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
+from webcompy.di._keys import _ROUTER_KEY
 from webcompy.di._scope import DIScope
-from webcompy.ports._fetch import Response
-from webcompy.ports._keys import FETCH_PORT_KEY
+from webcompy.ports._fetch import FetchPort, Response
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY, FETCH_PORT_KEY, HISTORY_PORT_KEY
+from webcompy.ports._middleware import FetchMiddlewareRegistry, FetchRequest, _MiddlewareFetchPort
+from webcompy.router import Router
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import FakeFetchPort, TestRenderer, mock_app_run
 
@@ -295,3 +300,195 @@ def test_matplotlib_image_rendered():
             src = img.getAttribute("src")
             assert src is not None
             assert src.startswith("data:image/png;base64,")
+
+
+def _make_router_scope(mod_router: Router, path: str = "/") -> tuple[DIScope, MockHistoryPort]:
+    hist = MockHistoryPort()
+    hist.navigate(path, None)
+    test_router = Router(*mod_router.__pages__, default=mod_router._default, history=hist, preload=False)
+    scope = DIScope()
+    scope.provide(_ROUTER_KEY, test_router)
+    scope.provide(HISTORY_PORT_KEY, hist)
+    return scope, hist
+
+
+class _FailingFetchPort(FetchPort):
+    async def fetch(
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
+        body: str | bytes | None = None,
+    ) -> Response:
+        raise AssertionError(f"Unexpected network call: {method} {url}")
+
+
+def test_todo_tutorial_step1_renders_and_filters():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step1.app import TodoApp as App
+
+        with TestRenderer.render(App) as result:
+            html = result.to_html()
+            assert "ToDo Tutorial" in html
+            assert "2 remaining" in html
+            assert len(result.query_selector_all("li")) == 3
+
+            active_btn = result.find_by_text("Active")
+            assert active_btn is not None
+            active_btn.dispatchEvent(VirtualDOMEvent("click"))
+            items = result.query_selector_all("li")
+            assert len(items) == 2
+            assert all("Read Getting Started" not in (item.textContent or "") for item in items)
+
+            done_btn = result.find_by_text("Done")
+            assert done_btn is not None
+            done_btn.dispatchEvent(VirtualDOMEvent("click"))
+            done_items = result.query_selector_all("li")
+            assert len(done_items) == 1
+            assert "Read Getting Started" in (done_items[0].textContent or "")
+
+
+def test_todo_tutorial_step2_renders_extracted_components():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step2.app import TodoApp as App
+
+        with TestRenderer.render(App) as result:
+            assert result.query_selector("todo-toolbar") is not None
+            assert len(result.query_selector_all("todo-item")) == 3
+            assert "2 remaining" in result.to_html()
+
+
+def test_todo_tutorial_step3_navigation():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step3.app import TodoApp as App
+        from static._demos.todo_tutorial.step3.app import router as mod_router
+
+        scope, hist = _make_router_scope(mod_router, "/")
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            assert len(result.query_selector_all("li")) == 3
+            hist.navigate("/active", None)
+            active_items = result.query_selector_all("li")
+            assert len(active_items) == 2
+            assert all("Read Getting Started" not in (item.textContent or "") for item in active_items)
+            hist.navigate("/done", None)
+            done_items = result.query_selector_all("li")
+            assert len(done_items) == 1
+            assert "Read Getting Started" in (done_items[0].textContent or "")
+
+
+@pytest.mark.asyncio
+async def test_todo_tutorial_step4_add_task_form():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step4.app import TodoApp as App
+        from static._demos.todo_tutorial.step4.app import router as mod_router
+
+        scope, _ = _make_router_scope(mod_router, "/")
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            assert len(result.query_selector_all("li")) == 3
+            text_inputs = [n for n in result.query_selector_all("input") if n.getAttribute("type") == "text"]
+            assert len(text_inputs) == 1
+            text_inputs[0].value = "Write tutorial tests"
+            text_inputs[0].dispatchEvent(VirtualDOMEvent("input"))
+            form_el = result.query_selector("form")
+            assert form_el is not None
+            form_el.dispatchEvent(VirtualDOMEvent("submit"))
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            items = result.query_selector_all("li")
+            assert len(items) == 4
+            assert any("Write tutorial tests" in (item.textContent or "") for item in items)
+
+
+@pytest.mark.asyncio
+async def test_todo_tutorial_step5_middleware_direct():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step5.app import create_tasks_api
+
+        mw = create_tasks_api()
+
+        async def fail_next(req: FetchRequest, *, response=None):
+            raise AssertionError(f"next should not be called for {req.method} {req.url}")
+
+        res_get = await mw(FetchRequest(url="/api/tasks", method="GET", headers=None, body=None), fail_next)
+        assert isinstance(res_get, Response)
+        assert res_get.status_code == 200
+        assert len(json.loads(res_get.text)) == 3
+
+        res_post = await mw(
+            FetchRequest(url="/api/tasks", method="POST", headers=None, body=json.dumps({"title": "Ship docs"})),
+            fail_next,
+        )
+        assert isinstance(res_post, Response)
+        assert res_post.status_code == 201
+        created = json.loads(res_post.text)
+        assert created["title"] == "Ship docs"
+        assert created["done"] is False
+
+        res_patch = await mw(
+            FetchRequest(
+                url="/api/tasks/2",
+                method="PATCH",
+                headers=None,
+                body=json.dumps({"done": True}),
+            ),
+            fail_next,
+        )
+        assert isinstance(res_patch, Response)
+        assert res_patch.status_code == 200
+        assert json.loads(res_patch.text)["done"] is True
+
+        passed_urls: list[str] = []
+
+        async def ok_next(req: FetchRequest, *, response=None):
+            passed_urls.append(req.url)
+            return Response(text="ok", headers={}, status_code=200, status_text="OK", ok=True)
+
+        await mw(FetchRequest(url="/other", method="GET", headers=None, body=None), ok_next)
+        assert passed_urls == ["/other"]
+
+
+@pytest.mark.asyncio
+async def test_todo_tutorial_step5_renders_with_middleware():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step5.app import TodoApp as App
+        from static._demos.todo_tutorial.step5.app import router as mod_router
+
+        scope, _ = _make_router_scope(mod_router, "/")
+        registry = FetchMiddlewareRegistry()
+        scope.provide(FETCH_MIDDLEWARE_KEY, registry)
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_FailingFetchPort(), registry))
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            html = result.to_html()
+            assert "Connect to /api/tasks" in html
+            assert "2 remaining" in html
+            text_inputs = [n for n in result.query_selector_all("input") if n.getAttribute("type") == "text"]
+            assert len(text_inputs) == 1
+            text_inputs[0].value = "Verify mock submit"
+            text_inputs[0].dispatchEvent(VirtualDOMEvent("input"))
+            form_el = result.query_selector("form")
+            assert form_el is not None
+            form_el.dispatchEvent(VirtualDOMEvent("submit"))
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            items = result.query_selector_all("li")
+            assert len(items) == 4
+            assert any("Verify mock submit" in (item.textContent or "") for item in items)
+
+
+@pytest.mark.asyncio
+async def test_todo_tutorial_step6_renders_with_error_boundary():
+    with mock_app_run():
+        from static._demos.todo_tutorial.step6.app import TodoApp as App
+        from static._demos.todo_tutorial.step6.app import router as mod_router
+
+        scope, _ = _make_router_scope(mod_router, "/")
+        registry = FetchMiddlewareRegistry()
+        scope.provide(FETCH_MIDDLEWARE_KEY, registry)
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_FailingFetchPort(), registry))
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            await asyncio.sleep(0)
+            html = result.to_html()
+            assert "Prepare for static deploy" in html
+            assert len(result.query_selector_all("li")) == 3
