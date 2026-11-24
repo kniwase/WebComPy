@@ -183,7 +183,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
 | `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, feature cards, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
-| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Basic Usage` / `Advanced Usage` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
 | `package-kind` | `PackageKind` enum for classifying browser dependencies |
 | `lockfile` | Reproducible builds via `webcompy-lock.json` |

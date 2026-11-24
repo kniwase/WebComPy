@@ -55,4 +55,4 @@ The `static/` directory holds files served verbatim — stylesheets, images, and
 
 ## Next steps
 
-With the layout in mind, head to the [Quickstart](/documents/getting-started/quickstart) to render your first component, or browse the demos in the navigation bar.
+With the layout in mind, head to the [Quickstart](/documents/getting-started/quickstart) to render your first component, inspect the full field reference in [Project Configuration](/documents/server/project-configuration) and [CLI Reference](/documents/server/cli-reference), or browse the demos in the navigation bar.

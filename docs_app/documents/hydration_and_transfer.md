@@ -180,6 +180,8 @@ Matching trees produce zero console warnings and an empty `hydration_report`.
 
 ## Next steps
 
+- Choose CDN vs local runtime/WASM delivery and bundled vs split wheels in [Serving Modes](/documents/server/serving-modes).
+- Configure `resource_transfer`, allow-lists, and `webcompy-lock.json` in [Project Configuration](/documents/server/project-configuration).
 - Learn how the pre-rendered pipeline produces `#__webcompy_data__` in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Handle async boundaries (`Suspense`, `ClientOnly`) during hydration in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Combine transferred resources with build-time asset precaching and offline fallback in [Progressive Web App](/documents/advanced/pwa).

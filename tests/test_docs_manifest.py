@@ -174,12 +174,26 @@ class TestManifestContent:
             "Guides",
             "Basic Usage",
             "Advanced Usage",
+            "Server & Tooling",
         ]
 
     def test_boundary_pages(self) -> None:
         paths = [page["path"] for page in flatten_pages()]
         assert paths[0] == "/documents/getting-started/what-is-webcompy"
-        assert paths[-1] == "/documents/advanced/i18n"
+        assert paths[-1] == "/documents/server/testing"
+
+    def test_server_and_tooling_pages_in_order(self) -> None:
+        server = next(section for section in DOCS_SECTIONS if section["title"] == "Server & Tooling")
+        assert [page["path"] for page in server["pages"]] == [
+            "/documents/server/cli-reference",
+            "/documents/server/project-configuration",
+            "/documents/server/asgi-integration",
+            "/documents/server/serving-modes",
+            "/documents/server/testing",
+        ]
+        prev_cli, next_cli = prev_next("/documents/server/cli-reference")
+        assert prev_cli is not None and prev_cli["path"] == "/documents/advanced/i18n"
+        assert next_cli is not None and next_cli["path"] == "/documents/server/project-configuration"
 
     def test_realtime_and_rpc_group_order(self) -> None:
         advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")

@@ -161,6 +161,7 @@ When the `with` block exits, `_active_di_scope` automatically restores to the pr
 
 ## Next steps
 
+- Override ports and test components synchronously with `TestRenderer` and `FakeFetchPort` in [Testing](/documents/server/testing).
 - Register request/response interceptors through DI registries in [Middleware](/documents/advanced/middleware).
 - Supply providers, ports, and lifecycle hooks from external modules in [Plugins](/documents/advanced/plugins).
 - Trace per-request `RenderContext` creation and teardown during SSR/SSG in [SSR & SSG](/documents/advanced/ssr-and-ssg).

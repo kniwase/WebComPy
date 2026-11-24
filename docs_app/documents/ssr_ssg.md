@@ -93,7 +93,7 @@ When mounting a WebComPy ASGI app inside a larger Starlette or FastAPI host appl
 - `configure_server_context(app)` wires `ServerRenderContext` and installs `ServerFetchPort` (and optional `ServerResourcePort`).
 - Passing `root_app=host` directs self-site SSR fetches through the parent host ASGI app so components can call host API routes during SSR, while blocking WebComPy's own page routes under `app.config.base_url`.
 
-(Step-by-step host-framework mounting recipes will live in the Server & Tooling guide.)
+For the complete host-framework mounting recipe and `base_url` / `blocked_paths` pairing rules, see [ASGI Integration](/documents/server/asgi-integration#embedding-webcompy-in-a-fastapi-or-starlette-host).
 
 ## Behavior notes & pitfalls
 
@@ -103,6 +103,8 @@ When mounting a WebComPy ASGI app inside a larger Starlette or FastAPI host appl
 
 ## Next steps
 
+- Inspect all flags and options for `start --dev`, `start`, and `generate` in [CLI Reference](/documents/server/cli-reference).
+- Configure host embedding and `WebComPyServerConfig.mounts` in [ASGI Integration](/documents/server/asgi-integration).
 - Follow the data snapshot from `<script id="__webcompy_data__">` into browser state in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Coordinate async setups across SSR and the browser with `Suspense`, `ClientOnly`, and the scheduler in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Customize the boot-time waiting state before hydration completes in [Loading Screen](/documents/advanced/loading-screen).

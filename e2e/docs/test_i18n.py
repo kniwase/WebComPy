@@ -17,7 +17,7 @@ def test_i18n_guide_renders(docs_page_on, assert_no_console_errors):
     expect(page.locator('.docs-toc a[href$="#late-client-side-locale-mutation-breaks-parity"]')).to_be_visible()
     expect(page.locator('.docs-toc a[href$="#next-steps"]')).to_be_visible()
     expect(page.locator(".docs-pager-prev a")).to_have_text("Persistence Patterns")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
+    expect(page.locator(".docs-pager-next a")).to_have_text("CLI Reference")
 
 
 @pytest.mark.e2e

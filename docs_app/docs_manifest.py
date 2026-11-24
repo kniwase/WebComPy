@@ -34,6 +34,10 @@ CATEGORY_SECTIONS: dict[str, str] = {
     "Guides": f"{DOCS_ROOT}/guides",
     "Basic Usage": f"{DOCS_ROOT}/basic",
     "Advanced Usage": f"{DOCS_ROOT}/advanced",
+    "Server & Tooling": f"{DOCS_ROOT}/server",
+    "Examples": f"{DOCS_ROOT}/examples",
+    "Migration": f"{DOCS_ROOT}/migration",
+    "API Reference": f"{DOCS_ROOT}/api",
 }
 
 DOCS_SECTIONS: list[DocsSection] = [
@@ -340,6 +344,36 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/advanced/i18n",
                 "source": "documents/i18n.md",
                 "group": "Architecture & Integration",
+            },
+        ],
+    },
+    {
+        "title": "Server & Tooling",
+        "pages": [
+            {
+                "label": "CLI Reference",
+                "path": "/documents/server/cli-reference",
+                "source": "documents/server_cli_reference.md",
+            },
+            {
+                "label": "Project Configuration",
+                "path": "/documents/server/project-configuration",
+                "source": "documents/server_project_configuration.md",
+            },
+            {
+                "label": "ASGI Integration",
+                "path": "/documents/server/asgi-integration",
+                "source": "documents/server_asgi_integration.md",
+            },
+            {
+                "label": "Serving Modes",
+                "path": "/documents/server/serving-modes",
+                "source": "documents/server_serving_modes.md",
+            },
+            {
+                "label": "Testing",
+                "path": "/documents/server/testing",
+                "source": "documents/server_testing.md",
             },
         ],
     },

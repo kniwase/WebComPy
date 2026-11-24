@@ -93,6 +93,18 @@ def test_basic_and_advanced_split_policy_pairs_are_reciprocal() -> None:
             "middleware.md",
             "/documents/advanced/middleware",
         ),
+        (
+            "ssr_ssg.md",
+            "/documents/advanced/ssr-and-ssg",
+            "server_cli_reference.md",
+            "/documents/server/cli-reference",
+        ),
+        (
+            "hydration_and_transfer.md",
+            "/documents/advanced/hydration-and-transfer",
+            "server_serving_modes.md",
+            "/documents/server/serving-modes",
+        ),
     ]
     by_file: dict[str, set[str]] = {}
     for name, _lineno, target in _body_link_targets():
