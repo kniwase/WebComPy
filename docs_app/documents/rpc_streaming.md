@@ -245,7 +245,7 @@ async def run_over_ws(ws_client: RpcWsClient) -> list[ExportStep]:
 
 ### Mock or inspect HTTP streams in `RpcMiddleware`
 
-Intercept HTTP `StreamingProcedure` calls targeting your bound server handler (such as `@app.rpc.bind(export_report)` shown above) inside component setup with `add_rpc_middleware` and supply a synthetic SSE `FetchStream` via `await next(ctx, stream=...)` (covered further alongside full middleware composition in upcoming middleware docs):
+Intercept HTTP `StreamingProcedure` calls targeting your bound server handler (such as `@app.rpc.bind(export_report)` shown above) inside component setup with `add_rpc_middleware` and supply a synthetic SSE `FetchStream` via `await next(ctx, stream=...)` (see [Middleware](/documents/advanced/middleware) for full middleware composition details):
 
 ```python
 # Server target (shared contract + server registration; short-circuited in offline preview)

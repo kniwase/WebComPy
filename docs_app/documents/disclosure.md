@@ -102,4 +102,4 @@ Every component above has a matching headless export under `webcompy.ui.headless
 - Understand headless vs themed layering in [UI Primitives](/documents/basic/ui-primitives).
 - See dialogs, drawers, dropdowns, and toasts in [Overlay Components](/documents/basic/overlay).
 - Explore validated inputs and form controls in [Forms](/documents/basic/forms).
-- Review custom element wrapper behavior in [Custom Elements](/documents/advanced/custom-elements).
+- Review custom element wrapper behavior in [Custom Elements](/documents/advanced/custom-elements) and the headless contract in [UI Headless Contract](/documents/advanced/ui-headless-contract).

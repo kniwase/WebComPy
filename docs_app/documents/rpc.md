@@ -193,7 +193,7 @@ def AuthedPing(context: ComponentContext[None]):
     )
 ```
 
-For full middleware composition details, look ahead to dedicated Advanced middleware documentation (same DI-scoped registry pattern as `add_fetch_middleware`).
+For full middleware composition details, see [Middleware](/documents/advanced/middleware) (same DI-scoped registry pattern as `add_fetch_middleware`).
 
 ## Behavior notes
 
