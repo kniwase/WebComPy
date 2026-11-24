@@ -106,4 +106,5 @@ When mounting a WebComPy ASGI app inside a larger Starlette or FastAPI host appl
 - Follow the data snapshot from `<script id="__webcompy_data__">` into browser state in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Coordinate async setups across SSR and the browser with `Suspense`, `ClientOnly`, and the scheduler in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Customize the boot-time waiting state before hydration completes in [Loading Screen](/documents/advanced/loading-screen).
+- Package generated routes and static assets for installability and offline navigation in [Progressive Web App](/documents/advanced/pwa).
 - Revisit route declarations and `ErrorBoundary` basics in [Routing](/documents/basic/routing) and [Error Handling](/documents/basic/error-handling).

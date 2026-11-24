@@ -64,3 +64,4 @@ WebComPy runs storage through an injected storage port. On the server during SSR
 - Review how reactive signals and equality suppression behave in [Reactive State](/documents/basic/reactive-state).
 - Combine persisted preferences with UI appearance in [Styling & Themes](/documents/basic/styling-and-themes).
 - Continue to [Persistence Patterns](/documents/advanced/persistence-patterns) for cross-tab synchronization internals (`sync_tabs=True`), multi-tab event behavior, and persistence comparisons.
+- Compare client-side storage with SSR-deterministic cookie persistence for locale state in [Internationalization](/documents/advanced/i18n).
