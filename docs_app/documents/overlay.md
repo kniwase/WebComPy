@@ -68,3 +68,4 @@ ToastHost({"toasts": toast_state.toasts, "on_dismiss": toast_state.dismiss, "on_
 - Review the two-layer architecture and part class hooks in [UI Primitives](/documents/basic/ui-primitives).
 - Explore tabs, accordions, alerts, progress bars, badges, skeletons, and cards in [Disclosure & Feedback](/documents/basic/disclosure).
 - Learn how `@layer components` and theme tokens work in [Styling & Themes](/documents/basic/styling-and-themes).
+- Inspect headless `data-state` attributes, part-class props, and custom theme authoring in [UI Headless Contract](/documents/advanced/ui-headless-contract).

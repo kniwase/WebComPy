@@ -35,3 +35,69 @@ def test_docs_body_links_resolve_to_manifest_paths() -> None:
         if path.rstrip("/") not in valid_paths:
             failures.append(f"{name}:{lineno}: {target}")
     assert not failures, "docs body links must resolve to manifest page paths:\n" + "\n".join(failures)
+
+
+def test_basic_and_advanced_split_policy_pairs_are_reciprocal() -> None:
+    pairs = [
+        (
+            "basic_routing.md",
+            "/documents/basic/routing",
+            "routing_deep_dive.md",
+            "/documents/advanced/routing-deep-dive",
+        ),
+        (
+            "basic_forms.md",
+            "/documents/basic/forms",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "basic_storage.md",
+            "/documents/basic/storage",
+            "persistence_patterns.md",
+            "/documents/advanced/persistence-patterns",
+        ),
+        (
+            "basic_components.md",
+            "/documents/basic/components",
+            "custom_elements.md",
+            "/documents/advanced/custom-elements",
+        ),
+        (
+            "basic_http_async.md",
+            "/documents/basic/http-and-async",
+            "typed_api_deep_dive.md",
+            "/documents/advanced/typed-api-deep-dive",
+        ),
+        (
+            "ui_primitives.md",
+            "/documents/basic/ui-primitives",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "overlay.md",
+            "/documents/basic/overlay",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "disclosure.md",
+            "/documents/basic/disclosure",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "basic_http_async.md",
+            "/documents/basic/http-and-async",
+            "middleware.md",
+            "/documents/advanced/middleware",
+        ),
+    ]
+    by_file: dict[str, set[str]] = {}
+    for name, _lineno, target in _body_link_targets():
+        by_file.setdefault(name, set()).add(target.split("#", 1)[0].rstrip("/"))
+
+    for basic_file, basic_path, adv_file, adv_path in pairs:
+        assert adv_path in by_file.get(basic_file, set()), f"{basic_file} missing link to {adv_path}"
+        assert basic_path in by_file.get(adv_file, set()), f"{adv_file} missing back-link to {basic_path}"

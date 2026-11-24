@@ -231,7 +231,7 @@ await notify(record_audit(client, AuditParams(action="viewed_dashboard")))
 
 ### Add auth headers or test mocks with `RpcMiddleware`
 
-Install HTTP RPC middleware inside component setup (in the active render DI scope) via `add_rpc_middleware` to attach authorization headers or short-circuit requests with synthetic responses during local UI work. This mirrors the `add_fetch_middleware` pattern introduced in [Step 5: Remote Data](/documents/guides/todo-remote-data) (and dedicated Advanced middleware docs will cover composition in detail):
+Install HTTP RPC middleware inside component setup (in the active render DI scope) via `add_rpc_middleware` to attach authorization headers or short-circuit requests with synthetic responses during local UI work. This mirrors the `add_fetch_middleware` pattern introduced in [Step 5: Remote Data](/documents/guides/todo-remote-data) (see [Middleware](/documents/advanced/middleware) for full composition details):
 
 ```python
 # Server procedure using standard endpoint

@@ -210,6 +210,23 @@ class TestManifestContent:
         ]
         assert rendering_paths[: len(expected_prefix)] == expected_prefix
 
+    def test_architecture_and_integration_group_order(self) -> None:
+        advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")
+        integration_paths = [
+            page["path"] for page in advanced["pages"] if page.get("group") == "Architecture & Integration"
+        ]
+        expected_prefix = [
+            "/documents/advanced/dependency-injection-deep-dive",
+            "/documents/advanced/middleware",
+            "/documents/advanced/routing-deep-dive",
+            "/documents/advanced/plugins",
+            "/documents/advanced/typed-api-deep-dive",
+            "/documents/advanced/ui-headless-contract",
+            "/documents/advanced/custom-elements",
+            "/documents/advanced/persistence-patterns",
+        ]
+        assert integration_paths[: len(expected_prefix)] == expected_prefix
+
     def test_routes_and_prev_next_ignore_groups(self) -> None:
         children = route_children()
         pages = route_pages()
@@ -221,7 +238,7 @@ class TestManifestContent:
 
         prev_pwa, next_pwa = prev_next("/documents/advanced/pwa")
         assert prev_pwa is not None and prev_pwa["path"] == "/documents/advanced/styling-deep-dive"
-        assert next_pwa is not None and next_pwa["path"] == "/documents/advanced/custom-elements"
+        assert next_pwa is not None and next_pwa["path"] == "/documents/advanced/dependency-injection-deep-dive"
 
     def test_sidebar_renders_group_subheaders(self) -> None:
         from docs_app.components.docs_sidebar import DocsSidebar

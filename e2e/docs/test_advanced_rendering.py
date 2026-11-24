@@ -63,5 +63,5 @@ def test_pager_walks_across_group_boundaries(docs_page_on, assert_no_console_err
     expect(page.locator(".docs-pager-next a")).to_have_text("Progressive Web App")
 
     page = docs_page_on("/documents/advanced/i18n")
-    expect(page.locator(".docs-pager-prev a")).to_have_text("Custom Elements")
+    expect(page.locator(".docs-pager-prev a")).to_have_text("Persistence Patterns")
     expect(page.locator(".docs-pager-next")).to_have_count(0)

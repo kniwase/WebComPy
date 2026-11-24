@@ -288,9 +288,51 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "group": "Rendering & Performance",
             },
             {
+                "label": "Dependency Injection Deep Dive",
+                "path": "/documents/advanced/dependency-injection-deep-dive",
+                "source": "documents/dependency_injection_deep_dive.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Middleware",
+                "path": "/documents/advanced/middleware",
+                "source": "documents/middleware.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Routing Deep Dive",
+                "path": "/documents/advanced/routing-deep-dive",
+                "source": "documents/routing_deep_dive.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Plugins",
+                "path": "/documents/advanced/plugins",
+                "source": "documents/plugins.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Typed API Deep Dive",
+                "path": "/documents/advanced/typed-api-deep-dive",
+                "source": "documents/typed_api_deep_dive.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "UI Headless Contract",
+                "path": "/documents/advanced/ui-headless-contract",
+                "source": "documents/ui_headless_contract.md",
+                "group": "Architecture & Integration",
+            },
+            {
                 "label": "Custom Elements",
                 "path": "/documents/advanced/custom-elements",
                 "source": "documents/custom_elements.md",
+                "group": "Architecture & Integration",
+            },
+            {
+                "label": "Persistence Patterns",
+                "path": "/documents/advanced/persistence-patterns",
+                "source": "documents/persistence_patterns.md",
                 "group": "Architecture & Integration",
             },
             {
