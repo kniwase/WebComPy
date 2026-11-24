@@ -209,6 +209,7 @@ class TestManifestContent:
             "/documents/advanced/styling-deep-dive",
         ]
         assert rendering_paths[: len(expected_prefix)] == expected_prefix
+        assert rendering_paths[-1] == "/documents/advanced/pwa"
 
     def test_architecture_and_integration_group_order(self) -> None:
         advanced = next(section for section in DOCS_SECTIONS if section["title"] == "Advanced Usage")
@@ -226,6 +227,7 @@ class TestManifestContent:
             "/documents/advanced/persistence-patterns",
         ]
         assert integration_paths[: len(expected_prefix)] == expected_prefix
+        assert integration_paths[-1] == "/documents/advanced/i18n"
 
     def test_routes_and_prev_next_ignore_groups(self) -> None:
         children = route_children()
