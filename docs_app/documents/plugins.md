@@ -40,7 +40,7 @@ class AnalyticsPlugin(WebComPyPlugin):
 
 ```python
 # my_app/bootstrap.py
-from webcompy import WebComPyApp, WebComPyAppConfig
+from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 app = WebComPyApp(
     root_component=AppShell,

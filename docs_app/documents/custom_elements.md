@@ -25,7 +25,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component(custom_element_name="status-card", display="block")
+@define_component(custom_element_name="app-status-card", display="block")
 def StatusCard(context: ComponentContext[None]):
     return [
         html.HEADER({}, "System"),

@@ -21,7 +21,7 @@ Create unique typed tokens with `InjectKey[T]` (or use a custom Python class as 
 ```python
 from typing import Protocol
 
-from webcompy import WebComPyApp
+from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.di import InjectKey, InjectionError, inject, provide
 from webcompy.elements import html
@@ -99,7 +99,8 @@ You can also use `create_test_app(root_component=...)` from `webcompy_testing` w
 `provide(key, value)` inside a parent component creates one child scope for that component, leaving sibling subtrees untouched. Providing a `Signal` shares live reactive updates downward:
 
 ```python
-from webcompy import Signal, use_computed, use_state
+from webcompy import use_computed, use_state
+from webcompy.signal import Signal
 from webcompy.components import ComponentContext, define_component
 from webcompy.di import InjectKey, inject, provide
 from webcompy.elements import html

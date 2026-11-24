@@ -59,7 +59,7 @@ class BrandSpinnerProps(TypedDict, total=False):
     size: str
 
 
-@define_component(custom_element_name="brand-spinner")
+@define_component()
 def BrandSpinner(context: ComponentContext[BrandSpinnerProps]):
     props = context.props or {}
     user_class = props.get("class_name", "")

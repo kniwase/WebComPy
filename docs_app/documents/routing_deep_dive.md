@@ -68,7 +68,7 @@ Notice the root page component uses `RouterView()` at depth 0 for `AdminLayout`,
 Append callables to `router.before_route_change`, `router.after_route_change`, and `router.on_route_error` during app initialization (or from `WebComPyPlugin.on_app_init`). A guard receives `(from_path, to_path)`: returning `False` cancels navigation, returning a path string (such as `"/login"`) redirects and replaces history instead of pushing, and returning `True` or `None` allows navigation to proceed:
 
 ```python
-from webcompy.router import WebComPyRouterException
+from webcompy.exception import WebComPyException
 
 
 async def require_admin(from_path: str, to_path: str) -> bool | str | None:
@@ -82,7 +82,7 @@ def track_navigation(new_path: str) -> None:
 
 
 def handle_route_error(err: Exception) -> bool:
-    if isinstance(err, WebComPyRouterException):
+    if isinstance(err, WebComPyException):
         print("Routing error handled:", err)
         return True  # suppresses propagation
     return False
@@ -120,7 +120,7 @@ With `preload=True`:
 Pass `active_class=` (and `exact=`) to `RouterLink` for automatic `aria-current="page"` and class updates across client navigations and SSR:
 
 ```python
-from webcompy import WebComPyApp, WebComPyAppConfig
+from webcompy.app import WebComPyApp, WebComPyAppConfig
 from webcompy.router import RouterLink
 
 # Prefix match (/admin/users keeps "/admin" active), segment-boundary safe ("/adminx" does not match)

@@ -75,6 +75,24 @@ def test_basic_and_advanced_split_policy_pairs_are_reciprocal() -> None:
             "ui_headless_contract.md",
             "/documents/advanced/ui-headless-contract",
         ),
+        (
+            "overlay.md",
+            "/documents/basic/overlay",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "disclosure.md",
+            "/documents/basic/disclosure",
+            "ui_headless_contract.md",
+            "/documents/advanced/ui-headless-contract",
+        ),
+        (
+            "basic_http_async.md",
+            "/documents/basic/http-and-async",
+            "middleware.md",
+            "/documents/advanced/middleware",
+        ),
     ]
     by_file: dict[str, set[str]] = {}
     for name, _lineno, target in _body_link_targets():
