@@ -377,6 +377,71 @@ DOCS_SECTIONS: list[DocsSection] = [
             },
         ],
     },
+    {
+        "title": "Examples",
+        "pages": [
+            {
+                "label": "Hello World",
+                "path": "/documents/examples/hello-world",
+                "source": "documents/example_hello_world.md",
+            },
+            {
+                "label": "ToDo List",
+                "path": "/documents/examples/todo",
+                "source": "documents/example_todo.md",
+            },
+            {
+                "label": "Forms",
+                "path": "/documents/examples/forms",
+                "source": "documents/example_forms.md",
+            },
+            {
+                "label": "Routing",
+                "path": "/documents/examples/routing",
+                "source": "documents/example_routing.md",
+            },
+            {
+                "label": "Storage Sync",
+                "path": "/documents/examples/storage-sync",
+                "source": "documents/example_storage_sync.md",
+            },
+            {
+                "label": "Transition",
+                "path": "/documents/examples/transition",
+                "source": "documents/example_transition.md",
+            },
+            {
+                "label": "Teleport",
+                "path": "/documents/examples/teleport",
+                "source": "documents/example_teleport.md",
+            },
+            {
+                "label": "i18n Playground",
+                "path": "/documents/examples/i18n-playground",
+                "source": "documents/example_i18n_playground.md",
+            },
+            {
+                "label": "Matplotlib",
+                "path": "/documents/examples/matplotlib",
+                "source": "documents/example_matplotlib.md",
+            },
+            {
+                "label": "HTTP Fetch",
+                "path": "/documents/examples/http-fetch",
+                "source": "documents/example_http_fetch.md",
+            },
+            {
+                "label": "Fetch Middleware",
+                "path": "/documents/examples/fetch-middleware",
+                "source": "documents/example_fetch_middleware.md",
+            },
+            {
+                "label": "RPC Middleware",
+                "path": "/documents/examples/rpc-middleware",
+                "source": "documents/example_rpc_middleware.md",
+            },
+        ],
+    },
 ]
 
 

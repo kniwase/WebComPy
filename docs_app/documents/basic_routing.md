@@ -151,6 +151,7 @@ For imperative navigation triggered by application setup or callbacks where an `
 
 ## Next steps
 
+- Try nested workspace layouts and route guards interactively in the [Routing](/documents/examples/routing) example.
 - Build validated forms and controls in [Forms](/documents/basic/forms).
 - Load remote data for routed views in [HTTP & Async](/documents/basic/http-and-async).
 - Understand how history-mode routes pre-render on the server and block recursive self-fetches in [SSR & SSG](/documents/advanced/ssr-and-ssg).

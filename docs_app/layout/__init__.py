@@ -35,48 +35,6 @@ def DocsRoot(_: ComponentContext[None]):
                 for page in flatten_pages()
             ],
         },
-        {
-            "title": "Demos",
-            # "to": "/sample",
-            "children": [
-                {
-                    "title": "HelloWorld",
-                    "to": "/sample/helloworld",
-                },
-                {
-                    "title": "FizzBuzz",
-                    "to": "/sample/fizzbuzz",
-                },
-                {
-                    "title": "ToDo List",
-                    "to": "/sample/todo",
-                },
-                {
-                    "title": "Matplotlib Sample",
-                    "to": "/sample/matplotlib",
-                },
-                {
-                    "title": "Fetch Sample",
-                    "to": "/sample/fetch",
-                },
-                {
-                    "title": "Teleport",
-                    "to": "/sample/teleport",
-                },
-                {
-                    "title": "Transition",
-                    "to": "/sample/transition",
-                },
-                {
-                    "title": "i18n",
-                    "to": "/sample/i18n",
-                },
-                {
-                    "title": "UI Form Controls",
-                    "to": "/sample/ui-form-controls",
-                },
-            ],
-        },
     ]
     return html.DIV(
         {},

@@ -40,24 +40,17 @@ def test_navbar_dropdown_items_have_no_layout_shift_before_hydration(
 
 
 @pytest.mark.e2e
-def test_navbar_dropdown_opens_and_switches_exclusively(docs_app_page, assert_no_console_errors):
+def test_navbar_dropdown_opens_and_closes_cleanly(docs_app_page, assert_no_console_errors):
     page = docs_app_page
     triggers = page.locator("li.navbar-item-dropdown button")
-    first = triggers.nth(0)
-    second = triggers.nth(1)
-    first.click()
-    expect(first).to_have_attribute("aria-expanded", "true")
+    expect(triggers).to_have_count(1)
+    expect(page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")).to_have_count(0)
+    docs_toggle = triggers.first
+    docs_toggle.click()
+    expect(docs_toggle).to_have_attribute("aria-expanded", "true")
     expect(page.locator("ul.navbar-dropdown:not([hidden])")).to_have_count(1)
-    # Activating the sibling dropdown closes the open menu (mutual exclusivity)
-    second.click()
-    expect(second).to_have_attribute("aria-expanded", "true")
-    expect(first).to_have_attribute("aria-expanded", "false")
-    expect(page.locator("ul.navbar-dropdown:not([hidden])")).to_have_count(1)
-    # Instance DOM ids are unique
-    ids = page.evaluate("() => [...document.querySelectorAll('li.navbar-item-dropdown button')].map((b) => b.id)")
-    assert ids[0] != ids[1]
-    # Outside click closes the menu
     page.locator(".navbar-brand").click()
+    expect(docs_toggle).to_have_attribute("aria-expanded", "false")
     expect(page.locator("ul.navbar-dropdown:not([hidden])")).to_have_count(0)
 
 
@@ -114,11 +107,13 @@ def test_documents_index_card_scoped_margin(docs_page_on, assert_no_console_erro
 
 @pytest.mark.e2e
 def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_errors):
-    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
+    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
     dropdown_toggle.click()
-    helloworld_link = docs_app_page.get_by_role("menuitem", name="HelloWorld")
+    helloworld_link = docs_app_page.get_by_role("menuitem", name="Hello World")
+    helloworld_link.scroll_into_view_if_needed()
     helloworld_link.click()
-    assert "/sample/helloworld" in docs_app_page.url
+    assert "/documents/examples/hello-world" in docs_app_page.url
+    expect(docs_app_page.locator("article.prose h1")).to_have_text("Hello World")
     frame = _wait_for_demo_iframe(docs_app_page, "helloworld")
     heading = frame.get_by_role("heading", name="Hello WebComPy!")
     expect(heading).to_be_visible()
@@ -126,7 +121,7 @@ def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_erro
 
 @pytest.mark.e2e
 def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/sample/helloworld")
+    page = docs_page_on("/documents/examples/hello-world")
     home_link = page.locator("nav a[href='/']")
     home_link.click()
     assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
@@ -142,9 +137,9 @@ def test_home_reload_no_error(docs_app_page, docs_console_messages, assert_no_co
 
 @pytest.mark.e2e
 def test_home_dropdown_anchored_to_trigger_on_scroll(docs_app_page, assert_no_console_errors):
-    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
+    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
     dropdown_toggle.click()
-    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
+    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="Hello World")
     expect(dropdown).to_be_visible()
 
     def anchored():
@@ -168,9 +163,9 @@ def test_home_dropdown_anchored_to_trigger_on_scroll(docs_app_page, assert_no_co
 
 @pytest.mark.e2e
 def test_home_dropdown_stays_within_viewport_after_resize(docs_app_page, assert_no_console_errors):
-    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
+    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
     dropdown_toggle.click()
-    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
+    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="Hello World")
     expect(dropdown).to_be_visible()
     docs_app_page.set_viewport_size({"width": 1000, "height": 800})
     docs_app_page.wait_for_function(
@@ -188,9 +183,9 @@ def test_home_dropdown_stays_within_viewport_after_resize(docs_app_page, assert_
 def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_console_errors):
     docs_app_page.set_viewport_size({"width": 600, "height": 800})
     docs_app_page.locator("button.navbar-mobile-toggle").click()
-    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
+    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
     dropdown_toggle.click()
-    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
+    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="Hello World")
     expect(dropdown).to_be_visible()
     menu_id = dropdown.get_attribute("id")
     assert menu_id is not None
@@ -198,7 +193,6 @@ def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_cons
         docs_app_page.evaluate("menuId => getComputedStyle(document.getElementById(menuId)).position", menu_id)
         == "fixed"
     )
-    # The menu is anchored below the trigger (nested-expansion look)
     docs_app_page.wait_for_function(
         "() => {"
         "  const menu = document.querySelector('ul.navbar-dropdown:not([hidden])');"
@@ -212,12 +206,9 @@ def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_cons
     trigger_box = dropdown_toggle.bounding_box()
     box = dropdown.bounding_box()
     assert box is not None and trigger_box is not None
-    # The menu spans the strip width: left edge at the strip padding,
-    # right edge on the trigger's right edge (anchored, full-width)
     strip_padding = 24
     assert abs(box["x"] - strip_padding) < 2
     assert abs((box["x"] + box["width"]) - (trigger_box["x"] + trigger_box["width"])) < 2
-    # The expanded strip stays visible and interactive above the menu
     home_link = docs_app_page.locator("li.navbar-item a").filter(has_text="Home")
     expect(home_link).to_be_visible()
     hit = docs_app_page.evaluate(
@@ -234,9 +225,9 @@ def test_home_mobile_dropdown_nested_below_trigger(docs_app_page, assert_no_cons
 @pytest.mark.e2e
 def test_home_dropdown_stays_within_viewport_at_mid_width(docs_app_page, assert_no_console_errors):
     docs_app_page.set_viewport_size({"width": 1024, "height": 800})
-    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Demos")
+    dropdown_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
     dropdown_toggle.click()
-    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
+    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="Hello World")
     expect(dropdown).to_be_visible()
     docs_app_page.wait_for_function(
         "() => {"
@@ -257,7 +248,7 @@ def test_navbar_dropdown_links_crawlable_in_initial_html(
     content = page.content()
     assert "wc-teleport-block:" in content
     assert "/documents/" in content
-    assert "/sample/teleport/" in content
+    assert "/documents/examples/teleport/" in content
     dropdown_links = page.locator("body > ul[role='menu'] a").count()
     assert dropdown_links > 0
     _wait_for_pyscript_init(page, docs_console_messages)

@@ -155,6 +155,7 @@ For streaming HTTP RPC procedures (`StreamingProcedure`), pass `stream=` (`await
 
 ## Next steps
 
+- Try stacked HTTP mocks and tracing live in [Fetch Middleware](/documents/examples/fetch-middleware) and typed contract synthesis in [RPC Middleware](/documents/examples/rpc-middleware).
 - Understand the scope lifecycle and per-request port isolation behind middleware registries in [Dependency Injection Deep Dive](/documents/advanced/dependency-injection-deep-dive).
 - Package fetch and RPC middlewares into reusable extensions in [Plugins](/documents/advanced/plugins).
 - Apply `RpcMiddleware` to typed contracts and streams in [RPC Contracts](/documents/advanced/rpc-contracts), [RPC](/documents/advanced/rpc), and [RPC Streaming](/documents/advanced/rpc-streaming).

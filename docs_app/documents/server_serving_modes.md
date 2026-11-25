@@ -89,6 +89,7 @@ config = WebComPyBuildConfig(
 
 ## Next steps
 
+- See an isolated iframe loading NumPy and Matplotlib WASM wheels on demand in the [Matplotlib](/documents/examples/matplotlib) example.
 - Pair self-hosted serving with precaching and runtime cache rules in [Progressive Web App](/documents/advanced/pwa).
 - Configure `standalone`, `wheel_mode`, and `lockfile_sync_config` in [Project Configuration](/documents/server/project-configuration).
 - Override serving flags per run from the CLI in [CLI Reference](/documents/server/cli-reference).

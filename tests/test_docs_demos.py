@@ -63,55 +63,6 @@ def test_helloworld_heading_text():
             assert heading.textContent == "Hello WebComPy!"
 
 
-def test_fizzbuzz_initial_state():
-    with mock_app_run():
-        from static._demos.fizzbuzz.app import FizzbuzzApp as App
-
-        with TestRenderer.render(App) as result:
-            html = result.to_html()
-            assert "Count: 10" in html
-
-
-def test_fizzbuzz_add_button():
-    with mock_app_run():
-        from static._demos.fizzbuzz.app import FizzbuzzApp as App
-
-        with TestRenderer.render(App) as result:
-            add_btn = result.find_by_text("Add")
-            assert add_btn is not None
-            add_btn.dispatchEvent(VirtualDOMEvent("click"))
-            assert "Count: 11" in result.to_html()
-
-
-def test_fizzbuzz_pop_button():
-    with mock_app_run():
-        from static._demos.fizzbuzz.app import FizzbuzzApp as App
-
-        with TestRenderer.render(App) as result:
-            pop_btn = result.find_by_text("Pop")
-            assert pop_btn is not None
-            pop_btn.dispatchEvent(VirtualDOMEvent("click"))
-            assert "Count: 9" in result.to_html()
-
-
-def test_fizzbuzz_hide_toggle():
-    with mock_app_run():
-        from static._demos.fizzbuzz.app import FizzbuzzApp as App
-
-        with TestRenderer.render(App) as result:
-            assert "FizzBuzz Hidden" not in result.to_html()
-
-            toggle_btn = result.find_by_text("Hide")
-            assert toggle_btn is not None
-            toggle_btn.dispatchEvent(VirtualDOMEvent("click"))
-            assert "FizzBuzz Hidden" in result.to_html()
-
-            open_btn = result.find_by_text("Open")
-            assert open_btn is not None
-            open_btn.dispatchEvent(VirtualDOMEvent("click"))
-            assert "FizzBuzz Hidden" not in result.to_html()
-
-
 def test_todo_initial_items():
     with mock_app_run():
         from static._demos.todo.app import TodoApp as App
@@ -301,13 +252,14 @@ def _make_router_scope(mod_router, path: str = "/") -> tuple[DIScope, object]:
     from tests.conftest import MockHistoryPort
     from webcompy.di._keys import _ROUTER_KEY
     from webcompy.ports._keys import HISTORY_PORT_KEY
-    from webcompy.router import Router
+    from webcompy.router import Router, RouterKey
 
     hist = MockHistoryPort()
     hist.navigate(path, None)
     test_router = Router(*mod_router.__pages__, default=mod_router._default, history=hist, preload=False)
     scope = DIScope()
     scope.provide(_ROUTER_KEY, test_router)
+    scope.provide(RouterKey, test_router)
     scope.provide(HISTORY_PORT_KEY, hist)
     return scope, hist
 
@@ -512,3 +464,170 @@ async def test_todo_tutorial_step6_renders_with_error_boundary():
             html = result.to_html()
             assert "Prepare for static deploy" in html
             assert len(result.query_selector_all("li")) == 3
+
+
+def test_routing_demo_nested_layout_and_guard():
+    with mock_app_run():
+        from static._demos.routing.app import RoutingDemoApp as App
+        from static._demos.routing.app import router as mod_router
+
+        from webcompy.di._keys import _ROUTER_KEY
+
+        scope, _hist = _make_router_scope(mod_router, "/")
+        test_router = scope.inject(_ROUTER_KEY)
+        test_router.before_route_change = list(mod_router.before_route_change)
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            assert "Home View" in result.to_html()
+            test_router.__set_path__("/workspace", None)
+            assert "Workspace Overview" in result.to_html()
+            assert "Sidebar: expanded" in result.to_html()
+            toggle_btn = result.find_by_text("Toggle Sidebar")
+            assert toggle_btn is not None
+            toggle_btn.dispatchEvent(VirtualDOMEvent("click"))
+            assert "Sidebar: compact" in result.to_html()
+
+            test_router.__set_path__("/workspace/items/42", None)
+            html = result.to_html()
+            assert "Workspace Item #42" in html
+            assert "Sidebar: compact" in html
+
+            test_router.__set_path__("/admin", None)
+            html = result.to_html()
+            assert "Sign In" in html
+            assert "Redirected from /admin" in html
+
+            sign_in_btn = result.find_by_text("Sign in as Admin")
+            assert sign_in_btn is not None
+            sign_in_btn.dispatchEvent(VirtualDOMEvent("click"))
+            assert "Protected Admin" in result.to_html()
+
+
+def test_storage_sync_demo_state_updates():
+    with mock_app_run():
+        from static._demos.storage_sync.app import StorageSyncDemo as App
+
+        with TestRenderer.render(App) as result:
+            assert "Theme: ocean" in result.to_html()
+            assert "Count: 0" in result.to_html()
+            forest_btn = result.find_by_text("Forest")
+            assert forest_btn is not None
+            forest_btn.dispatchEvent(VirtualDOMEvent("click"))
+            inc_btn = result.find_by_text("+1 Counter")
+            assert inc_btn is not None
+            inc_btn.dispatchEvent(VirtualDOMEvent("click"))
+            html = result.to_html()
+            assert "Theme: forest" in html
+            assert "Count: 1" in html
+
+
+def test_i18n_playground_switches_locale_and_plural():
+    with mock_app_run():
+        from static._demos.i18n_playground.app import I18nPlaygroundApp as App
+        from static._demos.i18n_playground.app import I18nPlaygroundRoot, make_i18n_manager
+
+        from webcompy.i18n import I18N_KEY
+
+        with TestRenderer.render(I18nPlaygroundRoot) as root_result:
+            assert "Current locale: en" in root_result.to_html()
+            assert "3 items" in root_result.to_html()
+
+        scope = DIScope()
+        scope.provide(I18N_KEY, make_i18n_manager())
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            assert "Current locale: en" in result.to_html()
+            assert "3 items" in result.to_html()
+
+            ja_btn = result.find_by_text("日本語")
+            assert ja_btn is not None
+            ja_btn.dispatchEvent(VirtualDOMEvent("click"))
+            assert "現在のロケール: ja" in result.to_html()
+            assert "3 個のアイテム" in result.to_html()
+
+            plus_btn = result.find_by_text("+")
+            assert plus_btn is not None
+            plus_btn.dispatchEvent(VirtualDOMEvent("click"))
+            assert "4 個のアイテム" in result.to_html()
+
+
+@pytest.mark.asyncio
+async def test_fetch_middleware_mock_demo_direct_and_rendered():
+    import json
+
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY
+    from webcompy.ports._middleware import FetchMiddlewareRegistry, FetchRequest, _MiddlewareFetchPort
+
+    with mock_app_run():
+        from static._demos.fetch_middleware_mock.app import FetchMiddlewareDemo as App
+        from static._demos.fetch_middleware_mock.app import create_notes_mock
+
+        mw = create_notes_mock()
+
+        async def fail_next(req: FetchRequest, *, response=None):
+            raise AssertionError(f"next should not be called for {req.method} {req.url}")
+
+        res_get = await mw(FetchRequest(url="/api/notes", method="GET", headers=None, body=None), fail_next)
+        assert isinstance(res_get, Response)
+        assert len(json.loads(res_get.text)) == 2
+
+        scope = DIScope()
+        registry = FetchMiddlewareRegistry()
+        scope.provide(FETCH_MIDDLEWARE_KEY, registry)
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_make_failing_fetch_port(), registry))
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            await asyncio.sleep(0)
+            html = result.to_html()
+            assert "Intercept GET /api/notes" in html
+            assert "GET /api/notes -&gt; 200" in html or "GET /api/notes -> 200" in html
+
+            inputs = [n for n in result.query_selector_all("input") if n.getAttribute("type") == "text"]
+            assert len(inputs) == 1
+            inputs[0].value = "Added mock note"
+            inputs[0].dispatchEvent(VirtualDOMEvent("input"))
+            add_btn = result.find_by_text("Add Note")
+            assert add_btn is not None
+            add_btn.dispatchEvent(VirtualDOMEvent("click"))
+            await asyncio.sleep(0)
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            assert "Added mock note" in result.to_html()
+
+
+@pytest.mark.asyncio
+async def test_rpc_middleware_mock_demo_single_and_batch():
+    from webcompy.di._keys import RPC_MIDDLEWARE_KEY, RPC_REGISTRY_KEY
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+    from webcompy.rpc._middleware import RpcMiddlewareRegistry
+    from webcompy.rpc._registry import ProcedureRegistry
+
+    with mock_app_run():
+        from static._demos.rpc_middleware_mock.app import RpcMiddlewareDemo as App
+
+        scope = DIScope()
+        scope.provide(RPC_REGISTRY_KEY, ProcedureRegistry())
+        scope.provide(RPC_MIDDLEWARE_KEY, RpcMiddlewareRegistry())
+        scope.provide(FETCH_PORT_KEY, _make_failing_fetch_port())
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            monitor_btn = result.find_by_text("Monitor")
+            assert monitor_btn is not None
+            monitor_btn.dispatchEvent(VirtualDOMEvent("click"))
+            plus_btn = result.find_by_text("+")
+            assert plus_btn is not None
+            plus_btn.dispatchEvent(VirtualDOMEvent("click"))
+
+            quote_btn = result.find_by_text("Request Quote")
+            assert quote_btn is not None
+            quote_btn.dispatchEvent(VirtualDOMEvent("click"))
+            await asyncio.sleep(0)
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            assert "3x Monitor @ $340" in result.to_html()
+            assert "Total: $1020" in result.to_html()
+
+            batch_btn = result.find_by_text("Run Batch")
+            assert batch_btn is not None
+            batch_btn.dispatchEvent(VirtualDOMEvent("click"))
+            await asyncio.sleep(0)
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            assert "Catalog size: 3 items (USD)" in result.to_html()

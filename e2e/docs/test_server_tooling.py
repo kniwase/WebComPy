@@ -47,4 +47,4 @@ def test_server_tooling_toc_anchor_and_pager_boundaries(docs_page_on, assert_no_
 
     page = docs_page_on("/documents/server/testing")
     expect(page.locator(".docs-pager-prev a")).to_have_text("Serving Modes")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
+    expect(page.locator(".docs-pager-next a")).to_have_text("Hello World")

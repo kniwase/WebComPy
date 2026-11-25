@@ -111,125 +111,111 @@ pip install webcompy-testing
 ## ドキュメントとデモ
 
 - [webcompy.net](https://webcompy.net/)
+    * [ドキュメント](https://webcompy.net/documents/)
+    * [ライブサンプル](https://webcompy.net/documents/examples/todo)
     * [ソースコード](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
 
 ## サンプルコード
 
 ```python
-from webcompy import use_computed, use_state
-from webcompy.signal import Signal
-from webcompy.elements import html, repeat, switch, DOMEvent
-from webcompy.router import RouterContext
-from webcompy.components import (
-    define_component,
-    ComponentContext,
-    on_before_rendering,
-)
+import uuid
+
+from webcompy.app import WebComPyApp
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DOMEvent, DomNodeRef, html, repeat
+from webcompy.signal import Signal, use_computed, use_reactive_dict, use_state
 
 
-@define_component("fizzbuzz-list")
-def FizzbuzzList(context: ComponentContext[Signal[int]]):
-    @use_computed
-    def fizzbuzz():
-        li: list[str] = []
-        for n in range(1, context.props.value + 1):
-            if n % 15 == 0:
-                li.append("FizzBuzz")
-            elif n % 5 == 0:
-                li.append("Fizz")
-            elif n % 3 == 0:
-                li.append("Buzz")
-            else:
-                li.append(str(n))
-        return li
+@define_component()
+def ToDoItem(context: ComponentContext[dict]):
+    input_ref = DomNodeRef()
 
-    return html.DIV(
+    def on_change_state(_: DOMEvent):
+        context.props["done"].value = input_ref.checked
+
+    return html.LI(
         {},
-        html.UL(
+        html.LABEL(
             {},
-            repeat(fizzbuzz, lambda s: html.LI({}, s)),
+            html.INPUT(
+                {
+                    "type": "checkbox",
+                    "@change": on_change_state,
+                    ":ref": input_ref,
+                },
+            ),
+        ),
+        " ",
+        html.SPAN(
+            {"style": use_computed(lambda: "text-decoration: line-through;" if context.props["done"].value else "")},
+            context.props["title"],
         ),
     )
 
 
-FizzbuzzList.scoped_style = {
-    "ul": {
-        "border": "dashed 2px #668ad8",
+ToDoItem.scoped_style = {
+    "li": {
+        "color": "#2d8fdd",
+        "border-left": "solid 6px #2d8fdd",
         "background": "#f1f8ff",
-        "padding": "0.5em 0.5em 0.5em 2em",
-    },
-    "ul > li:nth-child(3n)": {
-        "color": "red",
-    },
-    "ul > li:nth-child(5n)": {
-        "color": "blue",
-    },
-    "ul > li:nth-child(15n)": {
-        "color": "purple",
-    },
+        "line-height": "1.5",
+        "margin": "5px",
+        "padding": "5px",
+        "list-style-type": "none",
+    }
 }
 
 
-@define_component("fizzbuzz-page")
-def FizzbuzzPage(context: ComponentContext[RouterContext]):
-    opened = use_state(lambda: True)
-    count = use_state(lambda: 10)
+@define_component()
+def TodoApp(_: ComponentContext[None]):
+    input_ref = DomNodeRef()
+    data = use_reactive_dict(
+        lambda: {
+            str(uuid.uuid4()): {
+                "title": use_state(lambda: "Try WebComPy"),
+                "done": use_state(lambda: False),
+            },
+            str(uuid.uuid4()): {
+                "title": use_state(lambda: "Create WebComPy project"),
+                "done": use_state(lambda: False),
+            },
+        }
+    )
 
-    @use_computed
-    def toggle_button_text():
-        return "Hide" if opened.value else "Open"
+    def append_item(_: DOMEvent):
+        title = input_ref.value
+        if title:
+            data[str(uuid.uuid4())] = {
+                "title": Signal(title),
+                "done": Signal(False),
+            }
+        input_ref.value = ""
 
-    @on_before_rendering
-    def reset_count():
-        count.value = 10
-
-    def add(ev: DOMEvent):
-        count.value += 1
-
-    def pop(ev: DOMEvent):
-        if count.value > 0:
-            count.value -= 1
-
-    def toggle(ev: DOMEvent):
-        opened.value = not opened.value
+    def remove_done_items(_: DOMEvent):
+        keys_to_remove = [k for k, v in data.value.items() if v["done"].value]
+        for k in keys_to_remove:
+            del data[k]
 
     return html.DIV(
         {},
-        html.H3(
-            {},
-            "FizzBuzz",
-        ),
         html.P(
             {},
-            html.BUTTON(
-                {"@click": toggle},
-                toggle_button_text,
-            ),
-            html.BUTTON(
-                {"@click": add},
-                "Add",
-            ),
-            html.BUTTON(
-                {"@click": pop},
-                "Pop",
-            ),
+            "Title: ",
+            html.INPUT({":ref": input_ref}),
+            html.BUTTON({"@click": append_item}, "Add ToDo"),
+            html.BUTTON({"@click": remove_done_items}, "Remove Done Items"),
         ),
-        html.P(
+        html.UL(
             {},
-            "Count: ",
-            count,
-        ),
-        switch(
-            {
-                "case": opened,
-                "generator": lambda: FizzbuzzList(props=count),
-            },
-            default=lambda: html.H5(
-                {},
-                "FizzBuzz Hidden",
+            repeat(
+                data,
+                lambda v, k: ToDoItem(v),
             ),
         ),
     )
+
+
+app = WebComPyApp(root_component=TodoApp)
 ```
 
 ## コントリビューション

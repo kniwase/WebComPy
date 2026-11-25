@@ -162,6 +162,7 @@ By default (`scroll_restoration=True`), WebComPy sets browser `history.scrollRes
 
 ## Next steps
 
+- Explore nested child layouts, parameter extraction, and a redirect guard live in the [Routing](/documents/examples/routing) example.
 - Review flat route definitions, `use_router()`, and basic navigation in [Routing](/documents/basic/routing).
 - Hook `app.router` guards and page tracking cleanly from [Plugins](/documents/advanced/plugins).
 - Learn how SSR self-site fetch blocking and async route boundaries work in [SSR & SSG](/documents/advanced/ssr-and-ssg) and [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).

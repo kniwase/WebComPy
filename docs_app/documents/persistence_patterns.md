@@ -132,6 +132,7 @@ Sibling components inside that tab call `inject(ThemeKey)` and react instantaneo
 
 ## Next steps
 
+- Test live cross-tab state synchronization across two windows in the [Storage Sync](/documents/examples/storage-sync) example.
 - Revisit basic `localStorage` / `sessionStorage` usage in [Storage](/documents/basic/storage).
 - Share storage signals across components in the same tab with [Dependency Injection Deep Dive](/documents/advanced/dependency-injection-deep-dive).
 - Compare server-readable cookie persistence in [Internationalization](/documents/advanced/i18n).

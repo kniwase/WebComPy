@@ -132,6 +132,7 @@ With `immediate=True` (the default), WebComPy launches the operation right after
 
 ## Next steps
 
+- Try typed `HttpClient.get(..., response_type=...)` requests live in the [HTTP Fetch](/documents/examples/http-fetch) example.
 - Wrap async views with fallback recovery in [Error Handling](/documents/basic/error-handling).
 - Learn how resolved `AsyncResult` data and fetches transfer across SSR and hydration (including `transfer=False`) in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Coordinate `async def` setups, `Suspense`, `ClientOnly`, and the async scheduler in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
