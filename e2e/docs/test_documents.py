@@ -14,6 +14,7 @@ def test_documents_index_shows_section_cards(docs_page_on, assert_no_console_err
     expect(page.get_by_role("link", name="Open Signals and Streams")).to_be_visible()
     expect(page.get_by_role("link", name="Open CLI Reference")).to_be_visible()
     expect(page.get_by_role("link", name="Open Hello World")).to_be_visible()
+    expect(page.get_by_role("link", name="Open From Jinja2 + FastAPI")).to_be_visible()
     expect(page.get_by_role("link", name="Open App & Components")).to_be_visible()
 
 
@@ -26,6 +27,7 @@ def test_documents_page_content(docs_page_on, assert_no_console_errors):
     expect(page.get_by_role("heading", name="Advanced Usage")).to_be_visible()
     expect(page.get_by_role("heading", name="Server & Tooling")).to_be_visible()
     expect(page.get_by_role("heading", name="Examples")).to_be_visible()
+    expect(page.get_by_role("heading", name="Migration")).to_be_visible()
     expect(page.get_by_role("heading", name="API Reference")).to_be_visible()
 
 

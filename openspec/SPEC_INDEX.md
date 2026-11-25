@@ -127,7 +127,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/_version_sweep.py`, `scripts/run-browser-version-sweep.sh` | `browser-probes/spec.md` |
 | `webcompy_cli/_inspect_pyexec.py`, `webcompy_testing/browser_runner/` (evaluate) | `inspect-pyexec/spec.md`, `browser-test-harness/spec.md` |
 | `tests/browser/probes/` | `browser-probes/spec.md`, `browser-test-harness/spec.md` |
-| `docs_app/` | `docs-site-home/spec.md`, `docs-site-documents/spec.md`, `docs-api-reference/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
+| `docs_app/` | `docs-site-home/spec.md`, `docs-site-documents/spec.md`, `docs-migration-guide/spec.md`, `docs-api-reference/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
 | `scripts/check-docstrings.py`, `scripts/_api_surface.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md`, `docs-api-reference/spec.md` |
 | `scripts/generate_api_reference.py` | `docs-api-reference/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -184,7 +184,8 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
 | `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, feature cards, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
-| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `API Reference` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template + `examples_page_template` (narrative + live demo iframe + source, mocked networking, retired `/sample/*` & `fizzbuzz`), TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `Migration` / `API Reference` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template + `examples_page_template` (narrative + live demo iframe + source, mocked networking, retired `/sample/*` & `fizzbuzz`), TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
+| `docs-migration-guide` | Migration guides under `/documents/migration/`: FastAPI + Jinja2 architecture shift, ASGI strangler strategies, live mocked before/after comparison, conversion tables, exact template compatibility/error matrix, and phased exit-criteria checklist |
 | `docs-api-reference` | Generated-plus-authored `/documents/api/` reference skeletons (`scripts/_api_surface.py`, `scripts/generate_api_reference.py`, `--check` CI drift gate, full public API coverage across all four packages, author-region preservation, and non-duplication with conceptual guides) |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
 | `package-kind` | `PackageKind` enum for classifying browser dependencies |

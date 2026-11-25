@@ -443,6 +443,21 @@ DOCS_SECTIONS: list[DocsSection] = [
         ],
     },
     {
+        "title": "Migration",
+        "pages": [
+            {
+                "label": "From Jinja2 + FastAPI",
+                "path": "/documents/migration/from-jinja2-fastapi",
+                "source": "documents/migration_from_jinja2_fastapi.md",
+            },
+            {
+                "label": "Compatibility Notes",
+                "path": "/documents/migration/compatibility-notes",
+                "source": "documents/migration_compatibility_notes.md",
+            },
+        ],
+    },
+    {
         "title": "API Reference",
         "pages": [
             {

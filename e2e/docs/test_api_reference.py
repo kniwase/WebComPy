@@ -51,7 +51,7 @@ def test_api_reference_page_renders_with_toc_and_signatures(
 @pytest.mark.e2e
 def test_api_reference_toc_anchor_and_pager_boundaries(docs_page_on, assert_no_console_errors) -> None:
     page = docs_page_on("/documents/api/app-and-components")
-    expect(page.locator(".docs-pager-prev a")).to_have_text("RPC Middleware")
+    expect(page.locator(".docs-pager-prev a")).to_have_text("Compatibility Notes")
     expect(page.locator(".docs-pager-next a")).to_have_text("Template & Markdown")
 
     toc_link = page.locator(".docs-toc a", has_text="Components & Lifecycle").first

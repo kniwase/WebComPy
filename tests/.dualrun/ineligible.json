@@ -35,6 +35,7 @@
   "tests/test_docs_demos.py": "top-level import of 'webcompy_testing.FakeFetchPort' at line 12",
   "tests/test_docs_links.py": "top-level import from 'docs_app.docs_manifest' at line 6",
   "tests/test_docs_manifest.py": "top-level import from 'docs_app.docs_manifest' at line 8",
+  "tests/test_docs_migration_guide.py": "module-scope side-effecting call at line 13",
   "tests/test_docs_page.py": "top-level import from 'docs_app.components.docs_page' at line 3",
   "tests/test_dynamic_child_node_index.py": "top-level import of unmounted module 'tests.conftest' at line 9",
   "tests/test_e2e_log_filename.py": "top-level import of 'e2e.core.conftest' at line 5",

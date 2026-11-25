@@ -37,6 +37,7 @@ WebComPy is not a replacement for your backend framework — it complements it:
 - The **dev server and SSR endpoints are ASGI apps**. You can embed a WebComPy serving app inside a host ASGI application (for example, next to FastAPI routes) and share the same process.
 - **Data fetching during SSR** goes through the same ASGI transport, so server-rendered pages can call your own API routes without leaving the process.
 - For typed client-server communication, WebComPy offers its own **JSON-RPC layer** (HTTP, streaming, and WebSocket), which sits alongside — not instead of — plain REST endpoints you already serve.
+- Already running a server-rendered Jinja2 + FastAPI app? Follow the step-by-step strangler strategy in [Migrating from Jinja2 + FastAPI](/documents/migration/from-jinja2-fastapi).
 
 ## Next steps
 
