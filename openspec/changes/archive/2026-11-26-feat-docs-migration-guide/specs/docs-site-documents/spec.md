@@ -6,7 +6,7 @@
 
 ### Requirement: The Migration category shall register the migration guides
 
-The `DOCS_SECTIONS` manifest SHALL contain the standalone `Migration` category with pages `from-jinja2-fastapi` and `compatibility-notes` at `/documents/migration/`. Among the standalone categories the order SHALL be `Migration`, `Examples`, `API Reference` (relative to each other), following `Server & Tooling`.
+The `DOCS_SECTIONS` manifest SHALL contain the standalone `Migration` category with pages `from-jinja2-fastapi` and `compatibility-notes` at `/documents/migration/`. Among the standalone categories the order SHALL be `Examples`, `Migration`, `API Reference` (relative to each other), following `Server & Tooling`.
 
 #### Scenario: Migration pages registered
 

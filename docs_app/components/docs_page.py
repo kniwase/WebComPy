@@ -24,6 +24,17 @@ def _split_lead_and_body(content: Any) -> tuple[Any, Any | None]:
     return content, None
 
 
+def _split_before_heading_id(content: Any, heading_id: str) -> tuple[Any | None, Any | None]:
+    if isinstance(content, FragmentElement):
+        children = content._pending_children or content._children
+        for index, child in enumerate(children):
+            if isinstance(child, Element) and child._attrs.get("id") == heading_id:
+                if index == 0:
+                    return None, content
+                return FragmentElement(list(children[:index])), FragmentElement(list(children[index:]))
+    return content, None
+
+
 def _render_docs_page(doc: MarkdownDocument, current_path: str, article_children: list[Any]):
     children: list[Any] = [html.ARTICLE({"class": "prose"}, *article_children)]
     if doc.toc:
@@ -52,6 +63,29 @@ def docs_page_template(doc: MarkdownDocument, current_path: str, extra_content: 
     article_children: list[Any] = [doc.content]
     if extra_content is not None:
         article_children.append(extra_content)
+    return _render_docs_page(doc, current_path, article_children)
+
+
+def docs_page_template_with_demo(
+    doc: MarkdownDocument,
+    current_path: str,
+    *,
+    demo_app: str,
+    demo_title: str | None = None,
+    before_heading_id: str,
+):
+    head, tail = _split_before_heading_id(doc.content, before_heading_id)
+    props: DemoComponentProps = {
+        "title": demo_title or str(doc.metadata.get("title", demo_app)),
+        "app_name": demo_app,
+        "demo_path": f"/_demos/{demo_app}/app.py",
+    }
+    article_children: list[Any] = []
+    if head is not None:
+        article_children.append(head)
+    article_children.append(DemoDisplay(props))
+    if tail is not None:
+        article_children.append(tail)
     return _render_docs_page(doc, current_path, article_children)
 
 

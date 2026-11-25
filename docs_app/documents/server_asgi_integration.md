@@ -131,4 +131,5 @@ During `webcompy generate`, `generate_static_site()` calls `create_asgi_app()` i
 - Inspect `WebComPyBuildConfig` and `WebComPyServerConfig` fields in [Project Configuration](/documents/server/project-configuration).
 - Run `python -m webcompy start` or `generate` against mounted configs in [CLI Reference](/documents/server/cli-reference).
 - Test ASGI apps and SSR HTML output without Playwright using `create_test_asgi_app` in [Testing](/documents/server/testing).
+- Migrating an existing server-rendered app piece by piece? Follow the strangler guide in [Migrating from Jinja2 + FastAPI](/documents/migration/from-jinja2-fastapi).
 - Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

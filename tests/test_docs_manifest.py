@@ -176,6 +176,7 @@ class TestManifestContent:
             "Advanced Usage",
             "Server & Tooling",
             "Examples",
+            "Migration",
             "API Reference",
         ]
 
@@ -183,6 +184,19 @@ class TestManifestContent:
         paths = [page["path"] for page in flatten_pages()]
         assert paths[0] == "/documents/getting-started/what-is-webcompy"
         assert paths[-1] == "/documents/api/testing"
+
+    def test_migration_pages_in_order(self) -> None:
+        migration = next(section for section in DOCS_SECTIONS if section["title"] == "Migration")
+        assert [page["path"] for page in migration["pages"]] == [
+            "/documents/migration/from-jinja2-fastapi",
+            "/documents/migration/compatibility-notes",
+        ]
+        prev_first, next_first = prev_next("/documents/migration/from-jinja2-fastapi")
+        assert prev_first is not None and prev_first["path"] == "/documents/examples/rpc-middleware"
+        assert next_first is not None and next_first["path"] == "/documents/migration/compatibility-notes"
+        prev_second, next_second = prev_next("/documents/migration/compatibility-notes")
+        assert prev_second is not None and prev_second["path"] == "/documents/migration/from-jinja2-fastapi"
+        assert next_second is not None and next_second["path"] == "/documents/api/app-and-components"
 
     def test_api_reference_pages_in_order(self) -> None:
         api = next(section for section in DOCS_SECTIONS if section["title"] == "API Reference")
@@ -197,7 +211,7 @@ class TestManifestContent:
             "/documents/api/testing",
         ]
         prev_first, next_first = prev_next("/documents/api/app-and-components")
-        assert prev_first is not None and prev_first["path"] == "/documents/examples/rpc-middleware"
+        assert prev_first is not None and prev_first["path"] == "/documents/migration/compatibility-notes"
         assert next_first is not None and next_first["path"] == "/documents/api/template-and-markdown"
         prev_last, next_last = prev_next("/documents/api/testing")
         assert prev_last is not None and prev_last["path"] == "/documents/api/server-and-cli"

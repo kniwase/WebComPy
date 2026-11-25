@@ -74,6 +74,21 @@ def HomeContent(_: ComponentContext[None]):
                     )
                 },
             ),
+            DocsCard(
+                {"title": "Coming from Jinja2 + FastAPI?"},
+                slots={
+                    "default": lambda: html.DIV(
+                        {},
+                        "Migrate server-rendered FastAPI pages incrementally with ASGI host mounting and live before/after examples. ",
+                        DocsLink(
+                            {
+                                "to": "/documents/migration/from-jinja2-fastapi",
+                                "text": "Read the Migration Guide →",
+                            }
+                        ),
+                    )
+                },
+            ),
         ),
         DocsSection(
             {"heading": "Try it in a minute"},

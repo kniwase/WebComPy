@@ -255,6 +255,24 @@ def test_basic_and_advanced_split_policy_pairs_are_reciprocal() -> None:
             "api_testing.md",
             "/documents/api/testing",
         ),
+        (
+            "migration_from_jinja2_fastapi.md",
+            "/documents/migration/from-jinja2-fastapi",
+            "migration_compatibility_notes.md",
+            "/documents/migration/compatibility-notes",
+        ),
+        (
+            "server_asgi_integration.md",
+            "/documents/server/asgi-integration",
+            "migration_from_jinja2_fastapi.md",
+            "/documents/migration/from-jinja2-fastapi",
+        ),
+        (
+            "basic_template_html.md",
+            "/documents/basic/template-html",
+            "migration_compatibility_notes.md",
+            "/documents/migration/compatibility-notes",
+        ),
     ]
     by_file: dict[str, set[str]] = {}
     for name, _lineno, target in _body_link_targets():

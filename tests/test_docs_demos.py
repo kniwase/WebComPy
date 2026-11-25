@@ -631,3 +631,69 @@ async def test_rpc_middleware_mock_demo_single_and_batch():
             await asyncio.sleep(0)
             await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
             assert "Catalog size: 3 items (USD)" in result.to_html()
+
+
+@pytest.mark.asyncio
+async def test_migration_users_demo_direct_and_rendered():
+    import json
+
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_MIDDLEWARE_KEY
+    from webcompy.ports._middleware import FetchMiddlewareRegistry, FetchRequest, _MiddlewareFetchPort
+
+    with mock_app_run():
+        from static._demos.migration_users.app import MigrationUsersApp as App
+        from static._demos.migration_users.app import create_users_mock
+
+        mw = create_users_mock()
+
+        async def fail_next(req: FetchRequest, *, response=None):
+            raise AssertionError(f"next should not be called for {req.method} {req.url}")
+
+        res_get = await mw(FetchRequest(url="/api/users", method="GET", headers=None, body=None), fail_next)
+        assert isinstance(res_get, Response)
+        assert res_get.status_code == 200
+        assert len(json.loads(res_get.text)) == 6
+
+        scope = DIScope()
+        registry = FetchMiddlewareRegistry()
+        scope.provide(FETCH_MIDDLEWARE_KEY, registry)
+        scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(_make_failing_fetch_port(), registry))
+
+        with TestRenderer.render(App, parent_scope=scope) as result:
+            await result._scope.inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+            await asyncio.sleep(0)
+            html = result.to_html()
+            assert "Showing 6 of 6 users" in html
+            assert "Alice Chen" in html
+            assert "Frank Sato" in html
+
+            search_inputs = [n for n in result.query_selector_all("input") if n.getAttribute("type") == "search"]
+            assert len(search_inputs) == 1
+            search_input = search_inputs[0]
+
+            search_input.value = "Alice"
+            search_input.dispatchEvent(VirtualDOMEvent("input"))
+            html = result.to_html()
+            assert "Showing 1 of 6 users" in html
+            assert "Alice Chen" in html
+            assert "Bob Martinez" not in html
+
+            search_input.value = "no-such-user"
+            search_input.dispatchEvent(VirtualDOMEvent("input"))
+            html = result.to_html()
+            assert "Showing 0 of 6 users" in html
+            assert "No matching users." in html
+
+            buttons = {b.textContent: b for b in result.query_selector_all("button")}
+            clear_btn = buttons["Clear"]
+            clear_btn.dispatchEvent(VirtualDOMEvent("click"))
+            html = result.to_html()
+            assert "Showing 6 of 6 users" in html
+            assert "Alice Chen" in html
+
+            admin_btn = buttons["Admin"]
+            admin_btn.dispatchEvent(VirtualDOMEvent("click"))
+            html = result.to_html()
+            assert "Showing 2 of 6 users" in html
+            assert "Elena Novak" in html
+            assert "Carol Okafor" not in html
