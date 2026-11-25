@@ -11,7 +11,11 @@ _SERVER_TOOLING_PAGES = [
 
 
 @pytest.mark.e2e
-@pytest.mark.parametrize(("path", "title", "toc_heading"), _SERVER_TOOLING_PAGES)
+@pytest.mark.parametrize(
+    ("path", "title", "toc_heading"),
+    _SERVER_TOOLING_PAGES,
+    ids=[entry[0].rsplit("/", 1)[-1] for entry in _SERVER_TOOLING_PAGES],
+)
 def test_server_tooling_page_renders_with_toc_and_code(
     docs_page_on,
     assert_no_console_errors,
