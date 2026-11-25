@@ -171,3 +171,4 @@ Pass the same `FakeFetchPort` pattern (or `create_test_asgi_app(app)` with `app.
 - Test HTTP status codes and error states alongside typed responses in [HTTP & Async](/documents/basic/http-and-async).
 - Embed or mount full ASGI applications under test in [ASGI Integration](/documents/server/asgi-integration).
 - Run browser assertions and headless PyScript checks with `webcompy inspect` in [CLI Reference](/documents/server/cli-reference).
+- Full API: [Testing API](/documents/api/testing).

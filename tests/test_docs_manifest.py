@@ -176,12 +176,32 @@ class TestManifestContent:
             "Advanced Usage",
             "Server & Tooling",
             "Examples",
+            "API Reference",
         ]
 
     def test_boundary_pages(self) -> None:
         paths = [page["path"] for page in flatten_pages()]
         assert paths[0] == "/documents/getting-started/what-is-webcompy"
-        assert paths[-1] == "/documents/examples/rpc-middleware"
+        assert paths[-1] == "/documents/api/testing"
+
+    def test_api_reference_pages_in_order(self) -> None:
+        api = next(section for section in DOCS_SECTIONS if section["title"] == "API Reference")
+        assert [page["path"] for page in api["pages"]] == [
+            "/documents/api/app-and-components",
+            "/documents/api/template-and-markdown",
+            "/documents/api/reactivity",
+            "/documents/api/elements-and-routing",
+            "/documents/api/data",
+            "/documents/api/ui",
+            "/documents/api/server-and-cli",
+            "/documents/api/testing",
+        ]
+        prev_first, next_first = prev_next("/documents/api/app-and-components")
+        assert prev_first is not None and prev_first["path"] == "/documents/examples/rpc-middleware"
+        assert next_first is not None and next_first["path"] == "/documents/api/template-and-markdown"
+        prev_last, next_last = prev_next("/documents/api/testing")
+        assert prev_last is not None and prev_last["path"] == "/documents/api/server-and-cli"
+        assert next_last is None
 
     def test_examples_pages_in_order(self) -> None:
         examples = next(section for section in DOCS_SECTIONS if section["title"] == "Examples")

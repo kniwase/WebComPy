@@ -161,3 +161,4 @@ log = to_reactive_list(ws, maxlen=100)
 - Step up to structured RPC calls and cursor-backed subscriptions in [RPC over WebSocket](/documents/advanced/rpc-websocket).
 - Accumulate or collapse message streams in [Signals and Streams](/documents/advanced/signal-stream).
 - Compare one-way push transport in [Server-Sent Events](/documents/advanced/event-source).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

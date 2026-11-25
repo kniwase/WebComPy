@@ -329,3 +329,4 @@ def OfflineStreamPreview(context: ComponentContext[None]):
 - Inspect HTTP dispatcher configuration and `RpcError` codes in [RPC](/documents/advanced/rpc).
 - Convert `RpcStream` iterators into UI lists and latest signals in [Signals and Streams](/documents/advanced/signal-stream).
 - Compare standalone SSE connections in [Server-Sent Events](/documents/advanced/event-source).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

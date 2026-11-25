@@ -150,3 +150,4 @@ Fetch-based SSE connections are keyed in the shared registry by `(url, method, b
 - Convert SSE streams into UI state in [Signals and Streams](/documents/advanced/signal-stream).
 - Stream finite, request-scoped generator outputs via [RPC Streaming](/documents/advanced/rpc-streaming).
 - Review basic request/response fetching in [HTTP & Async](/documents/basic/http-and-async).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

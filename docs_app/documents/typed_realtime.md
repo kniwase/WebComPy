@@ -150,3 +150,4 @@ Type tags use qualified class names and are strictly allowlisted: only built-in 
 - Move up to declarative server/client contracts in [RPC Contracts](/documents/advanced/rpc-contracts).
 - Get built-in cursor replay on reconnect in [RPC over WebSocket](/documents/advanced/rpc-websocket).
 - Collect typed events into reactive lists in [Signals and Streams](/documents/advanced/signal-stream).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

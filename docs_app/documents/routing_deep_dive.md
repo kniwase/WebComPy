@@ -167,3 +167,4 @@ By default (`scroll_restoration=True`), WebComPy sets browser `history.scrollRes
 - Hook `app.router` guards and page tracking cleanly from [Plugins](/documents/advanced/plugins).
 - Learn how SSR self-site fetch blocking and async route boundaries work in [SSR & SSG](/documents/advanced/ssr-and-ssg) and [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Combine route isolation with [Error Handling](/documents/basic/error-handling).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

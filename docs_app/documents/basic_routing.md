@@ -156,3 +156,4 @@ For imperative navigation triggered by application setup or callbacks where an `
 - Load remote data for routed views in [HTTP & Async](/documents/basic/http-and-async).
 - Understand how history-mode routes pre-render on the server and block recursive self-fetches in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Continue to [Routing Deep Dive](/documents/advanced/routing-deep-dive) for nested child routes (`children` + index routes), `lazy()` code splitting, navigation guards (`before_route_change` / `after_route_change` / `on_route_error`), and scroll restoration.
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

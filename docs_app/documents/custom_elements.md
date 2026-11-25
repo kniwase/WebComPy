@@ -137,3 +137,4 @@ Cascade precedence runs strictly: `[webcompy-component] { display: contents; }` 
 - Explore `:host` reactive variables and full `@layer` CSS precedence in [Styling Deep Dive](/documents/advanced/styling-deep-dive) and [Styling & Themes](/documents/basic/styling-and-themes).
 - See how headless `headless-*` and themed `webcompy-*` wrappers layer behavior and styling in [UI Headless Contract](/documents/advanced/ui-headless-contract).
 - Animate box-generating custom elements in [Transition](/documents/advanced/transition) and review hydration adoption in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Full API: [App & Components API](/documents/api/app-and-components).

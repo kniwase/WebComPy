@@ -364,3 +364,4 @@ moved = await move_marker(client, MoveParams(target=Point(x=2.0, y=5.0)))
 - Stream finite request-scoped generator outputs in [RPC Streaming](/documents/advanced/rpc-streaming).
 - Run cursor-replayed pub/sub feeds and multiplexed calls over one socket in [RPC over WebSocket](/documents/advanced/rpc-websocket).
 - Review plain REST fetching and mock middleware in [HTTP & Async](/documents/basic/http-and-async) and [Step 5: Remote Data](/documents/guides/todo-remote-data).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

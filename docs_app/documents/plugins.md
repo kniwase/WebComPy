@@ -162,3 +162,4 @@ class RequestTracingPlugin(WebComPyPlugin):
 - Learn middleware ordering rules (`middlewares[0]` outermost) in [Middleware](/documents/advanced/middleware).
 - Register global route guards cleanly from `on_app_init(app)` in [Routing Deep Dive](/documents/advanced/routing-deep-dive).
 - Inspect how generated HTML places `scripts_head` / `scripts_body` in [SSR & SSG](/documents/advanced/ssr-and-ssg).
+- Full API: [App & Components API](/documents/api/app-and-components).

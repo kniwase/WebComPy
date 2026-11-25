@@ -120,3 +120,4 @@ Accessibility & motion contracts:
 - See how pre-rendered HTML and the render-task drain lead up to loading teardown in [SSR & SSG](/documents/advanced/ssr-and-ssg) and [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Understand state transfer happening immediately before `#webcompy-loading` disappears in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Explore CSS variables and cascade rules used by loading and theme tokens in [Styling Deep Dive](/documents/advanced/styling-deep-dive).
+- Full API: [App & Components API](/documents/api/app-and-components).

@@ -138,3 +138,4 @@ With `immediate=True` (the default), WebComPy launches the operation right after
 - Coordinate `async def` setups, `Suspense`, `ClientOnly`, and the async scheduler in [Async Rendering & Boundaries](/documents/advanced/async-rendering-and-boundaries).
 - Learn schema strictness modes, `encode_with_meta`, and FastAPI `TypedJSONResponse` in [Typed API Deep Dive](/documents/advanced/typed-api-deep-dive), and add request/response interceptors in [Middleware](/documents/advanced/middleware).
 - For server-pushed streams or typed RPC calls, explore [Server-Sent Events](/documents/advanced/event-source) and [RPC Contracts](/documents/advanced/rpc-contracts).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

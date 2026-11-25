@@ -123,3 +123,4 @@ If an external service needs direct DOM or timer callbacks that start outside co
 - Revisit writable component state and `Computed` derivations in [Reactive State](/documents/basic/reactive-state).
 - Compare read-only DOM event signals with DI-managed cookie locale state in [Internationalization](/documents/advanced/i18n).
 - Handle inline element event handlers (`@click`, `@input`) in [Elements & Events](/documents/basic/elements-and-events).
+- Full API: [Reactivity API](/documents/api/reactivity).

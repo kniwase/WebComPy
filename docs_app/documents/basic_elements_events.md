@@ -143,3 +143,4 @@ def AutoFocusSearch(context: ComponentContext[None]):
 - See how WebComPy renders Markdown files into element trees in [Markdown Documents](/documents/basic/markdown-documents).
 - Compare Python element helpers with [HTML Templates](/documents/basic/template-html).
 - Use `:bind` and first-party form controls in [Forms](/documents/basic/forms).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

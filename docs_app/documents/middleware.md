@@ -160,3 +160,4 @@ For streaming HTTP RPC procedures (`StreamingProcedure`), pass `stream=` (`await
 - Package fetch and RPC middlewares into reusable extensions in [Plugins](/documents/advanced/plugins).
 - Apply `RpcMiddleware` to typed contracts and streams in [RPC Contracts](/documents/advanced/rpc-contracts), [RPC](/documents/advanced/rpc), and [RPC Streaming](/documents/advanced/rpc-streaming).
 - Review basic `HttpClient` requests and Step 5's `FetchMiddleware` API mock in [HTTP & Async](/documents/basic/http-and-async) and [Step 5: Remote Data](/documents/guides/todo-remote-data).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

@@ -170,3 +170,4 @@ Notice `maxlen=1`: when the user types faster than HTTP requests finish, older q
 - Expose external callbacks as read-only cells in [Read-only Signals and Events](/documents/advanced/readonly-signal).
 - Open shared SSE and WebSocket streams in [Server-Sent Events](/documents/advanced/event-source) and [WebSocket](/documents/advanced/websocket).
 - Review reactive primitives (`Signal`, `ReactiveList`, `use_state`) in [Reactive State](/documents/basic/reactive-state).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

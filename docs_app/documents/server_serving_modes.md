@@ -94,3 +94,4 @@ config = WebComPyBuildConfig(
 - Configure `standalone`, `wheel_mode`, and `lockfile_sync_config` in [Project Configuration](/documents/server/project-configuration).
 - Override serving flags per run from the CLI in [CLI Reference](/documents/server/cli-reference).
 - Reduce initial page payload and navigation requests with `resource_transfer="all-text"` in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

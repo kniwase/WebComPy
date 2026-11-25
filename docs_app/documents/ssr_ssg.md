@@ -110,3 +110,4 @@ For the complete host-framework mounting recipe and `base_url` / `blocked_paths`
 - Customize the boot-time waiting state before hydration completes in [Loading Screen](/documents/advanced/loading-screen).
 - Package generated routes and static assets for installability and offline navigation in [Progressive Web App](/documents/advanced/pwa).
 - Revisit route declarations and `ErrorBoundary` basics in [Routing](/documents/basic/routing) and [Error Handling](/documents/basic/error-handling).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

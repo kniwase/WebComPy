@@ -155,3 +155,4 @@ Key lifecycle guarantees:
 - Configure CDN vs offline asset delivery in [Serving Modes](/documents/server/serving-modes).
 - Tune resource transfer and payload compression in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Add manifest and offline worker settings via `PWAConfig` in [Progressive Web App](/documents/advanced/pwa).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli) and [App & Components API](/documents/api/app-and-components).

@@ -289,3 +289,4 @@ See [RPC Streaming](/documents/advanced/rpc-streaming) for lifecycle states, ear
 - Review declarative contracts and server binding rules in [RPC Contracts](/documents/advanced/rpc-contracts).
 - Compare HTTP transport and SSR caching in [RPC](/documents/advanced/rpc).
 - Understand the underlying socket registry and typed wire codecs in [WebSocket](/documents/advanced/websocket) and [Typed Realtime](/documents/advanced/typed-realtime).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).
