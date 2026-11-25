@@ -65,6 +65,13 @@ Execute these commands in order. Stop on the first failure unless instructed oth
    - Validates Args/Returns/Raises sections match signatures (Google style, tuned via `[tool.pydoclint]` in `pyproject.toml`)
    - Run when any file under `packages/*/src` was changed
 
+10. **API Reference Sync Check**
+   ```bash
+   python3 scripts/generate_api_reference.py --check
+   ```
+   - Verifies that committed `docs_app/documents/api_*.md` skeletons match the current resolved public API surface under `packages/*/src`
+   - Run whenever `packages/*/src` public symbols/docstrings or `docs_app/documents/api_*.md` were changed
+
 ## Reporting Format
 
 After all checks complete, produce a summary:

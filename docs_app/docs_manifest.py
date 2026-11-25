@@ -442,6 +442,51 @@ DOCS_SECTIONS: list[DocsSection] = [
             },
         ],
     },
+    {
+        "title": "API Reference",
+        "pages": [
+            {
+                "label": "App & Components",
+                "path": "/documents/api/app-and-components",
+                "source": "documents/api_core_app_components.md",
+            },
+            {
+                "label": "Template & Markdown",
+                "path": "/documents/api/template-and-markdown",
+                "source": "documents/api_core_template_markdown.md",
+            },
+            {
+                "label": "Reactivity",
+                "path": "/documents/api/reactivity",
+                "source": "documents/api_core_reactivity.md",
+            },
+            {
+                "label": "Elements, Routing & DI",
+                "path": "/documents/api/elements-and-routing",
+                "source": "documents/api_core_elements_routing.md",
+            },
+            {
+                "label": "Data, Forms & i18n",
+                "path": "/documents/api/data",
+                "source": "documents/api_core_data.md",
+            },
+            {
+                "label": "UI & Theme",
+                "path": "/documents/api/ui",
+                "source": "documents/api_ui.md",
+            },
+            {
+                "label": "Server, CLI, RPC & Ports",
+                "path": "/documents/api/server-and-cli",
+                "source": "documents/api_server_cli.md",
+            },
+            {
+                "label": "Testing",
+                "path": "/documents/api/testing",
+                "source": "documents/api_testing.md",
+            },
+        ],
+    },
 ]
 
 

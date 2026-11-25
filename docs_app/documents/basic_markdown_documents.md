@@ -138,3 +138,4 @@ Putting these pieces together is how WebComPy's own documentation site works:
 
 - Wire Markdown pages into multi-page navigation in [Routing](/documents/basic/routing).
 - Customize theme colors and cascade layers in [Styling & Themes](/documents/basic/styling-and-themes).
+- Full API: [Template & Markdown API](/documents/api/template-and-markdown).

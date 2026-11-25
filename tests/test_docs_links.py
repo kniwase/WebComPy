@@ -207,6 +207,54 @@ def test_basic_and_advanced_split_policy_pairs_are_reciprocal() -> None:
             "example_rpc_middleware.md",
             "/documents/examples/rpc-middleware",
         ),
+        (
+            "basic_components.md",
+            "/documents/basic/components",
+            "api_core_app_components.md",
+            "/documents/api/app-and-components",
+        ),
+        (
+            "basic_template_html.md",
+            "/documents/basic/template-html",
+            "api_core_template_markdown.md",
+            "/documents/api/template-and-markdown",
+        ),
+        (
+            "basic_reactive_state.md",
+            "/documents/basic/reactive-state",
+            "api_core_reactivity.md",
+            "/documents/api/reactivity",
+        ),
+        (
+            "basic_routing.md",
+            "/documents/basic/routing",
+            "api_core_elements_routing.md",
+            "/documents/api/elements-and-routing",
+        ),
+        (
+            "basic_forms.md",
+            "/documents/basic/forms",
+            "api_core_data.md",
+            "/documents/api/data",
+        ),
+        (
+            "ui_primitives.md",
+            "/documents/basic/ui-primitives",
+            "api_ui.md",
+            "/documents/api/ui",
+        ),
+        (
+            "server_cli_reference.md",
+            "/documents/server/cli-reference",
+            "api_server_cli.md",
+            "/documents/api/server-and-cli",
+        ),
+        (
+            "server_testing.md",
+            "/documents/server/testing",
+            "api_testing.md",
+            "/documents/api/testing",
+        ),
     ]
     by_file: dict[str, set[str]] = {}
     for name, _lineno, target in _body_link_targets():

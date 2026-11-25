@@ -123,3 +123,4 @@ When the browser matches `(prefers-reduced-motion: reduce)` (queried via `MediaQ
 - Configure component wrapper `display` modes in [Custom Elements](/documents/advanced/custom-elements).
 - Combine animated state with reactive styles in [Styling Deep Dive](/documents/advanced/styling-deep-dive).
 - Render animated dialogs and drawers into `<body>` with [Teleport](/documents/advanced/teleport) and explore built-in disclosures in [Disclosure & Feedback](/documents/basic/disclosure).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

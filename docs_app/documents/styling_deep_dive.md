@@ -192,3 +192,4 @@ WebComPy rewrites `:host` selectors to target the component's custom-element tag
 - Review custom-element wrapper behavior and `display` options in [Custom Elements](/documents/advanced/custom-elements).
 - Pair box-generating wrapper styles with enter/leave animations in [Transition](/documents/advanced/transition).
 - Inspect how first-party design tokens structure the `components` layer in [UI Primitives](/documents/basic/ui-primitives).
+- Full API: [Template & Markdown API](/documents/api/template-and-markdown) and [UI & Theme API](/documents/api/ui).

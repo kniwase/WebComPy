@@ -136,3 +136,4 @@ Async signal callbacks (`@signal.on_after_updating async def ...`) follow intent
 - Understand the full SSR/SSG lifecycle behind `await_pending()` in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Configure grace periods and removal fades triggered after `await_pending(only_render=True)` in [Loading Screen](/documents/advanced/loading-screen).
 - Revisit `ErrorBoundary` parameters in [Error Handling](/documents/basic/error-handling) and typed RPC calls in [RPC Contracts](/documents/advanced/rpc-contracts).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing) and [Data, Forms & i18n API](/documents/api/data).

@@ -166,3 +166,4 @@ When the `with` block exits, `_active_di_scope` automatically restores to the pr
 - Supply providers, ports, and lifecycle hooks from external modules in [Plugins](/documents/advanced/plugins).
 - Trace per-request `RenderContext` creation and teardown during SSR/SSG in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Revisit component trees and reactive primitives in [Components](/documents/basic/components) and [Reactive State](/documents/basic/reactive-state).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

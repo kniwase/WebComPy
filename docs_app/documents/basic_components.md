@@ -168,3 +168,4 @@ By default, custom element wrappers use `display: contents` so they remain layou
 - Learn how to write component views with HTML syntax in [HTML Templates](/documents/basic/template-html).
 - Explore [Styling & Themes](/documents/basic/styling-and-themes) for cascade layers, `css_text`, and theme tokens.
 - When you need `observed_attributes`, browser/test lifecycle nuances, or custom-element JavaScript interop, continue to [Custom Elements](/documents/advanced/custom-elements).
+- Full API: [App & Components API](/documents/api/app-and-components).

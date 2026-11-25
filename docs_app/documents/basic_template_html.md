@@ -204,3 +204,4 @@ Note that `:`-prefixed prop names convert kebab-case to snake_case in `context.p
 - Learn how `Signal`, `Computed`, `ReactiveList`, and `use_state` work in [Reactive State](/documents/basic/reactive-state).
 - Compare template directives with Python element helpers in [Elements & Events](/documents/basic/elements-and-events).
 - Review props, slots, and scoped CSS in [Components](/documents/basic/components).
+- Full API: [Template & Markdown API](/documents/api/template-and-markdown).

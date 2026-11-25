@@ -137,3 +137,4 @@ Sibling components inside that tab call `inject(ThemeKey)` and react instantaneo
 - Share storage signals across components in the same tab with [Dependency Injection Deep Dive](/documents/advanced/dependency-injection-deep-dive).
 - Compare server-readable cookie persistence in [Internationalization](/documents/advanced/i18n).
 - Understand what actually travels inside the SSR payload in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Full API: [Data, Forms & i18n API](/documents/api/data).

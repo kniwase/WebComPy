@@ -271,3 +271,4 @@ console.log("caches:", await caches.keys());
 - Layer offline asset caching onto transferred text resources in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Configure the boot experience shown while PyScript loads in [Loading Screen](/documents/advanced/loading-screen).
 - Compare client storage and cookie lifecycles in [Persistence Patterns](/documents/advanced/persistence-patterns).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

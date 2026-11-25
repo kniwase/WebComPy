@@ -241,3 +241,4 @@ Server metadata and endpoint inspection remain accessible on `app.rpc` (`Procedu
 - Use long-lived subscriptions and low-latency multiplexed calls in [RPC over WebSocket](/documents/advanced/rpc-websocket).
 - Stream finite call-scoped generator outputs in [RPC Streaming](/documents/advanced/rpc-streaming).
 - Understand in-process SSR dispatch and hydration payload replay in [SSR & SSG](/documents/advanced/ssr-and-ssg) and [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).

@@ -125,3 +125,4 @@ When multiple `Teleport` elements target the same container (e.g. `body`):
 - Use built-in teleported overlays (`Modal`, `Drawer`, `Dropdown`, `Toast`) in [Overlay Components](/documents/basic/overlay).
 - Animate teleported modals with [Transition](/documents/advanced/transition).
 - See how SSR blocks and hydration adoption work end to end in [SSR & SSG](/documents/advanced/ssr-and-ssg) and [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
+- Full API: [Elements, Routing & DI API](/documents/api/elements-and-routing).

@@ -69,3 +69,4 @@ ToastHost({"toasts": toast_state.toasts, "on_dismiss": toast_state.dismiss, "on_
 - Explore tabs, accordions, alerts, progress bars, badges, skeletons, and cards in [Disclosure & Feedback](/documents/basic/disclosure).
 - Learn how `@layer components` and theme tokens work in [Styling & Themes](/documents/basic/styling-and-themes).
 - Inspect headless `data-state` attributes, part-class props, and custom theme authoring in [UI Headless Contract](/documents/advanced/ui-headless-contract).
+- Full API: [UI & Theme API](/documents/api/ui).

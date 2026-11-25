@@ -176,3 +176,4 @@ uv run python -m webcompy inspect stop PORT
 - Understand how `start --dev`, `start`, and `generate` share the SSR pipeline in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Compare CDN, standalone, and wheel-packaging options in [Serving Modes](/documents/server/serving-modes).
 - Run fast browserless component and ASGI tests before reaching for Chromium in [Testing](/documents/server/testing).
+- Full API: [Server, CLI, RPC & Ports API](/documents/api/server-and-cli).
