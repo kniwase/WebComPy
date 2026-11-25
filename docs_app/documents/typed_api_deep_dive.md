@@ -195,6 +195,7 @@ If you specify an explicit `Content-Type` header manually, WebComPy keeps your c
 
 ## Next steps
 
+- See object, list, and scalar typed `HttpClient` deserialization in the [HTTP Fetch](/documents/examples/http-fetch) example.
 - Learn `HttpClient` basics and `use_async_result()` UI state signals in [HTTP & Async](/documents/basic/http-and-async).
 - Combine client-side interceptors and response mocks with [Middleware](/documents/advanced/middleware).
 - Compare schema-driven REST with shared [RPC Contracts](/documents/advanced/rpc-contracts).

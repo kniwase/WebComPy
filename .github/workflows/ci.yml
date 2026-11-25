@@ -330,7 +330,7 @@ jobs:
         include:
           - group:
               name: docs-home
-              files: e2e/docs/test_home.py e2e/docs/test_helloworld.py
+              files: e2e/docs/test_home.py e2e/docs/test_examples_hello_world.py
             serving_mode: static
           - group:
               name: docs-documents
@@ -342,15 +342,15 @@ jobs:
             serving_mode: static
           - group:
               name: docs-demos
-              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py e2e/docs/test_demo_navigation.py
+              files: e2e/docs/test_examples_todo.py e2e/docs/test_examples_forms.py e2e/docs/test_examples_routing.py e2e/docs/test_examples_storage_sync.py e2e/docs/test_examples_transition.py e2e/docs/test_examples_teleport.py e2e/docs/test_examples_i18n_playground.py e2e/docs/test_demo_navigation.py
             serving_mode: static
           - group:
               name: docs-matplotlib
-              files: e2e/docs/test_matplotlib.py
+              files: e2e/docs/test_examples_matplotlib.py
             serving_mode: static
           - group:
               name: docs-fetch
-              files: e2e/docs/test_fetch.py
+              files: e2e/docs/test_examples_http_fetch.py e2e/docs/test_examples_fetch_middleware.py e2e/docs/test_examples_rpc_middleware.py
             serving_mode: static
     steps:
       - uses: actions/checkout@v5

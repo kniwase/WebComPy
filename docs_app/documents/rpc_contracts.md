@@ -359,6 +359,7 @@ moved = await move_marker(client, MoveParams(target=Point(x=2.0, y=5.0)))
 
 ## Next steps
 
+- Try contract-first `Procedure` and `batch()` calls backed by an in-app mock in the [RPC Middleware](/documents/examples/rpc-middleware) example.
 - Inspect HTTP transport internals, custom endpoint paths, Starlette mounting, and the manual transport appendix in [RPC](/documents/advanced/rpc).
 - Stream finite request-scoped generator outputs in [RPC Streaming](/documents/advanced/rpc-streaming).
 - Run cursor-replayed pub/sub feeds and multiplexed calls over one socket in [RPC over WebSocket](/documents/advanced/rpc-websocket).

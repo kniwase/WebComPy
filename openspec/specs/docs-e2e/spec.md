@@ -50,57 +50,50 @@ Each page in the docs_app SHALL load completely without Python tracebacks or Jav
 - **WHEN** a test navigates to `/sample/fizzbuzz` and waits for PyScript initialization
 - **THEN** no Python tracebacks SHALL appear in the browser console
 
-### Requirement: Docs E2E tests shall verify page content using text and role selectors
-Since docs_app is a production site without `data-testid` attributes, tests SHALL locate elements using Playwright's text-based and role-based selectors (e.g., `page.get_by_text()`, `page.get_by_role()`, `page.locator("h2")`). Tests SHALL NOT require modifications to the production component code. The only exception is Bootstrap's `data-bs-toggle` attribute, which is a framework attribute (not a test hook) and MAY be used for dropdown interaction.
+### Requirement: Content-based element location in docs E2E tests
+Since docs_app is a production site without `data-testid` attributes, tests SHALL locate elements using Playwright's text-based and role-based selectors (e.g., `page.get_by_role()`, `page.locator("h2")`). Tests SHALL NOT require modifications to production component code.
 
 #### Scenario: Verifying the home page heading
 - **WHEN** a test navigates to `/`
-- **THEN** the test SHALL locate the hero headline using `page.get_by_role("heading", name="Build Frontend in Python", level=1)`
+- **THEN** the test locates the hero via `page.get_by_role("heading", name="Build Frontend in Python", level=1)`
 
-#### Scenario: Verifying a button exists on the FizzBuzz page
-- **WHEN** a test navigates to `/sample/fizzbuzz`
-- **THEN** the test SHALL locate the "Add" button using `page.get_by_role("button", name="Add")`
+#### Scenario: Verifying a button exists on the Forms example
+- **WHEN** a test navigates to `/documents/examples/forms`
+- **THEN** the test locates the demo's submit button by role
 
 ### Requirement: Each docs page shall have a dedicated test file
-Each route in the docs_app SHALL have a dedicated test file in `e2e/docs/`. Test files SHALL be named `test_<page_name>.py` matching the route path (e.g., `test_home.py` for `/`, `test_fizzbuzz.py` for `/sample/fizzbuzz`).
+Each route in the docs_app SHALL have a dedicated test file in `e2e/docs/`. Test files SHALL be named `test_<page_name>.py` matching the route path (e.g., `test_home.py` for `/`, `test_examples_todo.py` for `/documents/examples/todo`).
 
 #### Scenario: Test file organization
-- **WHEN** the docs_app has routes `/`, `/documents`, `/sample/helloworld`, `/sample/fizzbuzz`, `/sample/todo`, `/sample/matplotlib`, `/sample/fetch`
-- **THEN** there SHALL be test files `test_home.py`, `test_documents.py`, `test_helloworld.py`, `test_fizzbuzz.py`, `test_todo.py`, `test_matplotlib.py`, and `test_fetch.py` in `e2e/docs/`
+- **WHEN** the docs_app has routes `/`, `/documents`, `/documents/examples/hello-world`, `/documents/examples/todo`, `/documents/examples/matplotlib`, `/documents/examples/http-fetch`
+- **THEN** there SHALL be correspondingly named test files in `e2e/docs/`
 
-### Requirement: Docs E2E tests shall test basic interactivity on demo pages
-Demo pages with interactive elements (buttons, inputs) SHALL be tested for basic user interactions: clicking buttons updates the displayed state, toggling visibility works, and form inputs respond correctly.
-
-#### Scenario: FizzBuzz Add button adds an item
-- **WHEN** a test navigates to `/sample/fizzbuzz` and clicks the "Add" button
-- **THEN** the count display SHALL increase by 1
+### Requirement: Example pages shall be tested for demo interactivity
+Examples pages with interactive demos SHALL be tested for basic user interactions inside the demo iframe.
 
 #### Scenario: ToDo list Add ToDo button adds an item
-- **WHEN** a test navigates to `/sample/todo`, types text in the input, and clicks "Add ToDo"
-- **THEN** a new list item SHALL appear
+- **WHEN** a test navigates to `/documents/examples/todo`, types text in the input, and clicks "Add ToDo"
+- **THEN** a new list item appears
 
 #### Scenario: Matplotlib plus button increments the value
-- **WHEN** a test navigates to `/sample/matplotlib` and clicks the "+" button
-- **THEN** the text "Value: 15" SHALL change to "Value: 16"
+- **WHEN** a test navigates to `/documents/examples/matplotlib` and clicks the "+" button
+- **THEN** the value display increments
 
-### Requirement: Fetch demo test shall be skipped until sample.json is available
-The `/sample/fetch` page requires a `sample.json` static file that does not yet exist. The test for this page SHALL be marked with `pytest.mark.skip` with a reason explaining the dependency on the static file fix.
-
-#### Scenario: Running the fetch test
-- **WHEN** a test run includes `test_fetch.py`
-- **THEN** the test SHALL be skipped with a reason referencing the missing `sample.json` static file
+#### Scenario: RPC middleware mock responds without a server
+- **WHEN** a test on `/documents/examples/rpc-middleware` clicks the demo's call button
+- **THEN** the typed result renders and no failed network request appears in the console
 
 ### Requirement: Docs E2E tests shall verify SPA navigation
 Tests SHALL verify that client-side routing works by clicking navigation links and verifying that the URL and page content change correctly. Navigation tests SHALL use the `docs_app_page` fixture (which keeps the page loaded, avoiding repeated PyScript initialization) for forward navigation, and the `docs_page_on` fixture for direct URL navigation.
 
 #### Scenario: Navigating from Home to HelloWorld demo
-- **WHEN** a test on the home page clicks the "Demos" dropdown toggle and then the "HelloWorld" link
-- **THEN** the URL SHALL change to `/sample/helloworld`
-- **AND** the "HelloWorld" heading SHALL be visible
+- **WHEN** a test on the home page clicks the "Documents" dropdown toggle and then the "Hello World" example link
+- **THEN** the URL SHALL change to `/documents/examples/hello-world`
+- **AND** the example heading SHALL be visible
 - **AND** no Python tracebacks SHALL appear in the browser console
 
 #### Scenario: Navigating back to Home
-- **WHEN** a test navigates to `/sample/helloworld` and then clicks the "Home" link
+- **WHEN** a test navigates to `/documents/examples/hello-world` and then clicks the "Home" link
 - **THEN** the URL SHALL change to `/`
 - **AND** the "Build Frontend in Python" hero heading SHALL be visible
 

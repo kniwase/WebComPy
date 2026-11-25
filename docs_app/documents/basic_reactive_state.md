@@ -112,6 +112,7 @@ handle = effect(sync_label)
 
 ## Next steps
 
+- See `ReactiveDict`, `Signal`, and `use_computed()` working together in the [ToDo List](/documents/examples/todo) example.
 - Render reactive lists and conditional branches in [Elements & Events](/documents/basic/elements-and-events).
 - Understand how `use_state`, `use_reactive_list`, and `use_reactive_dict` transfer initial values and skip factories during hydration in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - For event streams (WebSocket/SSE message logs where duplicates must not be collapsed), see [Signals and Streams](/documents/advanced/signal-stream).

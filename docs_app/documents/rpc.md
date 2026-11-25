@@ -236,6 +236,7 @@ Server metadata and endpoint inspection remain accessible on `app.rpc` (`Procedu
 
 ## Next steps
 
+- See `Procedure` calls and `batch()` mocked via `RpcMiddleware` in the [RPC Middleware](/documents/examples/rpc-middleware) example.
 - Start with contract declarations, `batch()`, and `notify()` in [RPC Contracts](/documents/advanced/rpc-contracts).
 - Use long-lived subscriptions and low-latency multiplexed calls in [RPC over WebSocket](/documents/advanced/rpc-websocket).
 - Stream finite call-scoped generator outputs in [RPC Streaming](/documents/advanced/rpc-streaming).
