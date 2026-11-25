@@ -266,6 +266,7 @@ console.log("caches:", await caches.keys());
 
 ## Next steps
 
+- Pair Service Worker precaching with self-hosted `standalone=True` assets in [Serving Modes](/documents/server/serving-modes).
 - Understand the build pipeline and `create_asgi_app()` modes in [SSR & SSG](/documents/advanced/ssr-and-ssg).
 - Layer offline asset caching onto transferred text resources in [Hydration & Data Transfer](/documents/advanced/hydration-and-transfer).
 - Configure the boot experience shown while PyScript loads in [Loading Screen](/documents/advanced/loading-screen).

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from e2e.conftest import sanitize_console_log_name
 from webcompy_cli._console_types import ConsoleMessage
 
 if TYPE_CHECKING:
@@ -346,7 +347,7 @@ def _write_console_log(request, console_messages_list: list[ConsoleMessage]):
         return
     log_dir = pathlib.Path(CONSOLE_LOG_DIR)
     log_dir.mkdir(parents=True, exist_ok=True)
-    test_name = request.node.name.replace("/", "_").replace("::", "__").replace(" ", "_")
+    test_name = sanitize_console_log_name(request.node.name)
     log_path = log_dir / f"console-{test_name}.log"
     with log_path.open("w") as f:
         for m in filtered:
