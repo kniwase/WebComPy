@@ -118,7 +118,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
 - **I18n Cookie-Only Locale Parity** — `i18n/spec.md`
-- **Theme & Design Token Contrast Parity** — `theme-system/spec.md`, `design-tokens/spec.md`
+- **Theme & Design Token Contrast Parity** — `theme-system/spec.md`, `design-tokens/spec.md`, `demo-iframe-isolation/spec.md`
 - **Testing Module** — `testing-module/spec.md`
 - **Inspect CLI Independence** — `inspect-cli/spec.md`
 - **Template Engine** — `template-engine/spec.md`

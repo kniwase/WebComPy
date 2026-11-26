@@ -52,7 +52,7 @@ the per-area reference.
 - **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 - **PWA Worker Generation, Precache & Scope** — `pwa/spec.md`
 - **I18n Cookie-Only Locale Parity** — `i18n/spec.md`
-- **Theme & Design Token Contrast Parity** — `theme-system/spec.md`, `design-tokens/spec.md`
+- **Theme & Design Token Contrast Parity** — `theme-system/spec.md`, `design-tokens/spec.md`, `demo-iframe-isolation/spec.md`
 
 ## File → Spec Mapping
 
@@ -130,7 +130,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/_version_sweep.py`, `scripts/run-browser-version-sweep.sh` | `browser-probes/spec.md` |
 | `webcompy_cli/_inspect_pyexec.py`, `webcompy_testing/browser_runner/` (evaluate) | `inspect-pyexec/spec.md`, `browser-test-harness/spec.md` |
 | `tests/browser/probes/` | `browser-probes/spec.md`, `browser-test-harness/spec.md` |
-| `docs_app/` | `docs-site-home/spec.md`, `docs-site-documents/spec.md`, `docs-migration-guide/spec.md`, `docs-api-reference/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
+| `docs_app/` | `docs-site-home/spec.md`, `docs-site-documents/spec.md`, `docs-migration-guide/spec.md`, `docs-api-reference/spec.md`, `docs-e2e/spec.md`, `demo-iframe-isolation/spec.md`, `loading-screen/spec.md` |
 | `scripts/check-docstrings.py`, `scripts/_api_surface.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md`, `docs-api-reference/spec.md` |
 | `scripts/generate_api_reference.py` | `docs-api-reference/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -199,7 +199,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `plugin-system` | Extension mechanism via `WebComPyPlugin` base class |
 | `plugin-script` | Declarative loading of JavaScript resources |
 | `reactive-dropdown` | Demonstration of reactive dropdown menus |
-| `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos |
+| `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos, parent theme sync, design-token contrast parity, component-scoped style boundaries, and responsive auto-sizing |
 | `inspect-cli` | CLI tool for browser inspection of WebComPy apps |
 | `json-rpc` | JSON-RPC 2.0 dispatcher, procedure registry, metadata extension, allowlist type decoding, typed browser client |
 | `rpc-middleware` | Stackable `RpcMiddleware` chains over HTTP RPC: typed args/headers context with batch/streaming metadata, validated `next(response=...)` synthesis through `_resolve_single`, registries on DI and plugin hooks |
