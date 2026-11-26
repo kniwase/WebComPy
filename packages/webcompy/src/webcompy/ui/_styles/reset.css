@@ -26,4 +26,21 @@
     max-width: 100%;
     height: auto;
   }
+
+  button,
+  input,
+  select,
+  textarea {
+    color-scheme: inherit;
+    font: inherit;
+    color: var(--color-fg);
+  }
+
+  button,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+  }
 }

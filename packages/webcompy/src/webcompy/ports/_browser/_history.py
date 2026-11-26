@@ -72,6 +72,23 @@ class BrowserHistoryPort(HistoryPort):
         hash_val = location.hash
         return hash_val[1:] if hash_val.startswith("#") else hash_val
 
+    def _js_state_to_dict(self, hist_state: Any) -> dict[str, Any] | None:
+        if hist_state is None or self._browser.pyscript.ffi.is_none(hist_state):
+            return None
+        if isinstance(hist_state, dict):
+            return hist_state
+        to_py = getattr(hist_state, "to_py", None)
+        if callable(to_py):
+            try:
+                converted = to_py()
+            except Exception as exc:
+                from webcompy import logging as webcompy_logging
+
+                webcompy_logging.warn(f"Failed to convert browser history state: {exc}")
+                return None
+            return converted if isinstance(converted, dict) else None
+        return None
+
     def _on_popstate(self, event: object) -> None:
         location = self._browser.window.location
         if self._mode == "history":
@@ -80,10 +97,7 @@ class BrowserHistoryPort(HistoryPort):
             hash_val = location.hash
             path = hash_val[1:] if hash_val.startswith("#") else hash_val
         path = self._normalize_path(path)
-        hist_state = self._browser.window.history.state
-        state: dict[str, Any] | None = None
-        if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
-            state = hist_state.to_dict()
+        state = self._js_state_to_dict(self._browser.window.history.state)
         old_value = self._value
         self._is_pop_dispatch = True
         try:
@@ -117,8 +131,4 @@ class BrowserHistoryPort(HistoryPort):
             hash_val = location.hash
             path = hash_val[1:] if hash_val.startswith("#") else hash_val
         self._value = self._normalize_path(path)
-        hist_state = self._browser.window.history.state
-        if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
-            self._state = hist_state.to_dict()
-        else:
-            self._state = None
+        self._state = self._js_state_to_dict(self._browser.window.history.state)

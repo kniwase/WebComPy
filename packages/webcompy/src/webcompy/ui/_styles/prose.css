@@ -6,11 +6,14 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-base);
     line-height: 1.6;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .prose :is(h1, h2, h3, h4, h5, h6) {
     color: var(--color-fg);
     line-height: 1.25;
+    overflow-wrap: break-word;
   }
 
   .prose h1 {
@@ -39,6 +42,7 @@
 
   .prose p {
     margin: 0 0 var(--space-4);
+    overflow-wrap: break-word;
   }
 
   .prose pre {
@@ -61,6 +65,7 @@
 
   .prose li {
     margin: 0 0 var(--space-1);
+    overflow-wrap: break-word;
   }
 
   .prose code {
@@ -71,14 +76,39 @@
     border-radius: var(--radius-sm);
   }
 
+  .prose :not(pre) > code {
+    overflow-wrap: anywhere;
+  }
+
   .prose pre code {
     background: none;
     padding: 0;
   }
 
+  .prose .prose-table-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 0 var(--space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .prose .prose-table-wrapper > table {
+    margin: 0;
+  }
+
+  .prose .prose-table-wrapper :is(th, td) > code {
+    overflow-wrap: normal;
+  }
+
   .prose table {
     border-collapse: collapse;
     margin: 0 0 var(--space-4);
+    max-width: 100%;
+  }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
   }
 
   .prose th,

@@ -5,7 +5,7 @@ and are used by ``ThemeManager`` to inject per-theme CSS custom properties
 via the reactive style primitive (``app.append_style(reactive_block(...))``)
 at runtime.
 
-The reactive style is emitted unlayered (per the ``app-styles`` spec), so it
+The reactive style is emitted unlayered, so it
 wins over the static ``@layer tokens`` defaults from ``tokens.css``. This lets
 a single source of truth (``tokens.css``) define the light defaults while
 theme signals override them reactively. ``render_tokens_css(important=True)``
@@ -31,6 +31,7 @@ LIGHT_TOKENS: Final[dict[str, str]] = {
     "--color-link": "#0969da",
     "--color-link-hover": "#0550ae",
     "--color-accent": "#0969da",
+    "--color-on-accent": "#ffffff",
     "--color-border": "#d0d7de",
     "--color-border-muted": "#d8dee4",
     "--color-success": "#1a7f37",
@@ -38,10 +39,11 @@ LIGHT_TOKENS: Final[dict[str, str]] = {
     "--color-warning": "#9a6700",
     "--shadow-sm": "0 1px 0 rgba(31, 35, 40, 0.04)",
     "--shadow-md": "0 3px 6px rgba(140, 149, 159, 0.15)",
+    "--shadow-lg": "0 8px 24px rgba(140, 149, 159, 0.2)",
     "--tok-kw": "#cf222e",
     "--tok-str": "#0a3069",
     "--tok-num": "#0550ae",
-    "--tok-comment": "#6e7781",
+    "--tok-comment": "#59636e",
     "--tok-fn": "#8250df",
     "--tok-builtin": "#953800",
     "--tok-decorator": "#953800",
@@ -60,7 +62,8 @@ DARK_TOKENS: Final[dict[str, str]] = {
     "--color-fg-subtle": "#6e7681",
     "--color-link": "#4493f8",
     "--color-link-hover": "#58a6ff",
-    "--color-accent": "#4493f8",
+    "--color-accent": "#1f6feb",
+    "--color-on-accent": "#ffffff",
     "--color-border": "#30363d",
     "--color-border-muted": "#21262d",
     "--color-success": "#3fb950",
@@ -68,6 +71,7 @@ DARK_TOKENS: Final[dict[str, str]] = {
     "--color-warning": "#d29922",
     "--shadow-sm": "0 1px 0 rgba(0, 0, 0, 0.4)",
     "--shadow-md": "0 3px 6px rgba(0, 0, 0, 0.45)",
+    "--shadow-lg": "0 8px 24px rgba(0, 0, 0, 0.6)",
     "--tok-kw": "#ff7b72",
     "--tok-str": "#a5d6ff",
     "--tok-num": "#79c0ff",

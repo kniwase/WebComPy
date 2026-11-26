@@ -245,6 +245,20 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
                     host.schedule_macro_task(_deferred)
             except Exception:
                 pass
+    elif is_open():
+        captured[0] = capture_active_element()
+        try:
+            host = inject(HOST_PORT_KEY, default=None)
+            if host is not None:
+
+                def _deferred_nr() -> None:
+                    if destroyed[0] or not is_open():
+                        return
+                    _setup_listeners()
+
+                host.schedule_macro_task(_deferred_nr)
+        except Exception:
+            pass
 
     from webcompy.components._hooks import _register_before_destroy_chained
 

@@ -68,7 +68,8 @@ def test_dark_tokens_match_legacy_tokens_dark_css() -> None:
         "--color-fg-subtle": "#6e7681",
         "--color-link": "#4493f8",
         "--color-link-hover": "#58a6ff",
-        "--color-accent": "#4493f8",
+        "--color-accent": "#1f6feb",
+        "--color-on-accent": "#ffffff",
         "--color-border": "#30363d",
         "--color-border-muted": "#21262d",
         "--color-success": "#3fb950",
@@ -76,6 +77,7 @@ def test_dark_tokens_match_legacy_tokens_dark_css() -> None:
         "--color-warning": "#d29922",
         "--shadow-sm": "0 1px 0 rgba(0, 0, 0, 0.4)",
         "--shadow-md": "0 3px 6px rgba(0, 0, 0, 0.45)",
+        "--shadow-lg": "0 8px 24px rgba(0, 0, 0, 0.6)",
         "--tok-kw": "#ff7b72",
         "--tok-str": "#a5d6ff",
         "--tok-num": "#79c0ff",
@@ -100,6 +102,7 @@ def test_dark_tokens_match_legacy_tokens_dark_css() -> None:
         "--color-link": "#0969da",
         "--color-link-hover": "#0550ae",
         "--color-accent": "#0969da",
+        "--color-on-accent": "#ffffff",
         "--color-border": "#d0d7de",
         "--color-border-muted": "#d8dee4",
         "--color-success": "#1a7f37",
@@ -107,10 +110,11 @@ def test_dark_tokens_match_legacy_tokens_dark_css() -> None:
         "--color-warning": "#9a6700",
         "--shadow-sm": "0 1px 0 rgba(31, 35, 40, 0.04)",
         "--shadow-md": "0 3px 6px rgba(140, 149, 159, 0.15)",
+        "--shadow-lg": "0 8px 24px rgba(140, 149, 159, 0.2)",
         "--tok-kw": "#cf222e",
         "--tok-str": "#0a3069",
         "--tok-num": "#0550ae",
-        "--tok-comment": "#6e7781",
+        "--tok-comment": "#59636e",
         "--tok-fn": "#8250df",
         "--tok-builtin": "#953800",
         "--tok-decorator": "#953800",
@@ -164,7 +168,7 @@ def test_theme_manager_register_reactive_style_after_root() -> None:
     assert len(app.styles) == 1
 
 
-def test_theme_manager_light_emits_empty_css() -> None:
+def test_theme_manager_light_emits_color_scheme_light() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     class FakeApp:
@@ -176,7 +180,10 @@ def test_theme_manager_light_emits_empty_css() -> None:
 
     app = FakeApp()
     manager = ThemeManager(app, app, Theme.LIGHT)
-    assert manager._build_theme_css() == ""
+    css = manager._build_theme_css()
+    assert css.startswith(":root {")
+    assert "color-scheme: light;" in css
+    assert "--color-bg: #0d1117" not in css
 
 
 def test_theme_manager_dark_emits_root_with_dark_tokens() -> None:
@@ -186,6 +193,7 @@ def test_theme_manager_dark_emits_root_with_dark_tokens() -> None:
     manager = ThemeManager(app, app, Theme.DARK)
     css = manager._build_theme_css()
     assert css.startswith(":root {")
+    assert "color-scheme: dark;" in css
     assert "--color-bg: #0d1117" in css
     assert "--color-fg: #e6edf3" in css
 
@@ -198,6 +206,7 @@ def test_theme_manager_system_emits_prefers_color_scheme_dark() -> None:
     css = manager._build_theme_css()
     assert "@media (prefers-color-scheme: dark)" in css
     assert ":root" in css
+    assert "color-scheme: dark;" in css
     assert "--color-bg: #0d1117" in css
 
 
@@ -471,4 +480,110 @@ def test_set_skips_cookie_when_persist_false(monkeypatch) -> None:
     scope.provide(COOKIE_PORT_KEY, _CookiePort())
     with scope:
         manager.set(Theme.DARK)
+    assert calls == []
+
+
+def _srgb_channel(val: int) -> float:
+    c = val / 255.0
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _relative_luminance(hex_color: str) -> float:
+    raw = hex_color.lstrip("#")
+    r, g, b = int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16)
+    return 0.2126 * _srgb_channel(r) + 0.7152 * _srgb_channel(g) + 0.0722 * _srgb_channel(b)
+
+
+def _contrast_ratio(fg_hex: str, bg_hex: str) -> float:
+    l1 = _relative_luminance(fg_hex)
+    l2 = _relative_luminance(bg_hex)
+    hi, lo = max(l1, l2), min(l1, l2)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+@pytest.mark.parametrize("token_set_name", ["LIGHT_TOKENS", "DARK_TOKENS"])
+def test_theme_tokens_meet_wcag_aa_contrast(token_set_name: str) -> None:
+    from webcompy.ui.theme import _tokens
+
+    tokens = getattr(_tokens, token_set_name)
+    pairs = [
+        ("--color-fg", "--color-bg"),
+        ("--color-fg", "--color-bg-card"),
+        ("--color-fg", "--color-bg-elevated"),
+        ("--color-fg-muted", "--color-bg"),
+        ("--color-fg-muted", "--color-bg-card"),
+        ("--color-fg-muted", "--color-bg-elevated"),
+        ("--color-link", "--color-bg"),
+        ("--color-link", "--color-bg-card"),
+        ("--color-on-accent", "--color-accent"),
+        ("--tok-comment", "--color-bg-code"),
+        ("--tok-kw", "--color-bg-code"),
+        ("--tok-str", "--color-bg-code"),
+        ("--tok-num", "--color-bg-code"),
+        ("--tok-fn", "--color-bg-code"),
+        ("--tok-builtin", "--color-bg-code"),
+        ("--tok-decorator", "--color-bg-code"),
+        ("--tok-op", "--color-bg-code"),
+        ("--tok-punct", "--color-bg-code"),
+        ("--tok-ident", "--color-bg-code"),
+    ]
+    for fg_key, bg_key in pairs:
+        ratio = _contrast_ratio(tokens[fg_key], tokens[bg_key])
+        assert ratio >= 4.5, f"{token_set_name} {fg_key} on {bg_key} contrast {ratio:.2f}:1 < 4.5:1"
+
+
+def test_tokens_css_matches_python_light_and_dark_token_keys() -> None:
+    import re
+
+    from webcompy.ui._styles import get_styles_file
+    from webcompy.ui.theme._tokens import DARK_TOKENS, LIGHT_TOKENS
+
+    raw = get_styles_file("tokens.css")
+    assert raw is not None
+    css = raw.decode("utf-8")
+    css_pairs = dict(re.findall(r"(--(?:color|shadow|tok)-[a-z0-9-]+):\s*([^;]+);", css))
+    assert set(css_pairs) == set(LIGHT_TOKENS)
+    assert set(LIGHT_TOKENS) == set(DARK_TOKENS)
+    for key, val in LIGHT_TOKENS.items():
+        assert css_pairs[key].strip() == val, f"Mismatch for {key}: css={css_pairs[key]!r} vs py={val!r}"
+
+
+def test_detect_prerendered_theme_parses_dynamic_style() -> None:
+    from webcompy.app._render_context import _detect_prerendered_theme
+
+    assert (
+        _detect_prerendered_theme("@media (prefers-color-scheme: dark) { :root { --color-bg: #0d1117; } }")
+        is Theme.SYSTEM
+    )
+    assert (
+        _detect_prerendered_theme(":root {\n  color-scheme: dark;\n  --color-bg: #0d1117 !important;\n}") is Theme.DARK
+    )
+    assert _detect_prerendered_theme(":root {\n  color-scheme: light;\n}") is Theme.LIGHT
+    assert _detect_prerendered_theme("") is Theme.LIGHT
+    assert _detect_prerendered_theme("body { margin: 0; }") is None
+
+
+def test_apply_without_persist_updates_signal_without_touching_cookie() -> None:
+    from webcompy.di import DIScope
+    from webcompy.ports._keys import COOKIE_PORT_KEY
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    calls: list[tuple[str, str]] = []
+
+    class _CookiePort:
+        def set(self, name: str, value: str, **kwargs: object) -> None:
+            calls.append((name, value))
+
+        def delete(self, name: str, **kwargs: object) -> None:
+            calls.append((name, ""))
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    scope = DIScope()
+    scope.provide(THEME_KEY, manager)
+    scope.provide(COOKIE_PORT_KEY, _CookiePort())
+    with scope:
+        manager._apply_without_persist(Theme.DARK)
+    assert manager.value is Theme.DARK
     assert calls == []
