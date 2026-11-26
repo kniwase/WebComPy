@@ -138,7 +138,7 @@ from webcompy.router import use_router
 @define_component()
 def BreadcrumbBar(context: ComponentContext[None]):
     router = use_router()
-    current_path = use_computed(lambda: router.current_match.value.path if router.current_match.value else "/")
+    current_path = use_computed(lambda: (router.current_match.value.path or "/") if router.current_match.value else "/")
     return html.SPAN({}, current_path)
 ```
 

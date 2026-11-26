@@ -117,8 +117,9 @@ def UiFormControlsDemo(_: ComponentContext[None]) -> Any:
 
 UiFormControlsDemo.scoped_style = {
     ".ufc-demo": {
-        "font-family": "sans-serif",
-        "padding": "1rem",
+        "font-family": "var(--font-sans)",
+        "color": "var(--color-fg)",
+        "padding": "var(--space-4)",
         "max-width": "28rem",
     },
     ".ufc-demo form": {
@@ -139,11 +140,21 @@ UiFormControlsDemo.scoped_style = {
     },
     ".ufc-demo-actions button": {
         "padding": "0.5rem 1rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
         "cursor": "pointer",
+    },
+    "#ufc-demo-submit": {
+        "background": "var(--color-accent)",
+        "border-color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
     },
     "#ufc-demo-status": {
         "margin-top": "0.75rem",
         "font-weight": "600",
+        "color": "var(--color-success)",
     },
 }
 

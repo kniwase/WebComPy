@@ -13,10 +13,14 @@ def test_examples_routing_nested_layout_and_guard(docs_page_on, assert_no_consol
     expect(page.get_by_role("heading", name="Next steps")).to_be_visible()
 
     frame = _wait_for_demo_iframe(page, "routing")
+    expect(frame.locator(".path-badge")).to_have_text("Path: /")
     expect(frame.get_by_role("heading", name="Home View")).to_be_visible()
+    assert frame.locator(".route-card").evaluate("el => parseFloat(getComputedStyle(el).paddingTop)") > 0
 
     frame.locator(".top-nav").get_by_role("link", name="Workspace").click()
+    expect(frame.locator(".path-badge")).to_have_text("Path: /workspace/")
     expect(frame.get_by_role("heading", name="Workspace Overview")).to_be_visible()
+    assert frame.locator(".workspace-shell").evaluate("el => getComputedStyle(el).display") == "grid"
     expect(frame.locator(".sidebar-status")).to_have_text("Sidebar: expanded")
 
     frame.get_by_role("button", name="Toggle Sidebar").click()

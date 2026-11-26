@@ -71,18 +71,6 @@ SpinnerShowcase.scoped_style = {
         "font-size": "var(--font-size-sm)",
         "color": "var(--color-fg-muted)",
     },
-    " .docs-headless-spinner-demo[data-state='loading']": {
-        "display": "inline-block",
-        "width": "var(--space-5)",
-        "height": "var(--space-5)",
-        "border": "2px dashed var(--color-border)",
-        "border-top-color": "var(--color-accent)",
-        "border-radius": "50%",
-        "animation": "docs-headless-spin 0.8s linear infinite",
-    },
-    "@keyframes docs-headless-spin": {
-        "to": {"transform": "rotate(360deg)"},
-    },
 }
 
 

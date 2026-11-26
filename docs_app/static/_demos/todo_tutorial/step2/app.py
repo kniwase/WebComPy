@@ -30,6 +30,8 @@ TodoItem.scoped_style = {
         "padding": "var(--space-2) var(--space-3)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
         "margin-bottom": "var(--space-2)",
     },
     ".todo-item.done": {"text-decoration": "line-through", "color": "var(--color-fg-muted)"},
@@ -64,8 +66,9 @@ TodoToolbar.scoped_style = {
         "cursor": "pointer",
     },
     ".filters button.active": {
+        "background": "var(--color-accent)",
         "border-color": "var(--color-accent)",
-        "color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
         "font-weight": "600",
     },
 }
@@ -127,6 +130,7 @@ def TodoApp(_: ComponentContext[None]):
 TodoApp.scoped_style = {
     ".todo-shell": {
         "max-width": "32rem",
+        "padding": "var(--space-3)",
         "font-family": "var(--font-sans)",
         "color": "var(--color-fg)",
     },

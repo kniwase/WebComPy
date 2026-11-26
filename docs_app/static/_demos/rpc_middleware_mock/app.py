@@ -205,14 +205,15 @@ RpcMiddlewareDemo.scoped_style = {
         "cursor": "pointer",
     },
     ".rpc-mw-demo button.active": {
-        "border-color": "var(--color-accent)",
-        "color": "var(--color-accent)",
+        "background": "var(--color-bg-card)",
+        "border-color": "var(--color-link)",
+        "color": "var(--color-link)",
         "font-weight": "600",
     },
     ".rpc-mw-demo button.primary-btn": {
         "border-color": "var(--color-accent)",
         "background": "var(--color-accent)",
-        "color": "#ffffff",
+        "color": "var(--color-on-accent)",
     },
 }
 

@@ -4,10 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/_webcompy-ui/index.css">
+  <style>
+    #webcompy-app {
+      display: flow-root;
+    }
+
+    #webcompy-loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+      z-index: 9999;
+    }
+
+    .wc-loader {
+      border: 3px solid var(--color-border);
+      border-radius: 50%;
+      border-top-color: var(--color-accent);
+      width: 40px;
+      height: 40px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .wc-loader {
+        animation: none;
+      }
+    }
+  </style>
 </head>
 <body>
 <div id="webcompy-loading">
-  <style>#webcompy-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.15);z-index:9999}.wc-loader{border:3px solid lightgray;border-radius:50%;border-top:3px solid skyblue;width:40px;height:40px;animation:spin 0.8s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
   <div class="wc-loader"></div>
 </div>
 
@@ -17,6 +51,177 @@
 
 <script>
   (() => {
+    const DARK_TOKENS_BODY = [
+      "--color-bg: #0d1117 !important;",
+      "--color-bg-elevated: #161b22 !important;",
+      "--color-bg-code: #161b22 !important;",
+      "--color-bg-card: #161b22 !important;",
+      "--color-fg: #e6edf3 !important;",
+      "--color-fg-muted: #8d96a0 !important;",
+      "--color-fg-subtle: #6e7681 !important;",
+      "--color-link: #4493f8 !important;",
+      "--color-link-hover: #58a6ff !important;",
+      "--color-accent: #1f6feb !important;",
+      "--color-on-accent: #ffffff !important;",
+      "--color-border: #30363d !important;",
+      "--color-border-muted: #21262d !important;",
+      "--color-success: #3fb950 !important;",
+      "--color-danger: #f85149 !important;",
+      "--color-warning: #d29922 !important;",
+      "--shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4) !important;",
+      "--shadow-md: 0 3px 6px rgba(0, 0, 0, 0.45) !important;",
+      "--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6) !important;",
+      "--tok-kw: #ff7b72 !important;",
+      "--tok-str: #a5d6ff !important;",
+      "--tok-num: #79c0ff !important;",
+      "--tok-comment: #8b949e !important;",
+      "--tok-fn: #d2a8ff !important;",
+      "--tok-builtin: #ffa657 !important;",
+      "--tok-decorator: #ffa657 !important;",
+      "--tok-op: #e6edf3 !important;",
+      "--tok-punct: #e6edf3 !important;",
+      "--tok-ident: #e6edf3 !important;",
+    ].join("\n  ");
+
+    const readThemeCookie = () => {
+      const match = document.cookie.match(/(?:^|;\s*)webcompy-theme=([^;]*)/);
+      return match ? decodeURIComponent(match[1]).toLowerCase() : "";
+    };
+
+    const buildFallbackThemeCss = () => {
+      const cookieValue = readThemeCookie();
+      if (cookieValue === "light") {
+        return ":root {\n  color-scheme: light;\n}";
+      }
+      if (cookieValue === "dark") {
+        return `:root {\n  color-scheme: dark;\n  ${DARK_TOKENS_BODY}\n}`;
+      }
+      return `@media (prefers-color-scheme: dark) {\n  :root {\n    color-scheme: dark;\n    ${DARK_TOKENS_BODY}\n  }\n}`;
+    };
+
+    const ensureMirrorStyle = () => {
+      let mirror = document.head.querySelector('style[data-webcompy-dynamic="0"]');
+      if (!mirror) {
+        mirror = document.createElement("style");
+        mirror.setAttribute("data-webcompy-dynamic", "0");
+        document.head.appendChild(mirror);
+      }
+      return mirror;
+    };
+
+    const readParentDynamicCss = (parentDoc) => {
+      if (!parentDoc || !parentDoc.head) {
+        return null;
+      }
+      const styles = parentDoc.head.querySelectorAll("style[data-webcompy-dynamic]");
+      if (!styles || styles.length === 0) {
+        return null;
+      }
+      return Array.from(styles, (el) => el.textContent || "").join("\n");
+    };
+
+    let parentDoc = null;
+    try {
+      if (window.parent && window.parent !== window && window.parent.document) {
+        parentDoc = window.parent.document;
+      }
+    } catch (_err) {
+      parentDoc = null;
+    }
+
+    const syncTheme = () => {
+      const mirror = ensureMirrorStyle();
+      let nextCss = null;
+      if (parentDoc) {
+        try {
+          nextCss = readParentDynamicCss(parentDoc);
+        } catch (_err) {
+          parentDoc = null;
+        }
+      }
+      if (nextCss === null) {
+        nextCss = buildFallbackThemeCss();
+      }
+      if (mirror.textContent !== nextCss) {
+        mirror.textContent = nextCss;
+      }
+    };
+
+    syncTheme();
+
+    const observers = [];
+    if (parentDoc && parentDoc.head && typeof MutationObserver !== "undefined") {
+      const parentHeadObserver = new MutationObserver(syncTheme);
+      parentHeadObserver.observe(parentDoc.head, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      observers.push(parentHeadObserver);
+
+      const selfHeadObserver = new MutationObserver(() => {
+        if (parentDoc && readParentDynamicCss(parentDoc) !== null) {
+          syncTheme();
+        }
+      });
+      selfHeadObserver.observe(document.head, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      observers.push(selfHeadObserver);
+    }
+
+    const appEl = document.getElementById("webcompy-app");
+    let lastFrameHeight = 0;
+
+    const updateFrameHeight = () => {
+      if (!appEl) {
+        return;
+      }
+      let frameEl = null;
+      try {
+        frameEl = window.frameElement;
+      } catch (_err) {
+        frameEl = null;
+      }
+      if (!frameEl || frameEl.getAttribute("data-demo-auto-resize") !== "true") {
+        return;
+      }
+      const loadingEl = document.getElementById("webcompy-loading");
+      if (loadingEl && getComputedStyle(loadingEl).display !== "none") {
+        return;
+      }
+      const rectHeight = appEl.getBoundingClientRect().height;
+      const scrollHeight = appEl.scrollHeight;
+      const rawHeight = Math.ceil(Math.max(rectHeight, scrollHeight));
+      if (rawHeight <= 0) {
+        return;
+      }
+      const targetHeight = Math.min(Math.max(rawHeight + 16, 360), 1600);
+      if (targetHeight !== lastFrameHeight) {
+        lastFrameHeight = targetHeight;
+        frameEl.style.height = targetHeight + "px";
+      }
+    };
+
+    if (appEl && typeof ResizeObserver !== "undefined") {
+      const appResizeObserver = new ResizeObserver(updateFrameHeight);
+      appResizeObserver.observe(appEl);
+      observers.push(appResizeObserver);
+    }
+    if (document.body && typeof MutationObserver !== "undefined") {
+      const bodyObserver = new MutationObserver(updateFrameHeight);
+      bodyObserver.observe(document.body, { childList: true });
+      observers.push(bodyObserver);
+    }
+    window.addEventListener("load", updateFrameHeight);
+    window.addEventListener("pagehide", () => {
+      while (observers.length > 0) {
+        observers.pop().disconnect();
+      }
+    });
+
     const APP_PACKAGES = {
       helloworld: [],
       todo: [],
@@ -57,22 +262,23 @@
     let coreJs = "";
     let coreCss = "";
     try {
-      const parentDoc = window.parent.document;
-      const parentScript = parentDoc.querySelector('script[type="py"][config]');
-      if (parentScript) {
-        const raw = parentScript.getAttribute("config").replace(/&quot;/g, '"');
-        const config = JSON.parse(raw);
-        wheel = config.packages.find(function (p) { return p.indexOf("webcompy-") !== -1; }) || "";
-        parentInterpreter = config.interpreter || "";
-        parentLockfileUrl = config.lockFileURL || "";
-      }
-      const parentCoreScript = parentDoc.querySelector('script[type="module"][src*="core.js"]');
-      if (parentCoreScript) {
-        coreJs = parentCoreScript.getAttribute("src") || "";
-      }
-      const parentCoreCss = parentDoc.querySelector('link[rel="stylesheet"][href*="core.css"]');
-      if (parentCoreCss) {
-        coreCss = parentCoreCss.getAttribute("href") || "";
+      if (parentDoc) {
+        const parentScript = parentDoc.querySelector('script[type="py"][config]');
+        if (parentScript) {
+          const raw = parentScript.getAttribute("config").replace(/&quot;/g, '"');
+          const config = JSON.parse(raw);
+          wheel = config.packages.find(function (pkg) { return pkg.indexOf("webcompy-") !== -1; }) || "";
+          parentInterpreter = config.interpreter || "";
+          parentLockfileUrl = config.lockFileURL || "";
+        }
+        const parentCoreScript = parentDoc.querySelector('script[type="module"][src*="core.js"]');
+        if (parentCoreScript) {
+          coreJs = parentCoreScript.getAttribute("src") || "";
+        }
+        const parentCoreCss = parentDoc.querySelector('link[rel="stylesheet"][href*="core.css"]');
+        if (parentCoreCss) {
+          coreCss = parentCoreCss.getAttribute("href") || "";
+        }
       }
     } catch (e) {
       console.error("Failed to resolve runtime configuration from parent config:", e);

@@ -53,7 +53,7 @@ def FetchSample(context: ComponentContext[None]):
         async_test()
 
     return html.DIV(
-        {},
+        {"class": "fetch-sample"},
         html.DIV(
             {},
             html.H5(
@@ -104,11 +104,21 @@ def FetchSample(context: ComponentContext[None]):
 
 
 FetchSample.scoped_style = {
+    ".fetch-sample": {
+        "padding": "var(--space-3)",
+        "color": "var(--color-fg)",
+    },
     ".user-data": {
-        "margin": "10px auto",
-        "padding": "10px",
-        "background-color": "#fafafa",
-        "border-radius": "15px",
+        "margin": "var(--space-2) 0",
+        "padding": "var(--space-3)",
+        "background-color": "var(--color-bg-card)",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-md)",
+        "color": "var(--color-fg)",
+    },
+    ".user-data ul": {
+        "margin": "0",
+        "padding-left": "var(--space-4)",
     },
 }
 

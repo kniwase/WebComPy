@@ -47,7 +47,7 @@ def MatplotlibSample(context: ComponentContext[None]):
         return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
 
     return html.DIV(
-        {},
+        {"class": "matplotlib-demo"},
         html.H5(
             {},
             "Square Wave",
@@ -89,23 +89,35 @@ def MatplotlibSample(context: ComponentContext[None]):
 
 
 MatplotlibSample.scoped_style = {
+    ".matplotlib-demo": {
+        "padding": "var(--space-3)",
+        "color": "var(--color-fg)",
+    },
     "button": {
         "display": "inline-block",
         "text-decoration": "none",
-        "border": "solid 2px #668ad8",
-        "border-radius": "3px",
-        "transition": "0.2s",
-        "color": "black",
-        "width": "30px",
+        "border": "1px solid var(--color-accent)",
+        "border-radius": "var(--radius-sm)",
+        "transition": "background-color 0.15s ease, color 0.15s ease",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
+        "width": "36px",
+        "padding": "0.25rem 0",
+        "margin-right": "var(--space-2)",
+        "cursor": "pointer",
     },
     "button:hover": {
-        "background": "#668ad8",
-        "color": "white",
+        "background": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
     },
     "input, img": {
         "width": "100%",
         "max-width": "600px",
         "height": "auto",
+    },
+    "img": {
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
     },
 }
 

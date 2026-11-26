@@ -21,6 +21,15 @@
   color: var(--color-fg);
 }
 
+.demo-iframe {
+  display: block;
+  width: 100%;
+  border: none;
+  min-height: 360px;
+  height: 400px;
+  background-color: var(--color-bg);
+}
+
 .demo-peer-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -64,6 +73,28 @@
 .demo-new-tab-link:hover {
   border-color: var(--color-accent);
   text-decoration: underline;
+}
+
+.docs-headless-spinner-demo[data-state="loading"] {
+  display: inline-block;
+  width: var(--space-5);
+  height: var(--space-5);
+  border: 2px dashed var(--color-fg-muted);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: docs-headless-spin 0.8s linear infinite;
+}
+
+@keyframes docs-headless-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-headless-spinner-demo[data-state="loading"] {
+    animation: none;
+  }
 }
 
 .not-found {

@@ -22,9 +22,10 @@ class DemoComponentProps(TypedDict):
 def _demo_iframe(app_name: str, title: str):
     return html.IFRAME(
         {
+            "class": "demo-iframe",
             "title": title,
             "src": f"/_demos/standard.html?app={app_name}",
-            "style": "width:100%; border:none; min-height:400px;",
+            "data-demo-auto-resize": "true",
         }
     )
 

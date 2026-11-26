@@ -14,6 +14,9 @@ def test_examples_forms_page_loads_and_submit_role(docs_page_on, assert_no_conso
 
     frame = _wait_for_demo_iframe(page, "ui_form_controls")
     expect(frame.get_by_role("button", name="Submit")).to_be_visible()
+    page.wait_for_function("() => document.querySelector('iframe.demo-iframe')?.getBoundingClientRect().height > 400")
+    height = page.locator("iframe.demo-iframe").evaluate("el => el.getBoundingClientRect().height")
+    assert height > 400
 
 
 def test_examples_forms_validation_flow(docs_page_on, assert_no_console_errors):

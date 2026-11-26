@@ -15,6 +15,9 @@ def test_examples_i18n_playground_locale_and_plural(docs_page_on, assert_no_cons
     frame = _wait_for_demo_iframe(page, "i18n_playground")
     expect(frame.locator(".i18n-current")).to_have_text("Current locale: en")
     expect(frame.locator(".i18n-items")).to_have_text("3 items")
+    page.wait_for_function("() => document.querySelector('iframe.demo-iframe')?.getBoundingClientRect().height > 400")
+    height = page.locator("iframe.demo-iframe").evaluate("el => el.getBoundingClientRect().height")
+    assert height > 400
 
     frame.get_by_role("button", name="日本語").click()
     expect(frame.locator(".i18n-current")).to_have_text("現在のロケール: ja")
