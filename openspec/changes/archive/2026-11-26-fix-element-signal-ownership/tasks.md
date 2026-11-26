@@ -15,5 +15,5 @@
 
 ## 3. Spec Sync, Verification & Archiving
 
-- [ ] 3.1 Sync delta specs into `openspec/specs/elements/spec.md` and `openspec/specs/reactive/spec.md`, update `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md`, and verify `npx --no-install openspec validate --specs` and `python3 scripts/check-doc-spec-refs.py` pass.
-- [ ] 3.2 Run full local CI (`ruff`, `pydoclint`, `check-browser-imports.py`, `pyright`, `pytest tests/`, `webcompy generate`, `scripts/run-browser-tests.sh`, and core E2E groups `reactive-lists dynamic-control template router`), verify 0 failures, and archive the change to `openspec/changes/archive/`.
+- [x] 3.1 Sync delta specs into `openspec/specs/elements/spec.md` and `openspec/specs/reactive/spec.md`, update `openspec/SPEC_INDEX.md` and `.agents/skills/webcompy-review/SKILL.md`, and verify `npx --no-install openspec validate --specs` and `python3 scripts/check-doc-spec-refs.py` pass.
+- [x] 3.2 Run full local CI (`ruff`, `pydoclint`, `check-browser-imports.py`, `pyright`, `pytest tests/`, `webcompy generate`, `scripts/run-browser-tests.sh`, and core E2E groups `reactive-lists dynamic-control template router`), verify 0 failures, and archive the change to `openspec/changes/archive/`.

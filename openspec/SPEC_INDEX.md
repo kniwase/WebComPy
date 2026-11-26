@@ -13,6 +13,7 @@ the per-area reference.
 - **No New Globals** — `architecture/spec.md`, `di-scope/spec.md`
 - **RenderContext Isolation** — `render-context/spec.md`
 - **Reactive Contracts** — `reactive/spec.md`, `effect/spec.md`
+- **Element Signal Ownership** — `elements/spec.md`, `reactive/spec.md`
 - **Event Handler Leaks** — `elements/spec.md`
 - **Error Handling** — `error-handling/spec.md`
 - **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`

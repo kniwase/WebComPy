@@ -4,7 +4,7 @@
 
 ### Requirement: Elements shall destroy only framework-owned signals on teardown and detachment
 
-Virtual DOM elements (`ElementAbstract` and its subclasses) SHALL NOT implicitly claim caller-supplied `SignalBase` inputs via attribute assignment, and element teardown (`_remove_element`) and branch-patch detachment (`_detach_from_node`) SHALL destroy ONLY signals explicitly registered as owned by that element (`_OwnedComputed` instances allocated by templates, internal element computeds, `@computed_property` members, and component transferable signals). Caller-supplied `Signal`, `Computed`, `ReadonlySignal`, `ReactiveList`, and `ReactiveDict` values passed into elements, templates, or component props SHALL retain their dependency edges across element unmount, switch-branch patching, and element refresh. Each framework-owned `_OwnedComputed` SHALL be claimed by at most one owning element or component so nested elements cannot prematurely destroy a parent component's prop.
+Virtual DOM elements (`ElementAbstract` and its subclasses) SHALL NOT implicitly claim caller-supplied `SignalBase` inputs via attribute assignment, and element teardown (`_remove_element`) and branch-patch detachment (`_detach_from_node`) SHALL destroy ONLY signals explicitly registered as owned by that element (framework-created derived computeds allocated by templates or `:bind` expansion, internal element computeds, `@computed_property` members, and component transferable signals). Caller-supplied `Signal`, `Computed`, `ReadonlySignal`, `ReactiveList`, and `ReactiveDict` values passed into elements, templates, or component props SHALL retain their dependency edges across element unmount, switch-branch patching, and element refresh. Each framework-created derived computed SHALL be claimed by at most one owning element or component so nested elements cannot prematurely destroy a parent component's prop.
 
 #### Scenario: RepeatElement preserves caller Computed and reactive collections across conditional unmount and remount
 - **WHEN** a `RepeatElement` renders a caller-supplied `Computed`, `ReactiveList`, or `ReactiveDict` inside a conditional `{% if %}` block that toggles off (`_remove_element`) and back on
@@ -31,17 +31,17 @@ Virtual DOM elements (`ElementAbstract` and its subclasses) SHALL NOT implicitly
 #### Scenario: MarkdownForElement preserves caller iterable signal and avoids duplicate allocation on reparenting
 - **WHEN** a `MarkdownForElement` renders a caller-supplied reactive iterable and later unmounts, OR when a `MarkdownForElement` over an expression computed is reparented via `_on_set_parent`
 - **THEN** the caller iterable SHALL retain its producer edges on unmount
-- **AND** reparenting SHALL NOT allocate a second `_OwnedComputed`
-- **AND** any expression-derived `_OwnedComputed` SHALL detach its upstream edges once when the `MarkdownForElement` unmounts
+- **AND** reparenting SHALL NOT allocate a second framework-created derived computed
+- **AND** any expression-derived framework computed SHALL detach its upstream edges once when the `MarkdownForElement` unmounts
 
 #### Scenario: Component-tag interpolated props survive inner conditional unmounts and clean up on component unmount
-- **WHEN** a parent template passes a framework-synthesized `_OwnedComputed` prop (such as `"Hi {{ name }}"` or `:items="box.items"`) to a child `Component`
+- **WHEN** a parent template passes a framework-synthesized derived prop (such as `"Hi {{ name }}"` or `:items="box.items"`) to a child `Component`
 - **AND** an element inside the child component conditionally unmounts while the child component remains mounted
 - **THEN** the prop computed SHALL NOT be destroyed until the child `Component` itself unmounts or detaches
 - **AND** when the child `Component` unmounts or detaches, the prop computed SHALL be destroyed
 
 #### Scenario: Framework-owned element and binding computeds detach from upstream producers on unmount
-- **WHEN** an element containing framework-owned `_OwnedComputed` or internal computeds (template text/attribute/for expressions, radio `:bind` `checked`, `MultiLineTextElement`, `_DictValueRow._token`, or `AppDocumentRoot` template root attributes) unmounts
+- **WHEN** an element containing framework-owned derived computeds or internal computeds (template text/attribute/for expressions, radio `:bind` `checked`, `MultiLineTextElement`, dictionary-row representation token, or `AppDocumentRoot` template root attributes) unmounts
 - **THEN** all such framework-owned computeds SHALL call `consumer_destroy()` and leave zero lingering consumer edges on upstream user signals
 
 #### Scenario: Observed props ReactiveDict is excluded from component signal transfer members
