@@ -20,7 +20,8 @@ from webcompy.elements.types._dynamic import (
 )
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
-from webcompy.signal import Computed, SignalBase
+from webcompy.signal import SignalBase
+from webcompy.signal._computed import _claim_owned_computed, _OwnedComputed
 
 K = TypeVar("K", str, int)
 V = TypeVar("V")
@@ -114,6 +115,7 @@ class RepeatElement(DynamicElement):
         self._signal_activated = False
         self._adoption_preserved = False
         super().__init__()
+        _claim_owned_computed(self, "_sequence", sequence)
 
     def _call_template(self, v: Any, k: str | int) -> ElementChildren:
         if self._two_arg_template is not None:
@@ -302,7 +304,7 @@ class MultiLineTextElement(RepeatElement):
 
     def __init__(self, text: str | SignalBase[Any]) -> None:
         super().__init__(
-            Computed(
+            _OwnedComputed(
                 lambda: list(
                     chain.from_iterable(
                         map(

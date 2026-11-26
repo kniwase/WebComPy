@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
@@ -17,9 +18,13 @@ class ElementAbstract(SignalReceivable):
 
     Manages the lifecycle shared by every element node: DOM node creation,
     mounting into the parent, hydration adoption of server-rendered nodes,
-    and callback cleanup on removal.
+    callback cleanup, and explicit framework-owned signal disposal on
+    removal without implicitly claiming borrowed attributes.
 
     """
+
+    if not TYPE_CHECKING:
+        __setattr__ = object.__setattr__
 
     _node_idx: int
     _node_cache: DOMNode | None = None
@@ -141,6 +146,7 @@ class ElementAbstract(SignalReceivable):
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
+        self._callback_nodes.clear()
         if remove_node and self._node_cache:
             self._node_cache.remove()
         self._clear_node_cache(False)

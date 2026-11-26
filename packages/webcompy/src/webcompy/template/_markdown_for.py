@@ -28,7 +28,7 @@ from webcompy.elements.types._dynamic import (
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
-from webcompy.signal._computed import _OwnedComputed
+from webcompy.signal._computed import _claim_owned_computed, _OwnedComputed
 from webcompy.template._binder import _make_loop_meta
 from webcompy.template._expression import (
     _EvalState,
@@ -672,6 +672,7 @@ class MarkdownForElement(DynamicElement):
         self._body_markdown = body_markdown
         self._context: dict[str, Any] = dict(context)
         self._iterable: Any = None
+        self._iterable_resolved = False
         self._signal_activated = False
         super().__init__()
 
@@ -687,7 +688,10 @@ class MarkdownForElement(DynamicElement):
         return value
 
     def _on_set_parent(self) -> None:
-        self._iterable = self._resolve_iterable()
+        if not self._iterable_resolved:
+            self._iterable = self._resolve_iterable()
+            self._iterable_resolved = True
+            _claim_owned_computed(self, "_iterable", self._iterable)
         if self._children:
             for child in self._children:
                 child._parent = self._parent

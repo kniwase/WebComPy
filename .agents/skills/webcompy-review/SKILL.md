@@ -73,6 +73,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **No New Globals** — `architecture/spec.md`, `di-scope/spec.md`
 - **RenderContext Isolation** — `render-context/spec.md`
 - **Reactive Contracts** — `reactive/spec.md`, `effect/spec.md`
+- **Element Signal Ownership** — `elements/spec.md`, `reactive/spec.md`
 - **Event Handler Leaks** — `elements/spec.md`
 - **Readonly Signal & Event Source Lifecycle** — `readonly-signal/spec.md`
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`

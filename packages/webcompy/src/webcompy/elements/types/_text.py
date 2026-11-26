@@ -9,6 +9,7 @@ from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal import SignalBase
+from webcompy.signal._computed import _claim_owned_computed
 
 
 class NewLine(ElementAbstract):
@@ -64,6 +65,7 @@ class TextElement(ElementAbstract):
     def __init__(self, text: str | SignalBase[Any]) -> None:
         self._text = text
         super().__init__()
+        _claim_owned_computed(self, "_text", text)
         if isinstance(self._text, SignalBase):
             self._add_callback_node(self._text.on_after_updating(self._update_text))
 
@@ -137,6 +139,7 @@ class RawHTMLElement(ElementAbstract):
         self._html = html
         self._wrapper = wrapper
         super().__init__()
+        _claim_owned_computed(self, "_html", html)
         if isinstance(self._html, SignalBase):
             self._add_callback_node(self._html.on_after_updating(self._update_html))
 

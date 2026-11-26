@@ -180,7 +180,7 @@ Key: `webcompy.elements.types._abstract:ElementAbstract` · Exports: `from webco
 
 Base class of all virtual DOM nodes.
 
-Manages the lifecycle shared by every element node: DOM node creation, mounting into the parent, hydration adoption of server-rendered nodes, and callback cleanup on removal.
+Manages the lifecycle shared by every element node: DOM node creation, mounting into the parent, hydration adoption of server-rendered nodes, callback cleanup, and explicit framework-owned signal disposal on removal without implicitly claiming borrowed attributes.
 
 ### ElementBase
 

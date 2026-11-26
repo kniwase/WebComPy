@@ -75,6 +75,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             events={"click": self._on_click, "mouseenter": self._on_mouseenter},
             children=self._generate_children(),
         )
+        if self._class_attr is not None:
+            self.__set_signal_member__("_class_attr", self._class_attr)
+        if self._aria_current_attr is not None:
+            self.__set_signal_member__("_aria_current_attr", self._aria_current_attr)
         if isinstance(self._to, SignalBase):
             self._add_callback_node(self._to.on_after_updating(self._refresh))
 

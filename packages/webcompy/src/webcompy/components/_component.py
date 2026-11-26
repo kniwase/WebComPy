@@ -25,7 +25,6 @@ from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.ports._dom import DOMNode
 from webcompy.signal import ReactiveDict, SignalBase, computed_property
-from webcompy.signal._computed import _OwnedComputed
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
@@ -332,9 +331,10 @@ class Component(ElementBase):
             "webcompy-component": property["component_name"],
             "webcompy-cid-" + property["component_id"]: True,
         }
-        for name, value in self._attrs.items():
-            if isinstance(value, _OwnedComputed):
-                self.__set_signal_member__(f"__attr_{name}", value)
+        if hasattr(node, "__signal_members__"):
+            for member_name, member_sig in node.__signal_members__.items():
+                self.__set_signal_member__(member_name, member_sig)
+            node.__signal_members__.clear()
         self._event_handlers = node._event_handlers
         self._ref = node._ref
         self._preserve_children = node._preserve_children

@@ -62,6 +62,7 @@ class RouterView(DynamicElement):
         self._children = []
         router = self._router
         self._level_match = Computed(lambda: router.current_match.value)
+        self.__set_signal_member__("_level_match", self._level_match)
         self._add_callback_node(self._level_match.on_after_updating(self._on_match_changed))
         router.after_route_change.append(self._on_navigate_attempt)
         if router._preload:
