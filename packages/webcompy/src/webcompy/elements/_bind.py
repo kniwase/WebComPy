@@ -10,7 +10,8 @@ from webcompy.elements._dom_objs import DOMEvent
 from webcompy.elements.typealias._element_property import AttrValue, ElementChildren, EventHandler
 from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
-from webcompy.signal import Computed, Signal, SignalBase
+from webcompy.signal import Signal, SignalBase
+from webcompy.signal._computed import _OwnedComputed
 
 _TEXT_TYPES = {"text", "email", "password", "search", "tel", "url"}
 _SUPPORTED_ELEMENTS = "input[type=text|email|password|search|tel|url|number|checkbox|radio], textarea, and select"
@@ -176,7 +177,7 @@ def _expand_radio_bind(
         raise WebComPyException("radio :bind requires a static value attribute")
     if "checked" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'checked' attribute")
-    checked = Computed(lambda: signal.value == radio_value)
+    checked = _OwnedComputed(lambda: signal.value == radio_value)
     attrs["checked"] = checked
 
     def write_back(ev: DOMEvent) -> None:

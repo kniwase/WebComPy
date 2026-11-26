@@ -190,7 +190,7 @@ def bind_text_part(node: TemplateText, ctx: dict[str, Any]) -> list[ElementChild
         state = _EvalState()
         value = evaluate(plan, scope, state)
         if state.saw_signal:
-            result.append(Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)))
+            result.append(_OwnedComputed(lambda plan=plan, scope=scope: evaluate(plan, scope)))
             continue
         if value is None:
             continue
@@ -352,7 +352,7 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     if state.saw_signal:
         return [
             _bind_for_reactive(
-                loop_vars, Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)), node.body, ctx
+                loop_vars, _OwnedComputed(lambda plan=plan, scope=scope: evaluate(plan, scope)), node.body, ctx
             )
         ]
 
@@ -365,6 +365,7 @@ class _DictValueRow(DynamicElement):
     def __init__(self, token: Computed, generator: Callable[[], ElementChildren]) -> None:
         super().__init__()
         self._token = token
+        self.__set_signal_member__("_token", token)
         self._generator = generator
 
     def _on_set_parent(self) -> None:
@@ -546,38 +547,54 @@ def bind_children(nodes: list[TemplateNode], ctx: dict[str, Any]) -> list[Elemen
 
 def _bind_component_tag(node: TemplateElement, ctx: dict[str, Any], generator: Any) -> ElementChildren:
     props: dict[str, Any] = {}
-    for attr in node.attrs:
-        if attr.name.startswith("@"):
-            raise WebComPyException(
-                f"@event attribute '{attr.name}' is not supported on component "
-                f"tags (<{node.tag_name}>). Components emit events via their "
-                f"own API, not through DOM-style @ attributes."
-            )
-        if attr.name.startswith(":"):
-            if any(isinstance(p, Hole) for p in attr.value):
+    owned_props: list[tuple[str, _OwnedComputed[Any]]] = []
+    try:
+        for attr in node.attrs:
+            if attr.name.startswith("@"):
                 raise WebComPyException(
-                    f"{{{{ }}}} interpolation is not supported in :prop attributes on component tags: {attr.name}"
+                    f"@event attribute '{attr.name}' is not supported on component "
+                    f"tags (<{node.tag_name}>). Components emit events via their "
+                    f"own API, not through DOM-style @ attributes."
                 )
-            raw_value = _attr_text(attr.value)
-            props[kebab_to_snake(attr.name[1:])] = resolve_var(raw_value, ctx)
-        else:
-            if attr.is_boolean:
-                value: Any = True
+            if attr.name.startswith(":"):
+                if any(isinstance(p, Hole) for p in attr.value):
+                    raise WebComPyException(
+                        f"{{{{ }}}} interpolation is not supported in :prop attributes on component tags: {attr.name}"
+                    )
+                raw_value = _attr_text(attr.value)
+                value = resolve_var(raw_value, ctx)
+                prop_name = kebab_to_snake(attr.name[1:])
+                props[prop_name] = value
             else:
-                value = resolve_attr(attr.value, ctx)
-            props[kebab_to_snake(attr.name)] = value
+                value = True if attr.is_boolean else resolve_attr(attr.value, ctx)
+                prop_name = kebab_to_snake(attr.name)
+                props[prop_name] = value
+            if isinstance(value, _OwnedComputed) and not value._claimed:
+                value._claimed = True
+                owned_props.append((prop_name, value))
 
-    if node.children:
-        body = node.children
+        if node.children:
+            body = node.children
 
-        def slot_gen() -> ElementChildren:
-            return _wrap_for_fragment(bind_children(body, ctx))
+            def slot_gen() -> ElementChildren:
+                return _wrap_for_fragment(bind_children(body, ctx))
 
-        slots: dict[str, Any] = {"default": slot_gen}
+            slots: dict[str, Any] = {"default": slot_gen}
+        else:
+            slots = {}
+
+        comp = generator(props, slots=slots)
+    except Exception:
+        for _, owned in owned_props:
+            consumer_destroy(owned)
+        raise
+    if isinstance(comp, ElementAbstract):
+        for prop_name, owned in owned_props:
+            comp.__set_signal_member__(f"__prop_{prop_name}", owned)
     else:
-        slots = {}
-
-    return generator(props, slots=slots)
+        for _, owned in owned_props:
+            consumer_destroy(owned)
+    return comp
 
 
 def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
@@ -616,9 +633,4 @@ def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
         ref=ref,
         children=children,
     )
-    for name, value in resolved_attrs.items():
-        if name == ":bind":
-            continue
-        if isinstance(value, _OwnedComputed):
-            element.__set_signal_member__(f"__attr_{name}", value)
     return element

@@ -20,6 +20,7 @@ from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
 from webcompy.signal import SignalBase
+from webcompy.signal._computed import _claim_owned_computed
 from webcompy.signal._graph import consumer_destroy
 
 
@@ -241,6 +242,7 @@ class ElementBase(ElementWithChildren):
                 node.removeEventListener(name, event_handler)
             if hasattr(event_handler, "destroy"):
                 event_handler.destroy()
+        self._event_handlers_added.clear()
         if self._ref is not None:
             self._ref.__reset_node__()
         super()._remove_element(recursive, remove_node)
@@ -290,4 +292,6 @@ class Element(ElementBase):
         self._preserve_children = preserve_children
         self._children = []
         super().__init__()
+        for name, value in self._attrs.items():
+            _claim_owned_computed(self, f"__attr_{name}", value)
         self._init_children(children)

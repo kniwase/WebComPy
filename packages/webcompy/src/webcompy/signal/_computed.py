@@ -104,11 +104,19 @@ class Computed(SignalBase[V]):
 class _OwnedComputed(Computed[V]):
     """A ``Computed`` created by the framework (template binder).
 
-    Owning elements (``SwitchElement``, ``Component`` root, template-bound
-    elements) register ``_OwnedComputed`` instances as signal members so
-    teardown destroys them. Computeds and Signals supplied by the caller
-    are never instances of this type and must not be claimed as owned.
+    Owning elements and components claim unowned ``_OwnedComputed``
+    instances via :func:`_claim_owned_computed` so teardown destroys
+    them at the owning boundary. Computeds and Signals supplied by the
+    caller are never instances of this type and must not be claimed as owned.
     """
+
+    _claimed: bool = False
+
+
+def _claim_owned_computed(owner: SignalReceivable, name: str, value: Any) -> None:
+    if isinstance(value, _OwnedComputed) and not value._claimed:
+        value._claimed = True
+        owner.__set_signal_member__(name, value)
 
 
 def use_computed(factory: Callable[[], T]) -> Computed[T]:

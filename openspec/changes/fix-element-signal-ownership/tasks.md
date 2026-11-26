@@ -2,16 +2,16 @@
 
 ## 1. Signal Ownership & Element Runtime Fix
 
-- [ ] 1.1 Add single-owner claiming (`_OwnedComputed._claimed` + `_claim_owned_computed`) in `packages/webcompy/src/webcompy/signal/_computed.py` and verify unit tests compile cleanly.
-- [ ] 1.2 Override `ElementAbstract.__setattr__ = object.__setattr__` (under `if not TYPE_CHECKING:`), update `ElementAbstract` docstring, and clear `_callback_nodes` in `_remove_element` in `packages/webcompy/src/webcompy/elements/types/_abstract.py`.
-- [ ] 1.3 Update `Element` and `ElementBase` (`_element.py`), radio `:bind` (`_bind.py`), `Component._init_component` (`_component.py`), `TextElement`/`RawHTMLElement` (`_text.py`), `RepeatElement`/`MultiLineTextElement` (`_repeat.py`), and `SwitchElement` (`_switch.py`) to claim only framework-owned `_OwnedComputed` signals and transfer root element members on `AppDocumentRoot`.
-- [ ] 1.4 Update template and router elements (`template/_binder.py`, `template/_markdown_for.py`, `router/_link.py`, `router/_view.py`) to convert internal derived computeds to `_OwnedComputed`, pre-claim component-tag `_OwnedComputed` props safely, guard `MarkdownForElement` against duplicate allocation, and explicitly register router internal computeds.
-- [ ] 1.5 Check docstring coverage and API reference sync (`scripts/check-docstrings.py`, `scripts/generate_api_reference.py --check`, `uv run pydoclint`) and regenerate API reference skeleton if needed.
+- [x] 1.1 Add single-owner claiming (`_OwnedComputed._claimed` + `_claim_owned_computed`) in `packages/webcompy/src/webcompy/signal/_computed.py` and verify unit tests compile cleanly.
+- [x] 1.2 Override `ElementAbstract.__setattr__ = object.__setattr__` (under `if not TYPE_CHECKING:`), update `ElementAbstract` docstring, and clear `_callback_nodes` in `_remove_element` in `packages/webcompy/src/webcompy/elements/types/_abstract.py`.
+- [x] 1.3 Update `Element` and `ElementBase` (`_element.py`), radio `:bind` (`_bind.py`), `Component._init_component` (`_component.py`), `TextElement`/`RawHTMLElement` (`_text.py`), `RepeatElement`/`MultiLineTextElement` (`_repeat.py`), and `SwitchElement` (`_switch.py`) to claim only framework-owned `_OwnedComputed` signals and transfer root element members on `AppDocumentRoot`.
+- [x] 1.4 Update template and router elements (`template/_binder.py`, `template/_markdown_for.py`, `router/_link.py`, `router/_view.py`) to convert internal derived computeds to `_OwnedComputed`, pre-claim component-tag `_OwnedComputed` props safely, guard `MarkdownForElement` against duplicate allocation, and explicitly register router internal computeds.
+- [x] 1.5 Check docstring coverage and API reference sync (`scripts/check-docstrings.py`, `scripts/generate_api_reference.py --check`, `uv run pydoclint`) and regenerate API reference skeleton if needed.
 
 ## 2. Regression Tests & Dual-Run Classification
 
-- [ ] 2.1 Add comprehensive unit tests in `tests/test_element_signal_ownership.py` verifying caller-owned signal preservation (all 6 affected element classes, `Switch` patching, `RouterLink._refresh`, component-tag prop isolation) and framework-owned signal cleanup without consumer-edge leaks.
-- [ ] 2.2 Add a real-PyScript browser-tier regression test in `tests/browser/` obeying `scripts/check-browser-imports.py`, and verify `tests/.dualrun/ineligible.json` stays in sync via `uv run python -m pytest tests/test_dualrun_classifier.py`.
+- [x] 2.1 Add comprehensive unit tests in `tests/test_element_signal_ownership.py` verifying caller-owned signal preservation (all 6 affected element classes, `Switch` patching, `RouterLink._refresh`, component-tag prop isolation) and framework-owned signal cleanup without consumer-edge leaks.
+- [x] 2.2 Add a real-PyScript browser-tier regression test in `tests/browser/` obeying `scripts/check-browser-imports.py`, and verify `tests/.dualrun/ineligible.json` stays in sync via `uv run python -m pytest tests/test_dualrun_classifier.py`.
 
 ## 3. Spec Sync, Verification & Archiving
 
