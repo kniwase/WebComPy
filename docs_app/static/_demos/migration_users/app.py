@@ -99,18 +99,17 @@ PageShell.scoped_style = {
         "border-radius": "var(--radius-sm)",
         "border": "1px solid var(--color-border)",
         "background": "var(--color-bg-elevated)",
-        "color": "var(--color-accent)",
+        "color": "var(--color-link)",
+        "font-weight": "600",
     },
 }
 
 
 @define_component()
-def MigrationUsersApp(_: ComponentContext[None]):
+def UserDirectory(_: ComponentContext[None]):
     query = use_state(lambda: "")
     role_filter = use_state(lambda: "all")
     users: ReactiveList[User] = use_reactive_list(lambda: [])
-
-    add_fetch_middleware(create_users_mock())
 
     async def _load_users() -> list[User]:
         loaded = await HttpClient.get("/api/users", response_type=list[User])
@@ -182,36 +181,31 @@ def MigrationUsersApp(_: ComponentContext[None]):
         for role, label in [("all", "All"), ("admin", "Admin"), ("editor", "Editor"), ("viewer", "Viewer")]
     ]
 
-    return PageShell(
-        {"title": "Team Directory"},
-        slots={
-            "default": lambda: html.DIV(
-                {"class": "users-demo"},
-                html.DIV(
-                    {"class": "controls"},
-                    html.INPUT(
-                        {
-                            "type": "search",
-                            "class": "search-input",
-                            "placeholder": "Filter by name or email...",
-                            "aria-label": "Filter users",
-                            ":bind": query,
-                        }
-                    ),
-                    html.BUTTON({"type": "button", "class": "clear-btn", "@click": _clear_filters}, "Clear"),
-                ),
-                html.DIV({"class": "role-tabs", "role": "group", "aria-label": "Filter by role"}, *role_buttons),
-                html.P({"class": "user-summary"}, summary_text),
-                switch(
-                    {"case": users_result.is_success, "generator": _render_results},
-                    default=lambda: html.P({"class": "loading-state"}, "Loading users..."),
-                ),
-            )
-        },
+    return html.DIV(
+        {"class": "users-demo"},
+        html.DIV(
+            {"class": "controls"},
+            html.INPUT(
+                {
+                    "type": "search",
+                    "class": "search-input",
+                    "placeholder": "Filter by name or email...",
+                    "aria-label": "Filter users",
+                    ":bind": query,
+                }
+            ),
+            html.BUTTON({"type": "button", "class": "clear-btn", "@click": _clear_filters}, "Clear"),
+        ),
+        html.DIV({"class": "role-tabs", "role": "group", "aria-label": "Filter by role"}, *role_buttons),
+        html.P({"class": "user-summary"}, summary_text),
+        switch(
+            {"case": users_result.is_success, "generator": _render_results},
+            default=lambda: html.P({"class": "loading-state"}, "Loading users..."),
+        ),
     )
 
 
-MigrationUsersApp.scoped_style = {
+UserDirectory.scoped_style = {
     ".controls": {
         "display": "flex",
         "gap": "var(--space-2)",
@@ -219,6 +213,7 @@ MigrationUsersApp.scoped_style = {
     },
     ".search-input": {
         "flex": "1",
+        "min-width": "0",
         "padding": "0.4rem 0.6rem",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
@@ -240,8 +235,9 @@ MigrationUsersApp.scoped_style = {
         "margin-bottom": "var(--space-2)",
     },
     ".role-btn.active": {
+        "background": "var(--color-accent)",
         "border-color": "var(--color-accent)",
-        "color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
         "font-weight": "600",
     },
     ".user-summary": {
@@ -261,12 +257,14 @@ MigrationUsersApp.scoped_style = {
         "display": "flex",
         "justify-content": "space-between",
         "align-items": "center",
+        "flex-wrap": "wrap",
         "gap": "var(--space-2)",
         "padding": "var(--space-2) var(--space-3)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
         "margin-bottom": "var(--space-2)",
         "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
     },
     ".user-primary": {
         "display": "flex",
@@ -287,6 +285,7 @@ MigrationUsersApp.scoped_style = {
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
         "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
     },
     ".empty-state, .loading-state": {
         "padding": "var(--space-3)",
@@ -295,6 +294,16 @@ MigrationUsersApp.scoped_style = {
         "color": "var(--color-fg-muted)",
     },
 }
+
+
+@define_component()
+def MigrationUsersApp(_: ComponentContext[None]):
+    add_fetch_middleware(create_users_mock())
+    return PageShell(
+        {"title": "Team Directory"},
+        slots={"default": lambda: UserDirectory(None)},
+    )
+
 
 app = WebComPyApp(root_component=MigrationUsersApp)
 app.run()

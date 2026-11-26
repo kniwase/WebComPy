@@ -697,3 +697,65 @@ async def test_migration_users_demo_direct_and_rendered():
             assert "Showing 2 of 6 users" in html
             assert "Elena Novak" in html
             assert "Carol Okafor" not in html
+
+
+def test_demo_shell_supports_theme_sync_and_auto_resize():
+    shell_html = (DOCS_APP_DIR / "static" / "_demos" / "standard.html").read_text()
+    assert "/_webcompy-ui/index.css" in shell_html
+    assert "data-webcompy-dynamic" in shell_html
+    assert "MutationObserver" in shell_html
+    assert "ResizeObserver" in shell_html
+    assert "webcompy-theme" in shell_html
+    assert "data-demo-auto-resize" in shell_html
+
+
+def test_routing_demo_initial_path_and_component_scoped_styles():
+    with mock_app_run():
+        from static._demos.routing.app import (
+            AdminView,
+            HomeView,
+            LoginView,
+            NotFoundView,
+            RoutingDemoApp,
+            WorkspaceItem,
+            WorkspaceLayout,
+            WorkspaceOverview,
+            WorkspaceSettings,
+        )
+        from static._demos.routing.app import router as mod_router
+
+        assert ".route-card" in HomeView.scoped_style
+        assert ".workspace-shell" in WorkspaceLayout.scoped_style
+        assert ".leaf-panel" in WorkspaceOverview.scoped_style
+        assert ".leaf-panel" in WorkspaceSettings.scoped_style
+        assert ".leaf-panel" in WorkspaceItem.scoped_style
+        assert ".route-card" in LoginView.scoped_style
+        assert ".route-card" in AdminView.scoped_style
+        assert ".route-card" in NotFoundView.scoped_style
+
+        scope, _hist = _make_router_scope(mod_router, "")
+        with TestRenderer.render(RoutingDemoApp, parent_scope=scope) as result:
+            badges = [n for n in result.query_selector_all("span") if "path-badge" in (n.getAttribute("class") or "")]
+            assert len(badges) == 1
+            assert badges[0].textContent == "Path: /"
+
+
+def test_migration_users_owns_directory_scoped_styles():
+    with mock_app_run():
+        from static._demos.migration_users.app import PageShell, UserDirectory
+
+        assert ".user-list" not in PageShell.scoped_style
+        assert ".user-list" in UserDirectory.scoped_style
+        assert ".user-item" in UserDirectory.scoped_style
+
+
+@pytest.mark.parametrize("step_name", ["step3", "step4", "step5", "step6"])
+def test_todo_tutorial_routed_steps_own_task_list_styles(step_name: str):
+    import importlib
+
+    with mock_app_run():
+        mod = importlib.import_module(f"static._demos.todo_tutorial.{step_name}.app")
+        assert ".task-list" not in mod.TodoApp.scoped_style
+        assert ".task-list" in mod.TodoAllPage.scoped_style
+        assert ".task-list" in mod.TodoActivePage.scoped_style
+        assert ".task-list" in mod.TodoDonePage.scoped_style

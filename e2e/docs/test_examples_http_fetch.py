@@ -15,6 +15,9 @@ def test_examples_http_fetch_page_loads(docs_page_on, assert_no_console_errors):
     frame = _wait_for_demo_iframe(page, "fetch_sample")
     expect(frame.get_by_role("heading", name="User Data")).to_be_visible()
     expect(frame.get_by_text("Total users: 3")).to_be_visible()
+    page.wait_for_function("() => document.querySelector('iframe.demo-iframe')?.getBoundingClientRect().height > 400")
+    height = page.locator("iframe.demo-iframe").evaluate("el => el.getBoundingClientRect().height")
+    assert height > 400
 
 
 def test_examples_http_fetch_reload_no_error(docs_page_on, docs_console_messages, assert_no_console_errors):

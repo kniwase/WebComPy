@@ -37,8 +37,9 @@ def TransitionDemo(_: ComponentContext[None]):
 
 TransitionDemo.scoped_style = {
     ".transition-demo": {
-        "font-family": "sans-serif",
-        "padding": "1rem",
+        "font-family": "var(--font-sans)",
+        "color": "var(--color-fg)",
+        "padding": "var(--space-4)",
     },
     ".demo-controls": {
         "display": "flex",
@@ -47,12 +48,19 @@ TransitionDemo.scoped_style = {
     },
     ".demo-controls button": {
         "padding": "0.5rem 1rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
         "cursor": "pointer",
     },
     ".demo-fade-box": {
         "margin-top": "1rem",
         "padding": "1rem",
-        "background": "mistyrose",
+        "background": "color-mix(in srgb, var(--color-danger) 15%, var(--color-bg-card))",
+        "border": "1px solid var(--color-danger)",
+        "border-radius": "var(--radius-md)",
+        "color": "var(--color-fg)",
         "transition": "opacity 400ms ease",
     },
     ".fade-enter-from": {
@@ -76,7 +84,10 @@ TransitionDemo.scoped_style = {
     ".demo-slide-box": {
         "margin-top": "1rem",
         "padding": "1rem",
-        "background": "lightcyan",
+        "background": "color-mix(in srgb, var(--color-accent) 15%, var(--color-bg-card))",
+        "border": "1px solid var(--color-accent)",
+        "border-radius": "var(--radius-md)",
+        "color": "var(--color-fg)",
         "transform": "translateX(0)",
     },
     ".slide-enter-from": {

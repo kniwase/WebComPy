@@ -173,10 +173,14 @@ FetchMiddlewareDemo.scoped_style = {
     ".note-form input": {
         "flex": "1",
         "padding": "0.35rem 0.5rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg)",
+        "color": "var(--color-fg)",
     },
     ".status-line": {
         "font-size": "var(--font-size-sm, 0.875rem)",
-        "color": "var(--color-accent)",
+        "color": "var(--color-link)",
         "min-height": "1.2rem",
     },
     ".notes-list, .trace-list": {

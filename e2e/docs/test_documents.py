@@ -201,3 +201,26 @@ def test_unknown_route_404_has_zero_hydration_mismatches(docs_page_on, docs_cons
     expect(page.locator(".not-found-path")).to_contain_text("this-page-does-not-exist-404")
     assert [m for m in docs_console_messages if "Hydration mismatches detected" in m.text] == []
     assert page.locator(".py-error").count() == 0
+
+
+@pytest.mark.e2e
+def test_ui_primitives_headless_spinner_visible_and_contrasting(docs_page_on, assert_no_console_errors):
+    page = docs_page_on("/documents/basic/ui-primitives")
+    spinner = page.locator(".docs-headless-spinner-demo[data-state='loading']")
+    expect(spinner).to_be_visible()
+    toggle = page.locator("button.theme-toggle")
+    for expected_scheme in ("light", "dark"):
+        toggle.click()
+        page.wait_for_function(
+            f"() => (document.querySelector('style[data-webcompy-dynamic=\"0\"]')?.textContent || '').includes('color-scheme: {expected_scheme};')"
+        )
+        metrics = spinner.evaluate(
+            "el => {"
+            "  const rect = el.getBoundingClientRect();"
+            "  const style = getComputedStyle(el);"
+            "  return { width: rect.width, height: rect.height, borderTopColor: style.borderTopColor, borderLeftColor: style.borderLeftColor };"
+            "}"
+        )
+        assert metrics["width"] > 0 and metrics["height"] > 0, f"HeadlessSpinner collapsed: {metrics}"
+        assert metrics["borderTopColor"] != "rgba(0, 0, 0, 0)"
+        assert metrics["borderLeftColor"] != "rgba(0, 0, 0, 0)"

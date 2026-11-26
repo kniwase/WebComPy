@@ -61,6 +61,10 @@ class TestExamplesPageTemplate:
             assert rendered.index("Short lead sentence.") < rendered.index("demo-display")
             assert rendered.index("demo-display") < rendered.index("What this demonstrates")
             assert '/documents/examples/hello-world#what-this-demonstrates"' in rendered
+            iframe = result.query_selector("iframe")
+            assert iframe is not None
+            assert "demo-iframe" in (iframe.getAttribute("class") or "").split()
+            assert iframe.getAttribute("data-demo-auto-resize") == "true"
 
     def test_peer_demo_renders_two_iframes_and_new_tab_link(self) -> None:
         from webcompy.components import ComponentContext, define_component

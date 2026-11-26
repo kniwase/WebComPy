@@ -16,6 +16,57 @@ class AuthSession:
 _SESSION = AuthSession()
 _AUTH_NOTICE = ""
 
+_ROUTE_CARD_BASE_STYLE = {
+    ".route-card": {
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "padding": "var(--space-3)",
+        "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
+    },
+    ".route-card h2": {
+        "margin": "0 0 var(--space-2) 0",
+        "font-size": "var(--font-size-lg, 1.125rem)",
+    },
+    ".route-card p": {
+        "margin": "0 0 var(--space-3) 0",
+        "color": "var(--color-fg)",
+    },
+}
+
+_ACTION_LINK_STYLE = {
+    ".action-link": {
+        "display": "inline-block",
+        "padding": "0.35rem 0.75rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-link)",
+        "text-decoration": "none",
+    },
+    ".action-link:hover": {
+        "border-color": "var(--color-link)",
+    },
+}
+
+_LEAF_PANEL_STYLE = {
+    ".leaf-panel": {
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "padding": "var(--space-3)",
+        "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
+    },
+    ".leaf-panel h3": {
+        "margin": "0 0 var(--space-2) 0",
+        "font-size": "var(--font-size-base, 1rem)",
+    },
+    ".leaf-panel p": {
+        "margin": "0",
+        "color": "var(--color-fg)",
+    },
+}
+
 
 def _auth_guard(_from_path: str, to_path: str) -> str | None:
     global _AUTH_NOTICE
@@ -43,6 +94,17 @@ def HomeView(_: ComponentContext[RouterContext]):
     )
 
 
+HomeView.scoped_style = {
+    **_ROUTE_CARD_BASE_STYLE,
+    ".route-actions": {
+        "display": "flex",
+        "flex-wrap": "wrap",
+        "gap": "var(--space-2)",
+    },
+    **_ACTION_LINK_STYLE,
+}
+
+
 @define_component()
 def WorkspaceOverview(_: ComponentContext[RouterContext]):
     return html.DIV(
@@ -50,6 +112,9 @@ def WorkspaceOverview(_: ComponentContext[RouterContext]):
         html.H3({}, "Workspace Overview"),
         html.P({}, "Index child route ('') sharing WorkspaceLayout while preserving sidebar state."),
     )
+
+
+WorkspaceOverview.scoped_style = _LEAF_PANEL_STYLE
 
 
 @define_component()
@@ -61,6 +126,9 @@ def WorkspaceSettings(_: ComponentContext[RouterContext]):
     )
 
 
+WorkspaceSettings.scoped_style = _LEAF_PANEL_STYLE
+
+
 @define_component()
 def WorkspaceItem(context: ComponentContext[RouterContext]):
     item_id = context.props.path_params.get("item_id", "unknown")
@@ -69,6 +137,9 @@ def WorkspaceItem(context: ComponentContext[RouterContext]):
         html.H3({}, f"Workspace Item #{item_id}"),
         html.P({}, f"Dynamic parameter item_id={item_id!r} extracted from /workspace/items/{{item_id}}."),
     )
+
+
+WorkspaceItem.scoped_style = _LEAF_PANEL_STYLE
 
 
 @define_component()
@@ -105,6 +176,63 @@ def WorkspaceLayout(_: ComponentContext[RouterContext]):
     )
 
 
+WorkspaceLayout.scoped_style = {
+    ".workspace-shell": {
+        "display": "grid",
+        "grid-template-columns": "12rem minmax(0, 1fr)",
+        "gap": "var(--space-3)",
+    },
+    "@media (max-width: 600px)": {
+        ".workspace-shell": {
+            "grid-template-columns": "minmax(0, 1fr)",
+        },
+    },
+    ".workspace-sidebar": {
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "padding": "var(--space-3)",
+        "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
+    },
+    ".workspace-sidebar.compact": {
+        "background": "var(--color-bg-elevated)",
+        "border-color": "var(--color-accent)",
+    },
+    ".sidebar-status": {
+        "margin": "0 0 var(--space-2) 0",
+        "font-size": "var(--font-size-sm, 0.875rem)",
+        "font-weight": "600",
+        "color": "var(--color-fg)",
+    },
+    ".sidebar-toggle": {
+        "width": "100%",
+        "padding": "0.35rem 0.5rem",
+        "margin-bottom": "var(--space-2)",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
+        "cursor": "pointer",
+    },
+    ".sidebar-links": {
+        "display": "flex",
+        "flex-direction": "column",
+        "gap": "0.25rem",
+    },
+    ".sidebar-links a": {
+        "padding": "0.25rem 0.5rem",
+        "border-radius": "var(--radius-sm)",
+        "color": "var(--color-fg-muted)",
+        "text-decoration": "none",
+    },
+    ".sidebar-links a.active": {
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-link)",
+        "font-weight": "600",
+    },
+}
+
+
 @define_component()
 def LoginView(_: ComponentContext[RouterContext]):
     router = use_router()
@@ -126,6 +254,23 @@ def LoginView(_: ComponentContext[RouterContext]):
     )
 
 
+LoginView.scoped_style = {
+    **_ROUTE_CARD_BASE_STYLE,
+    ".guard-notice": {
+        "color": "var(--color-warning)",
+        "font-weight": "600",
+    },
+    ".primary-btn": {
+        "padding": "0.45rem 0.9rem",
+        "border": "1px solid var(--color-accent)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
+        "cursor": "pointer",
+    },
+}
+
+
 @define_component()
 def AdminView(_: ComponentContext[RouterContext]):
     router = use_router()
@@ -142,6 +287,19 @@ def AdminView(_: ComponentContext[RouterContext]):
     )
 
 
+AdminView.scoped_style = {
+    **_ROUTE_CARD_BASE_STYLE,
+    ".secondary-btn": {
+        "padding": "0.45rem 0.9rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
+        "cursor": "pointer",
+    },
+}
+
+
 @define_component()
 def NotFoundView(context: ComponentContext[RouterContext]):
     return html.DIV(
@@ -150,6 +308,12 @@ def NotFoundView(context: ComponentContext[RouterContext]):
         html.P({}, f"No route matched {context.props.path!r}."),
         RouterLink(to="/", text=["Return Home"], attrs={"class": "action-link"}),
     )
+
+
+NotFoundView.scoped_style = {
+    **_ROUTE_CARD_BASE_STYLE,
+    **_ACTION_LINK_STYLE,
+}
 
 
 @define_component()
@@ -161,7 +325,7 @@ def RoutingDemoApp(_: ComponentContext[None]):
         _AUTH_NOTICE = ""
 
     router = use_router()
-    current_path = use_computed(lambda: router.current_match.value.path if router.current_match.value else "/")
+    current_path = use_computed(lambda: (router.current_match.value.path or "/") if router.current_match.value else "/")
 
     return html.DIV(
         {"class": "routing-demo"},
@@ -207,6 +371,7 @@ RoutingDemoApp.scoped_style = {
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
         "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
     },
     ".top-nav": {
         "display": "flex",
@@ -220,93 +385,15 @@ RoutingDemoApp.scoped_style = {
         "padding": "0.35rem 0.75rem",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-card)",
         "color": "var(--color-fg)",
         "text-decoration": "none",
     },
     ".top-nav a.active": {
-        "border-color": "var(--color-accent)",
-        "color": "var(--color-accent)",
-        "font-weight": "600",
-    },
-    ".workspace-shell": {
-        "display": "grid",
-        "grid-template-columns": "12rem minmax(0, 1fr)",
-        "gap": "var(--space-3)",
-    },
-    ".workspace-sidebar": {
-        "border": "1px solid var(--color-border)",
-        "border-radius": "var(--radius-sm)",
-        "padding": "var(--space-3)",
-        "background": "var(--color-bg-card)",
-    },
-    ".workspace-sidebar.compact": {
-        "background": "var(--color-bg-elevated)",
-        "border-color": "var(--color-accent)",
-    },
-    ".sidebar-status": {
-        "margin": "0 0 var(--space-2) 0",
-        "font-size": "var(--font-size-sm, 0.875rem)",
-        "font-weight": "600",
-    },
-    ".sidebar-toggle": {
-        "width": "100%",
-        "padding": "0.35rem 0.5rem",
-        "margin-bottom": "var(--space-2)",
-        "cursor": "pointer",
-    },
-    ".sidebar-links": {
-        "display": "flex",
-        "flex-direction": "column",
-        "gap": "0.25rem",
-    },
-    ".sidebar-links a": {
-        "padding": "0.25rem 0.5rem",
-        "border-radius": "var(--radius-sm)",
-        "color": "var(--color-fg-muted)",
-        "text-decoration": "none",
-    },
-    ".sidebar-links a.active": {
-        "background": "var(--color-bg-elevated)",
-        "color": "var(--color-link)",
-        "font-weight": "600",
-    },
-    ".route-card, .leaf-panel": {
-        "border": "1px solid var(--color-border)",
-        "border-radius": "var(--radius-sm)",
-        "padding": "var(--space-3)",
-        "background": "var(--color-bg-card)",
-    },
-    ".route-actions": {
-        "display": "flex",
-        "flex-wrap": "wrap",
-        "gap": "var(--space-2)",
-    },
-    ".action-link": {
-        "display": "inline-block",
-        "padding": "0.35rem 0.75rem",
-        "border": "1px solid var(--color-border)",
-        "border-radius": "var(--radius-sm)",
-        "color": "var(--color-link)",
-        "text-decoration": "none",
-    },
-    ".guard-notice": {
-        "color": "var(--color-accent)",
-        "font-weight": "500",
-    },
-    ".primary-btn, .secondary-btn": {
-        "padding": "0.45rem 0.9rem",
-        "border-radius": "var(--radius-sm)",
-        "cursor": "pointer",
-    },
-    ".primary-btn": {
-        "border": "1px solid var(--color-accent)",
         "background": "var(--color-accent)",
-        "color": "#ffffff",
-    },
-    ".secondary-btn": {
-        "border": "1px solid var(--color-border)",
-        "background": "var(--color-bg-elevated)",
-        "color": "var(--color-fg)",
+        "border-color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
+        "font-weight": "600",
     },
 }
 

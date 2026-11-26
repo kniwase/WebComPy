@@ -33,6 +33,11 @@ def test_migration_from_jinja2_fastapi_page_and_demo(page, docs_page_on, assert_
     expect(frame.locator(".user-summary")).to_have_text("Showing 6 of 6 users")
     expect(frame.locator(".user-list .user-item")).to_have_count(6)
     expect(frame.locator(".user-list")).to_contain_text("Alice Chen")
+    assert frame.locator(".user-list").evaluate("el => getComputedStyle(el).listStyleType") == "none"
+    assert frame.locator(".user-list").evaluate("el => getComputedStyle(el).paddingLeft") == "0px"
+    assert frame.locator(".user-item").first.evaluate("el => getComputedStyle(el).display") == "flex"
+    page.wait_for_function("() => document.querySelector('iframe.demo-iframe')?.getBoundingClientRect().height > 400")
+    assert page.locator("iframe.demo-iframe").evaluate("el => el.getBoundingClientRect().height") > 400
 
     search_input = frame.get_by_placeholder("Filter by name or email...")
     search_input.fill("Alice")

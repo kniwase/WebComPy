@@ -36,6 +36,9 @@ def test_examples_matplotlib_image_rendered(docs_page_on, assert_no_console_erro
     frame = _wait_for_demo_iframe(page, "matplotlib_sample")
     img = frame.locator("img")
     assert img.is_visible()
+    page.wait_for_function("() => document.querySelector('iframe.demo-iframe')?.getBoundingClientRect().height > 400")
+    height = page.locator("iframe.demo-iframe").evaluate("el => el.getBoundingClientRect().height")
+    assert height > 400
 
 
 def test_examples_matplotlib_reload_no_error(docs_page_on, docs_console_messages, assert_no_console_errors):

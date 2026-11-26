@@ -35,12 +35,14 @@ def ToDoItem(context: ComponentContext[dict]):
 
 ToDoItem.scoped_style = {
     "li": {
-        "color": "#2d8fdd",
-        "border-left": " solid 6px #2d8fdd",
-        "background": "#f1f8ff",
+        "color": "var(--color-fg)",
+        "border": "1px solid var(--color-border)",
+        "border-left": "6px solid var(--color-accent)",
+        "background": "var(--color-bg-card)",
+        "border-radius": "var(--radius-sm)",
         "line-height": "1.5",
-        "margin": "5px",
-        "padding": "5px",
+        "margin": "var(--space-2) 0",
+        "padding": "var(--space-2) var(--space-3)",
         "vertical-align": "middle",
         "list-style-type": "none",
     }
@@ -78,7 +80,7 @@ def TodoApp(_: ComponentContext[None]):
             del data[k]
 
     return html.DIV(
-        {},
+        {"class": "todo-demo"},
         html.P(
             {},
             "Title: ",
@@ -97,17 +99,42 @@ def TodoApp(_: ComponentContext[None]):
 
 
 TodoApp.scoped_style = {
+    ".todo-demo": {
+        "padding": "var(--space-3)",
+        "color": "var(--color-fg)",
+    },
+    ".todo-demo p": {
+        "display": "flex",
+        "flex-wrap": "wrap",
+        "align-items": "center",
+        "gap": "var(--space-2)",
+        "margin": "0 0 var(--space-3) 0",
+    },
+    ".todo-demo input": {
+        "padding": "0.35rem 0.5rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg)",
+        "color": "var(--color-fg)",
+    },
+    ".todo-demo ul": {
+        "padding": "0",
+        "margin": "0",
+    },
     "button": {
         "display": "inline-block",
         "text-decoration": "none",
-        "border": "solid 2px #668ad8",
-        "border-radius": "3px",
-        "transition": "0.2s",
-        "color": "black",
+        "padding": "0.35rem 0.75rem",
+        "border": "1px solid var(--color-accent)",
+        "border-radius": "var(--radius-sm)",
+        "transition": "background-color 0.15s ease, color 0.15s ease",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
+        "cursor": "pointer",
     },
     "button:hover": {
-        "background": "#668ad8",
-        "color": "white",
+        "background": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
     },
 }
 

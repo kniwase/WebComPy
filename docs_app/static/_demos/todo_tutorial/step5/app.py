@@ -111,6 +111,8 @@ TodoItem.scoped_style = {
         "padding": "var(--space-2) var(--space-3)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-card)",
+        "color": "var(--color-fg)",
         "margin-bottom": "var(--space-2)",
     },
     ".todo-item.done .task-title": {"text-decoration": "line-through", "color": "var(--color-fg-muted)"},
@@ -140,14 +142,20 @@ TodoToolbar.scoped_style = {
         "padding": "var(--space-1) var(--space-3)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-card)",
         "color": "var(--color-fg)",
         "text-decoration": "none",
     },
     ".filters a.active": {
+        "background": "var(--color-accent)",
         "border-color": "var(--color-accent)",
-        "color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
         "font-weight": "600",
     },
+}
+
+_TASK_LIST_STYLE = {
+    ".task-list": {"list-style": "none", "padding": "0", "margin": "0"},
 }
 
 
@@ -170,14 +178,23 @@ def TodoAllPage(_: ComponentContext[RouterContext]):
     return _render_task_list("all")
 
 
+TodoAllPage.scoped_style = _TASK_LIST_STYLE
+
+
 @define_component()
 def TodoActivePage(_: ComponentContext[RouterContext]):
     return _render_task_list("active")
 
 
+TodoActivePage.scoped_style = _TASK_LIST_STYLE
+
+
 @define_component()
 def TodoDonePage(_: ComponentContext[RouterContext]):
     return _render_task_list("done")
+
+
+TodoDonePage.scoped_style = _TASK_LIST_STYLE
 
 
 @define_component()
@@ -187,6 +204,12 @@ def TodoNotFoundPage(_: ComponentContext[RouterContext]):
         html.P({}, "View not found."),
         RouterLink(to="/", text=["Back to all tasks"]),
     )
+
+
+TodoNotFoundPage.scoped_style = {
+    ".not-found": {"color": "var(--color-fg)"},
+    ".not-found a": {"color": "var(--color-link)"},
+}
 
 
 @define_component()
@@ -253,6 +276,7 @@ def TodoApp(_: ComponentContext[None]):
 TodoApp.scoped_style = {
     ".todo-shell": {
         "max-width": "32rem",
+        "padding": "var(--space-3)",
         "font-family": "var(--font-sans)",
         "color": "var(--color-fg)",
     },
@@ -267,12 +291,19 @@ TodoApp.scoped_style = {
         "border": "1px solid var(--color-accent)",
         "border-radius": "var(--radius-sm)",
         "background": "var(--color-accent)",
-        "color": "#ffffff",
+        "color": "var(--color-on-accent)",
         "cursor": "pointer",
     },
-    ".task-list": {"list-style": "none", "padding": "0", "margin": "0"},
     ".status": {"color": "var(--color-fg-muted)", "font-size": "var(--font-size-sm)"},
     ".status.error": {"color": "var(--color-danger)"},
+    ".status.error button": {
+        "padding": "var(--space-1) var(--space-3)",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "background": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
+        "cursor": "pointer",
+    },
 }
 
 router = Router(
