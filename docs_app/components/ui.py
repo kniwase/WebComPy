@@ -194,13 +194,12 @@ DocsButton.scoped_style = {
         "border-color": "var(--color-accent)",
     },
     ".ui-button-primary": {
-        "color": "#ffffff",
+        "color": "var(--color-on-accent)",
         "background-color": "var(--color-accent)",
         "border-color": "var(--color-accent)",
     },
     ".ui-button-primary:hover": {
-        "background-color": "var(--color-link-hover)",
-        "border-color": "var(--color-link-hover)",
+        "filter": "brightness(0.92)",
     },
     ".ui-button-danger": {
         "color": "#ffffff",

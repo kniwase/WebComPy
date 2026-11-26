@@ -157,6 +157,14 @@ class AppDocumentRoot(Component):
                         await scheduler.await_pending(only_render=True)
                     ctx._hydration_in_progress = False
                     ctx._hydration_payload_closed = True
+                    deferred_theme = getattr(ctx, "_deferred_theme", None)
+                    if deferred_theme is not None:
+                        ctx._deferred_theme = None
+                        from webcompy.ui.theme._theme import THEME_KEY
+
+                        theme_mgr = ctx.di_scope.inject(THEME_KEY, default=None)
+                        if theme_mgr is not None:
+                            theme_mgr._apply_without_persist(deferred_theme)
                     if hydrating:
                         emit_report_summary(ctx)
                 if self.__loading:

@@ -888,7 +888,7 @@ Key: `webcompy.ui.theme._manager:ThemeManager` · Exports: `from webcompy.ui.the
 
 Reactive theme state holding a `Signal[Theme]` and a derived CSS style.
 
-The derived style emits dark-token overrides for the active theme and is registered with the app via `register_style`. Theme changes are persisted through the theme cookie unless persistence is disabled in the app configuration.
+The derived style emits explicit `color-scheme` declarations and dark-token overrides for the active theme, registered with the app via `register_style`. Theme changes are persisted through the theme cookie unless persistence is disabled in the app configuration.
 
 **Args:**
 

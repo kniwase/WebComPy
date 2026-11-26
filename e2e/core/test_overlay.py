@@ -100,3 +100,54 @@ def test_toast_push_and_visible(page_on):
     toast = page.locator("[data-state='visible']").first
     expect(toast).to_be_visible()
     expect(toast).to_contain_text("Toast message")
+
+
+def test_modal_and_drawer_dark_mode_backdrop_and_panel_styles(page, page_on):
+    page.emulate_media(color_scheme="dark")
+    page_on("/overlay")
+
+    page.locator("[data-testid='open-modal']").click()
+    modal_backdrop = page.locator(".webcompy-modal-backdrop")
+    modal_panel = page.locator(".webcompy-modal-panel")
+    expect(modal_backdrop).to_be_visible()
+    expect(modal_panel).to_be_visible()
+    modal_styles = page.evaluate(
+        "() => {"
+        "  const b = getComputedStyle(document.querySelector('.webcompy-modal-backdrop'));"
+        "  const p = getComputedStyle(document.querySelector('.webcompy-modal-panel'));"
+        "  return { bBg: b.backgroundColor, bOp: b.opacity, pBg: p.backgroundColor, pFg: p.color, pShadow: p.boxShadow };"
+        "}"
+    )
+    assert modal_styles["bOp"] == "1"
+    assert modal_styles["bBg"] in ("rgba(0, 0, 0, 0.5)", "rgb(0, 0, 0)")
+    assert modal_styles["pShadow"] != "none"
+    assert modal_styles["pBg"] != modal_styles["pFg"]
+    page.keyboard.press("Escape")
+    expect(page.locator("[role='dialog']")).to_have_count(0)
+
+    page.locator("[data-testid='open-drawer']").click()
+    drawer_backdrop = page.locator(".webcompy-drawer-backdrop")
+    drawer_panel = page.locator(".webcompy-drawer-panel")
+    expect(drawer_backdrop).to_be_visible()
+    expect(drawer_panel).to_be_visible()
+    drawer_styles = page.evaluate(
+        "() => {"
+        "  const b = getComputedStyle(document.querySelector('.webcompy-drawer-backdrop'));"
+        "  const p = getComputedStyle(document.querySelector('.webcompy-drawer-panel'));"
+        "  return {"
+        "    bBg: b.backgroundColor,"
+        "    pPadTop: parseFloat(p.paddingTop),"
+        "    pPadLeft: parseFloat(p.paddingLeft),"
+        "    pBg: p.backgroundColor,"
+        "    pFg: p.color,"
+        "    pShadow: p.boxShadow,"
+        "  };"
+        "}"
+    )
+    assert drawer_styles["bBg"] in ("rgba(0, 0, 0, 0.5)", "rgb(0, 0, 0)")
+    assert drawer_styles["pPadTop"] > 0
+    assert drawer_styles["pPadLeft"] > 0
+    assert drawer_styles["pShadow"] != "none"
+    assert drawer_styles["pBg"] != drawer_styles["pFg"]
+    drawer_backdrop.click(position={"x": 5, "y": 5})
+    expect(page.locator("[role='dialog']")).to_have_count(0)

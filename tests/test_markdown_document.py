@@ -107,6 +107,39 @@ class TestLoadMarkdownDocumentPipeline:
         assert port._text_calls == ["docs/a.md"]
         assert doc.toc[0].text == "Hi"
 
+    @pytest.mark.asyncio
+    async def test_tables_wrapped_by_default_and_opt_out(self) -> None:
+        md = "# Doc\n\n| Col1 | Col2 |\n|---|---|\n| val1 | val2 |\n"
+        port = _FakeResourcePort({"docs/table.md": md, "docs/only_table.md": "| A | B |\n|---|---|\n| 1 | 2 |\n"})
+        with _document_di_scope(port):
+            doc = await load_markdown_document("docs/table.md")
+            wrappers = _walk(
+                doc.content,
+                lambda n: (
+                    isinstance(n, Element)
+                    and n._tag_name == "div"
+                    and "prose-table-wrapper" in str(n._attrs.get("class", "")).split()
+                ),
+            )
+            assert len(wrappers) == 1
+            assert any(isinstance(c, Element) and c._tag_name == "table" for c in wrappers[0]._children)
+
+            root_table_doc = await load_markdown_document("docs/only_table.md")
+            assert isinstance(root_table_doc.content, Element)
+            assert root_table_doc.content._tag_name == "div"
+            assert root_table_doc.content._attrs.get("class") == "prose-table-wrapper"
+
+            unwrapped_doc = await load_markdown_document("docs/table.md", wrap_tables=False)
+            unwrapped_wrappers = _walk(
+                unwrapped_doc.content,
+                lambda n: (
+                    isinstance(n, Element)
+                    and n._tag_name == "div"
+                    and "prose-table-wrapper" in str(n._attrs.get("class", "")).split()
+                ),
+            )
+            assert unwrapped_wrappers == []
+
 
 class TestSSRResourceRecording:
     @pytest.mark.asyncio

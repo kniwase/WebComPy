@@ -33,10 +33,14 @@ def _child_lists(element: Any) -> list[list[Any]]:
 def _walk_elements(roots: list[Any], visit: Visitor) -> None:
     for i in range(len(roots)):
         child = roots[i]
+        orig_parent = getattr(child, "_parent", None)
+        orig_node_idx = getattr(child, "_node_idx", None)
         replacement = visit(child, roots, i)
         if replacement is not None:
-            replacement._parent = getattr(child, "_parent", None)
-            replacement._node_idx = getattr(child, "_node_idx", 0)
+            if orig_parent is not None:
+                replacement._parent = orig_parent
+            if orig_node_idx is not None:
+                replacement._node_idx = orig_node_idx
             roots[i] = replacement
             continue
         for lst in _child_lists(child):
@@ -199,3 +203,23 @@ def replace_code_blocks_in_roots(roots: list[ElementAbstract]) -> None:
 
 def apply_class_map_to_roots(roots: list[ElementAbstract], classes: Mapping[str, str]) -> None:
     _walk_elements(roots, _class_map_visit_factory(classes))
+
+
+def _wrap_table_visit() -> Visitor:
+    def visit(child: Any, lst: list[Any], i: int) -> Any | None:
+        if isinstance(child, Element) and child._tag_name == "div":
+            existing = child._attrs.get("class")
+            if isinstance(existing, str) and "prose-table-wrapper" in existing.split():
+                return child
+        if isinstance(child, Element) and child._tag_name == "table":
+            return Element("div", {"class": "prose-table-wrapper"}, {}, None, [child])
+        return None
+
+    return visit
+
+
+def wrap_tables(root: ElementAbstract) -> ElementAbstract:
+    """Wrap ``<table>`` elements in ``<div class="prose-table-wrapper">``."""
+    roots: list[Any] = [root]
+    _walk_elements(roots, _wrap_table_visit())
+    return roots[0]

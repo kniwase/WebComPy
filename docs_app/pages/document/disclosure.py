@@ -100,7 +100,7 @@ def DisclosureDemo(context: ComponentContext[None]):
 
 DisclosureDemo.scoped_style = {
     " .disclosure-demo": {"display": "grid", "gap": "var(--space-3)", "margin": "var(--space-4) 0"},
-    " .disclosure-demo-row": {"display": "flex", "gap": "var(--space-2)", "align-items": "center"},
+    " .disclosure-demo-row": {"display": "flex", "flex-wrap": "wrap", "gap": "var(--space-2)", "align-items": "center"},
     " .disclosure-demo-stack": {"display": "grid", "gap": "var(--space-2)", "flex": "1"},
     " .disclosure-demo button": {"justify-self": "start"},
 }

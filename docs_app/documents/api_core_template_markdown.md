@@ -468,6 +468,7 @@ async def load_markdown_document(
     heading_ids: bool = True,
     code_blocks: bool = True,
     classes: Mapping[str, str] | None = None,
+    wrap_tables: bool = True,
     context: Mapping[str, Any] | None = None,
 ) -> MarkdownDocument
 ```
@@ -476,7 +477,7 @@ Key: `webcompy.template._markdown_document:load_markdown_document` · Exports: `
 
 Load a Markdown file into a rendered document with TOC metadata.
 
-Reads the source text, splits off frontmatter, renders the body through `render_markdown`, and collects heading information for tables of contents.
+Reads the source text, splits off frontmatter, renders the body through `render_markdown`, applies document transforms, and collects heading information for tables of contents.
 
 **Args:**
 
@@ -484,6 +485,7 @@ Reads the source text, splits off frontmatter, renders the body through `render_
 - `heading_ids`: Whether heading elements receive slug `id` attributes.
 - `code_blocks`: Whether fenced code blocks are replaced with `CodeBlock` components.
 - `classes`: Optional mapping from tag name to CSS class applied to matching elements.
+- `wrap_tables`: Whether `<table>` elements are wrapped in `<div class="prose-table-wrapper">` for horizontal scrolling.
 - `context`: Optional template context for `{{ }}` interpolation inside the Markdown body.
 
 **Returns:** The rendered document with frontmatter metadata and heading list.

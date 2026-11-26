@@ -109,14 +109,14 @@ Key tokens:
 |-------|---------|
 | `--color-bg`, `--color-bg-elevated`, `--color-bg-card` | Backgrounds |
 | `--color-fg`, `--color-fg-muted`, `--color-fg-subtle` | Foregrounds |
-| `--color-link`, `--color-link-hover`, `--color-accent` | Accents |
+| `--color-link`, `--color-link-hover`, `--color-accent`, `--color-on-accent` | Accents |
 | `--color-border`, `--color-border-muted` | Borders |
 | `--color-success`, `--color-danger`, `--color-warning` | Status |
 | `--space-1` ... `--space-8` | Spacing scale |
 | `--font-size-sm` ... `--font-size-2xl` | Type scale |
 | `--font-sans`, `--font-mono` | Font families |
 | `--radius-sm`, `--radius-md`, `--radius-lg` | Border radii |
-| `--shadow-sm`, `--shadow-md` | Box shadows |
+| `--shadow-sm`, `--shadow-md`, `--shadow-lg` | Box shadows |
 | `--tok-kw`, `--tok-str`, `--tok-num`, `--tok-comment`, `--tok-fn`, `--tok-builtin`, `--tok-decorator`, `--tok-op`, `--tok-punct`, `--tok-ident` | Syntax highlighting |
 
-All tokens have light and dark variants; the dark variants are activated by `:root[data-theme="dark"]` (set server-side or by the theme system).
+All tokens have light and dark variants; the dark variants are activated by `ThemeManager`'s injected `:root` CSS (direct overrides for `Theme.DARK` or `@media (prefers-color-scheme: dark)` for `Theme.SYSTEM`).

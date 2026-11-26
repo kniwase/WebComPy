@@ -310,6 +310,64 @@ class TestDrawer:
             dom_port.dispatch_document_event("keydown", {"key": "Escape"})
             assert called == ["close"]
 
+    def test_backdrop_dismiss_and_disable(self, overlay_env):
+        from webcompy.ui.headless import Drawer
+
+        called: list[str] = []
+
+        @define_component(custom_element_name="test-drawer-backdrop")
+        def Page(ctx):
+            return Drawer(
+                {
+                    "open": True,
+                    "on_close": lambda: called.append("close"),
+                    "edge": "right",
+                    "aria_label": "Drawer backdrop",
+                    "transition_name": "webcompy-drawer",
+                },
+                slots={"default": lambda: html.DIV({}, "drawer body")},
+            )
+
+        with TestRenderer.render(Page) as result:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            backdrops = _find_all(
+                result.body_node,
+                lambda n: "webcompy-headless-drawer-backdrop" in (n.getAttribute("class") or ""),
+            )
+            assert len(backdrops) == 1
+            dom_port.dispatch_document_event("click", {"target": backdrops[0]})
+            assert called == ["close"]
+
+        called2: list[str] = []
+
+        @define_component(custom_element_name="test-drawer-backdrop-off")
+        def Page2(ctx):
+            return Drawer(
+                {
+                    "open": True,
+                    "on_close": lambda: called2.append("close"),
+                    "edge": "right",
+                    "close_on_backdrop": False,
+                    "aria_label": "Drawer backdrop off",
+                    "transition_name": "webcompy-drawer",
+                },
+                slots={"default": lambda: html.DIV({}, "drawer body")},
+            )
+
+        with TestRenderer.render(Page2) as result:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = result._scope.inject(DOM_PORT_KEY, default=None)
+            backdrops = _find_all(
+                result.body_node,
+                lambda n: "webcompy-headless-drawer-backdrop" in (n.getAttribute("class") or ""),
+            )
+            assert len(backdrops) == 1
+            dom_port.dispatch_document_event("click", {"target": backdrops[0]})
+            assert called2 == []
+
 
 class TestDropdown:
     """Dropdown 6.3: ARIA, keyboard, outside click, listener cleanup."""

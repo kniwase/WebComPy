@@ -90,6 +90,76 @@ class TestPopstateNormalization:
         assert port._value == "/about/"
 
 
+class TestHistoryStateJsProxyConversion:
+    def test_popstate_converts_js_proxy_with_to_py_without_to_dict(self):
+        from webcompy.ports._history import HistoryPort
+
+        class _FakeJsProxy:
+            def __init__(self, value):
+                self._value = value
+
+            def to_py(self):
+                return self._value
+
+        port = _make_browser_port("history")
+        HistoryPort.__init__(port, "/", mode="history")
+        port._browser.window.location.pathname = "/next/"
+        port._browser.window.location.search = ""
+        port._browser.window.history._state = _FakeJsProxy({"scroll": 120})
+        received: list[tuple[str, dict | None]] = []
+        port.set_navigation_callback(lambda p, s: received.append((p, s)))
+
+        port._on_popstate(None)
+        assert received == [("/next/", {"scroll": 120})]
+
+    def test_refresh_from_window_handles_to_py_dict_non_dict_and_error(self, monkeypatch):
+        from webcompy.ports._history import HistoryPort
+
+        class _FakeJsProxy:
+            def __init__(self, value=None, exc: Exception | None = None):
+                self._value = value
+                self._exc = exc
+
+            def to_py(self):
+                if self._exc is not None:
+                    raise self._exc
+                return self._value
+
+        warnings: list[object] = []
+        monkeypatch.setattr("webcompy.logging.warn", lambda *args: warnings.append(args))
+
+        port = _make_browser_port("history")
+        HistoryPort.__init__(port, "/", mode="history")
+        port._browser.window.location.pathname = "/one"
+        port._browser.window.location.search = ""
+
+        port._browser.window.history._state = _FakeJsProxy({"k": "v"})
+        port.refresh_from_window()
+        assert port._state == {"k": "v"}
+
+        port._browser.window.history._state = _FakeJsProxy(["not", "a", "dict"])
+        port.refresh_from_window()
+        assert port._state is None
+
+        port._browser.window.history._state = {"direct": True}
+        port.refresh_from_window()
+        assert port._state == {"direct": True}
+
+        port._browser.window.history._state = _FakeJsProxy(exc=RuntimeError("ffi boom"))
+        port.refresh_from_window()
+        assert port._state is None
+        assert len(warnings) == 1
+
+        port._browser.window.history._state = None
+        port.refresh_from_window()
+        assert port._state is None
+
+        monkeypatch.setattr(port._browser.pyscript.ffi, "is_none", lambda _v: True)
+        port._browser.window.history._state = _FakeJsProxy({"ignored": 1})
+        port.refresh_from_window()
+        assert port._state is None
+
+
 class TestInitialPathNormalization:
     def test_ctor_initial_path_normalized(self, monkeypatch):
         from webcompy.ports._browser._history import BrowserHistoryPort

@@ -39,6 +39,18 @@ if TYPE_CHECKING:
     from webcompy.app._root_component import AppDocumentRoot
 
 
+def _detect_prerendered_theme(style_css: str) -> Any:
+    from webcompy.ui.theme._theme import Theme
+
+    if "@media (prefers-color-scheme: dark)" in style_css:
+        return Theme.SYSTEM
+    if "color-scheme: dark" in style_css or "--color-bg:" in style_css:
+        return Theme.DARK
+    if "color-scheme: light" in style_css or style_css.strip() == "":
+        return Theme.LIGHT
+    return None
+
+
 class RenderContext(ABC):
     """Per-render context encapsulating one application render operation.
 
@@ -93,6 +105,7 @@ class RenderContext(ABC):
         self._hydration_in_progress: bool = False
         self._hydration_payload_closed: bool = False
         self._hydration_reporter = HydrationReporter()
+        self._deferred_theme: Any = None
         self._transfer_ordinal_counters: dict[str, int] = {}
         self._transfer_probe_depth: int = 0
         self._prev_app_instance: Any = None
@@ -159,7 +172,19 @@ class RenderContext(ABC):
                 theme_value = Theme(str(theme_value).lower())
             except ValueError:
                 theme_value = Theme.SYSTEM
-        manager = ThemeManager(self._app, self, theme_value)
+        initial_for_manager = theme_value
+        if ENVIRONMENT == "pyscript" and self._app._hydrate and self._initial_theme is None:
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            dom_port = self._di_scope.inject(DOM_PORT_KEY, default=None)
+            if dom_port is not None:
+                style_el = dom_port.query_selector('style[data-webcompy-dynamic="0"]')
+                if style_el is not None:
+                    prerendered = _detect_prerendered_theme(str(style_el.textContent or ""))
+                    if prerendered is not None and prerendered is not theme_value:
+                        self._deferred_theme = theme_value
+                        initial_for_manager = prerendered
+        manager = ThemeManager(self._app, self, initial_for_manager)
         self._di_scope.provide(THEME_KEY, manager)
 
         self._app._record_phase("imports_done")

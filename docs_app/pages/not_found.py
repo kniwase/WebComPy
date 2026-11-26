@@ -1,12 +1,19 @@
-from webcompy.components import ComponentContext, define_component
+from webcompy.components import ComponentContext, define_component, on_mounted
 from webcompy.elements import html
 from webcompy.router import RouterContext
+from webcompy.signal import use_state
 
 from ..components.ui import DocsSection
 
 
 @define_component()
 def NotFound(context: ComponentContext[RouterContext]):
+    displayed_path = use_state(lambda: "")
+
+    @on_mounted
+    def _sync_path():
+        displayed_path.value = context.props.path
+
     context.set_title("NotFound - WebCompy")
 
     return html.DIV(
@@ -17,7 +24,7 @@ def NotFound(context: ComponentContext[RouterContext]):
                 "default": lambda: html.DIV(
                     {"class": "not-found"},
                     html.P({}, "The requested path does not exist:"),
-                    html.PRE({"class": "not-found-path"}, context.props.path),
+                    html.PRE({"class": "not-found-path"}, displayed_path),
                 )
             },
         ),

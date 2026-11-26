@@ -23,6 +23,7 @@ from webcompy.template._markdown_transforms import (
     collect_headings,
     replace_code_blocks,
     slugify,
+    wrap_tables,
 )
 
 
@@ -371,3 +372,62 @@ class TestTransformsOnFragment:
         apply_heading_ids(result)
         assert [_extract_text(h) for h in _heading_elements(result)] == ["Alpha", "Beta"]
         assert [_h._attrs.get("id") for _h in _heading_elements(result)] == ["alpha", "beta"]
+
+
+class TestWrapTables:
+    def test_wraps_nested_table_and_preserves_classes(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# Heading\n\n| A | B |\n|---|---|\n| 1 | 2 |\n", classes={"table": "doc-table"})
+        wrapped = wrap_tables(result)
+        wrappers = _find_all(
+            wrapped,
+            lambda n: (
+                isinstance(n, Element)
+                and n._tag_name == "div"
+                and "prose-table-wrapper" in str(n._attrs.get("class", "")).split()
+            ),
+        )
+        assert len(wrappers) == 1
+        inner_tables = _find_all(wrappers[0], lambda n: isinstance(n, Element) and n._tag_name == "table")
+        assert len(inner_tables) == 1
+        assert inner_tables[0]._attrs.get("class") == "doc-table"
+
+    def test_wraps_standalone_root_table(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("| A | B |\n|---|---|\n| 1 | 2 |\n")
+        assert isinstance(result, Element) and result._tag_name == "table"
+        wrapped = wrap_tables(result)
+        assert isinstance(wrapped, Element)
+        assert wrapped._tag_name == "div"
+        assert wrapped._attrs.get("class") == "prose-table-wrapper"
+        assert getattr(wrapped, "_parent", None) is None
+        assert wrapped._children[0] is result
+        assert result._parent is wrapped
+
+    def test_idempotent_on_already_wrapped_table(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("| A | B |\n|---|---|\n| 1 | 2 |\n")
+        first = wrap_tables(result)
+        second = wrap_tables(first)
+        wrappers = _find_all(
+            second,
+            lambda n: (
+                isinstance(n, Element)
+                and n._tag_name == "div"
+                and "prose-table-wrapper" in str(n._attrs.get("class", "")).split()
+            ),
+        )
+        assert len(wrappers) == 1
+
+    def test_render_markdown_directly_does_not_wrap_tables(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("Intro\n\n| A | B |\n|---|---|\n| 1 | 2 |\n")
+        wrappers = _find_all(
+            result,
+            lambda n: (
+                isinstance(n, Element)
+                and n._tag_name == "div"
+                and "prose-table-wrapper" in str(n._attrs.get("class", "")).split()
+            ),
+        )
+        assert wrappers == []

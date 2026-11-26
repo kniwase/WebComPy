@@ -17,6 +17,7 @@ COLOR_TOKENS = [
     "color-link",
     "color-link-hover",
     "color-accent",
+    "color-on-accent",
     "color-border",
     "color-border-muted",
     "color-success",
@@ -84,8 +85,43 @@ def test_dark_tokens_defined_in_python() -> None:
     """
     from webcompy.ui.theme._tokens import DARK_TOKENS
 
-    for token in COLOR_TOKENS + SYNTAX_TOKENS:
+    for token in COLOR_TOKENS + SYNTAX_TOKENS + ["shadow-sm", "shadow-md", "shadow-lg"]:
         assert f"--{token}" in DARK_TOKENS, f"Dark theme missing token --{token} in webcompy/ui/theme/_tokens.py"
+
+
+def test_tokens_light_defined_for_shadow_tokens() -> None:
+    css = _css_text("tokens.css")
+    for token in ("shadow-sm", "shadow-md", "shadow-lg"):
+        assert f"--{token}" in css, f"Light theme missing token --{token}"
+
+
+def test_reset_layer_defines_native_form_control_defaults() -> None:
+    css = _css_text("reset.css")
+    assert "@layer reset" in css
+    assert "color-scheme: inherit" in css
+    assert "var(--color-fg)" in css
+    assert "var(--color-bg-card)" in css
+    assert "var(--color-border)" in css
+
+
+def test_primitives_overlay_backdrops_and_drawer_styles() -> None:
+    css = _css_text("primitives.css")
+    modal_backdrop = re.search(r"\.webcompy-modal-backdrop\s*\{([^}]*)\}", css, re.DOTALL)
+    assert modal_backdrop is not None
+    assert "rgba(0, 0, 0," in modal_backdrop.group(1)
+    assert "var(--color-fg)" not in modal_backdrop.group(1)
+
+    drawer_backdrop = re.search(r"\.webcompy-drawer-backdrop\s*\{([^}]*)\}", css, re.DOTALL)
+    assert drawer_backdrop is not None
+    assert "rgba(0, 0, 0," in drawer_backdrop.group(1)
+
+    drawer_panel = re.search(r"\.webcompy-drawer-panel\s*\{([^}]*)\}", css, re.DOTALL)
+    assert drawer_panel is not None
+    panel_body = drawer_panel.group(1)
+    assert "padding:" in panel_body
+    assert "var(--color-bg-elevated)" in panel_body
+    assert "var(--color-fg)" in panel_body
+    assert "var(--shadow-lg)" in panel_body
 
 
 def test_tokens_declares_color_scheme_on_root() -> None:
@@ -180,3 +216,20 @@ def test_prose_css_declares_layer_order() -> None:
 def test_code_block_css_in_components_layer() -> None:
     css = _css_text("code-block.css")
     assert "@layer components" in css, "code-block.css must be wrapped in @layer components"
+
+
+def test_prose_css_overflow_and_responsive_media_rules() -> None:
+    css = _css_text("prose.css")
+    wrapper_match = re.search(r"\.prose\s+\.prose-table-wrapper\s*\{([^}]*)\}", css, re.DOTALL)
+    assert wrapper_match is not None
+    wrapper_body = wrapper_match.group(1)
+    assert "overflow-x: auto" in wrapper_body
+    assert "max-width: 100%" in wrapper_body
+
+    inline_code_match = re.search(r"\.prose\s+:not\(pre\)\s*>\s*code\s*\{([^}]*)\}", css, re.DOTALL)
+    assert inline_code_match is not None
+    assert "overflow-wrap: anywhere" in inline_code_match.group(1)
+
+    img_match = re.search(r"\.prose\s+img\s*\{([^}]*)\}", css, re.DOTALL)
+    assert img_match is not None
+    assert "max-width: 100%" in img_match.group(1)

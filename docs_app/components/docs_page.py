@@ -120,9 +120,17 @@ DOCS_PAGE_SCOPED_STYLE = {
         "gap": "var(--space-6)",
         "align-items": "start",
     },
+    " .docs-page > *": {
+        "min-width": "0",
+    },
+    " .prose": {
+        "min-width": "0",
+        "max-width": "100%",
+    },
     " .docs-toc": {
         "position": "sticky",
         "top": "var(--space-4)",
+        "min-width": "0",
         "font-size": "var(--font-size-sm)",
     },
     " .docs-toc-list": {

@@ -54,7 +54,10 @@ def test_records_are_frozen_dataclasses():
     assert rec.component_id == "list"
 
 
-def test_emit_report_summary_logs_single_aggregated_warning(hydration_window, caplog):
+def test_emit_report_summary_logs_single_aggregated_warning(hydration_window, monkeypatch, caplog):
+    captured: list[tuple[object, ...]] = []
+    monkeypatch.setattr("webcompy.logging.warn", lambda *args: captured.append(args))
+
     record_mismatch("tag", "div", "span", "comp-a")
     record_mismatch("tag", "p", "div", "comp-a")
     record_mismatch("text", "a", "b", "comp-b")
@@ -62,8 +65,9 @@ def test_emit_report_summary_logs_single_aggregated_warning(hydration_window, ca
     with caplog.at_level(logging.WARNING, logger="webcompy.hydration"):
         emit_report_summary(hydration_window)
 
-    assert len(caplog.records) == 1
-    text = caplog.text
+    assert caplog.records == []
+    assert len(captured) == 1
+    text = str(captured[0][0])
     assert "Hydration mismatches detected (3)" in text
     assert "tag=2" in text
     assert "text=1" in text
@@ -71,10 +75,15 @@ def test_emit_report_summary_logs_single_aggregated_warning(hydration_window, ca
     assert "comp-b(1)" in text
 
 
-def test_emit_report_summary_silent_when_no_records(hydration_window, caplog):
+def test_emit_report_summary_silent_when_no_records(hydration_window, monkeypatch, caplog):
+    captured: list[tuple[object, ...]] = []
+    monkeypatch.setattr("webcompy.logging.warn", lambda *args: captured.append(args))
+
     with caplog.at_level(logging.WARNING, logger="webcompy.hydration"):
         emit_report_summary(hydration_window)
+
     assert caplog.records == []
+    assert captured == []
 
 
 def test_render_context_exposes_hydration_report():
@@ -234,6 +243,40 @@ class TestHydrationWindowClose:
             assert ctx._hydration_reporter.records == []
         finally:
             _active_app_context.reset(token)
+
+    @pytest.mark.asyncio
+    async def test_deferred_cookie_theme_applied_after_window_closes_without_mismatch(self, monkeypatch):
+        from webcompy.ports._keys import COOKIE_PORT_KEY
+        from webcompy.ui.theme._manager import ThemeManager
+        from webcompy.ui.theme._theme import THEME_KEY, Theme
+
+        ctx = _FakeCtx()
+        cookie_writes: list[tuple[str, str]] = []
+
+        class _CookieSpy:
+            def set(self, name: str, value: str, **kwargs: object) -> None:
+                cookie_writes.append((name, value))
+
+            def delete(self, name: str, **kwargs: object) -> None:
+                cookie_writes.append((name, ""))
+
+        root = self._make_root(monkeypatch, ctx)
+        ctx.di_scope = root._di_scope
+        manager = ThemeManager(root._app, ctx, Theme.SYSTEM)
+        root._di_scope.provide(THEME_KEY, manager)
+        root._di_scope.provide(COOKIE_PORT_KEY, _CookieSpy())
+        ctx._deferred_theme = Theme.DARK
+
+        token = _active_app_context.set(ctx)
+        try:
+            await root._render()
+        finally:
+            _active_app_context.reset(token)
+
+        assert ctx._hydration_reporter.records == []
+        assert ctx._deferred_theme is None
+        assert manager.value is Theme.DARK
+        assert cookie_writes == []
 
 
 async def _noop_async():

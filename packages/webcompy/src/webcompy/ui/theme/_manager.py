@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 class ThemeManager:
     """Reactive theme state holding a ``Signal[Theme]`` and a derived CSS style.
 
-    The derived style emits dark-token overrides for the active theme and
-    is registered with the app via ``register_style``. Theme changes are
-    persisted through the theme cookie unless persistence is disabled in
-    the app configuration.
+    The derived style emits explicit ``color-scheme`` declarations and
+    dark-token overrides for the active theme, registered with the app
+    via ``register_style``. Theme changes are persisted through the theme
+    cookie unless persistence is disabled in the app configuration.
 
     Args:
         app: Owning application, used to register the reactive style.
@@ -106,16 +106,19 @@ class ThemeManager:
         preferred = _system_preferred_theme()
         return Theme.LIGHT if preferred is Theme.DARK else Theme.DARK
 
+    def _apply_without_persist(self, theme: Theme) -> None:
+        self._signal.value = theme
+
     def _build_theme_css(self) -> str:
         from webcompy.ui.theme._tokens import DARK_TOKENS, render_tokens_css
 
         theme = self._signal.value
         dark_body = render_tokens_css(DARK_TOKENS, important=True)
         if theme is Theme.LIGHT:
-            return ""
+            return ":root {\n  color-scheme: light;\n}"
         if theme is Theme.DARK:
-            return f":root {{\n  {dark_body}\n}}"
-        return f"@media (prefers-color-scheme: dark) {{\n  :root {{\n    {dark_body}\n  }}\n}}"
+            return f":root {{\n  color-scheme: dark;\n  {dark_body}\n}}"
+        return f"@media (prefers-color-scheme: dark) {{\n  :root {{\n    color-scheme: dark;\n    {dark_body}\n  }}\n}}"
 
 
 def _normalize_initial(initial: Any) -> Theme:

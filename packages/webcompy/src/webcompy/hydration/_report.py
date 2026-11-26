@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from logging import getLogger
 from typing import Any, Literal
 
-MismatchKind = Literal["text", "attribute", "tag", "node-count", "raw_html"]
+from webcompy import logging as webcompy_logging
 
-_logger = getLogger("webcompy.hydration")
+MismatchKind = Literal["text", "attribute", "tag", "node-count", "raw_html"]
 
 
 @dataclass(frozen=True)
@@ -53,12 +52,8 @@ def emit_report_summary(ctx: Any) -> None:
             by_cid[record.component_id] = by_cid.get(record.component_id, 0) + 1
     kind_summary = ", ".join(f"{kind}={count}" for kind, count in sorted(by_kind.items()))
     cid_summary = ", ".join(f"{cid}({count})" for cid, count in sorted(by_cid.items()))
-    _logger.warning(
-        "Hydration mismatches detected (%d): %s%s",
-        len(records),
-        kind_summary,
-        f"; components: {cid_summary}" if cid_summary else "",
-    )
+    suffix = f"; components: {cid_summary}" if cid_summary else ""
+    webcompy_logging.warn(f"Hydration mismatches detected ({len(records)}): {kind_summary}{suffix}")
 
 
 def _active_hydration_window() -> Any:

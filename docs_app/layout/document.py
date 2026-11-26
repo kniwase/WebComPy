@@ -111,9 +111,11 @@ DocsLayout.scoped_style = {
     },
     " .docs-main": {
         "min-width": "0",
+        "max-width": "100%",
     },
     " .docs-pager": {
         "display": "flex",
+        "flex-wrap": "wrap",
         "justify-content": "space-between",
         "gap": "var(--space-4)",
         "margin-top": "var(--space-8)",
