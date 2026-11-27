@@ -36,7 +36,9 @@ def test_examples_routing_nested_layout_and_guard(docs_page_on, assert_no_consol
 
     frame.locator(".top-nav").get_by_role("link", name="Admin").click()
     expect(frame.get_by_role("heading", name="Sign In")).to_be_visible()
-    expect(frame.locator(".guard-notice")).to_contain_text("Redirected from /admin")
+    notice = frame.locator(".guard-notice")
+    expect(notice).to_contain_text("Redirected from /admin")
+    assert notice.evaluate("el => getComputedStyle(el).color !== getComputedStyle(el.closest('.route-card')).color")
 
     frame.get_by_role("button", name="Sign in as Admin").click()
     expect(frame.get_by_role("heading", name="Protected Admin")).to_be_visible()

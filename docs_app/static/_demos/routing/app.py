@@ -256,7 +256,7 @@ def LoginView(_: ComponentContext[RouterContext]):
 
 LoginView.scoped_style = {
     **_ROUTE_CARD_BASE_STYLE,
-    ".guard-notice": {
+    ".route-card .guard-notice": {
         "color": "var(--color-warning)",
         "font-weight": "600",
     },
