@@ -160,6 +160,7 @@ def render_markdown(
     *,
     heading_ids: bool = False,
     code_blocks: bool = False,
+    copyable_code_blocks: bool = False,
     classes: Mapping[str, str] | None = None,
 ) -> ElementAbstract
 ```
@@ -176,6 +177,7 @@ The source is split into plain segments and `{% for %}` directive blocks; plain 
 - `context`: Template context used for variable interpolation inside the Markdown.
 - `heading_ids`: When `True`, add deduplicated slug ids to headings.
 - `code_blocks`: When `True`, replace fenced code blocks with `CodeBlock` components.
+- `copyable_code_blocks`: When `True` alongside `code_blocks`, render replaced `CodeBlock` components with copy-to-clipboard controls.
 - `classes`: Mapping of HTML tag names to CSS classes applied to the matching rendered elements.
 
 **Returns:** The rendered element, or a fragment when rendering produced multiple roots.
@@ -466,7 +468,9 @@ async def load_markdown_document(
     source: str | Path,
     *,
     heading_ids: bool = True,
+    heading_anchors: bool = False,
     code_blocks: bool = True,
+    copyable_code_blocks: bool = False,
     classes: Mapping[str, str] | None = None,
     wrap_tables: bool = True,
     context: Mapping[str, Any] | None = None,
@@ -483,7 +487,9 @@ Reads the source text, splits off frontmatter, renders the body through `render_
 
 - `source`: Resource path or file path of the Markdown source.
 - `heading_ids`: Whether heading elements receive slug `id` attributes.
+- `heading_anchors`: Whether `<h2>`-`<h6>` headings with an `id` receive a clickable `<a class="heading-anchor">` permalink.
 - `code_blocks`: Whether fenced code blocks are replaced with `CodeBlock` components.
+- `copyable_code_blocks`: Whether replaced `CodeBlock` components render a copy-to-clipboard button.
 - `classes`: Optional mapping from tag name to CSS class applied to matching elements.
 - `wrap_tables`: Whether `<table>` elements are wrapped in `<div class="prose-table-wrapper">` for horizontal scrolling.
 - `context`: Optional template context for `{{ }}` interpolation inside the Markdown body.

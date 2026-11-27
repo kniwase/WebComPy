@@ -68,6 +68,7 @@ def render_markdown(
     *,
     heading_ids: bool = False,
     code_blocks: bool = False,
+    copyable_code_blocks: bool = False,
     classes: Mapping[str, str] | None = None,
 ) -> ElementAbstract:
     """Render a Markdown source string into WebComPy elements.
@@ -89,6 +90,9 @@ def render_markdown(
         heading_ids: When ``True``, add deduplicated slug ids to headings.
         code_blocks: When ``True``, replace fenced code blocks with
             ``CodeBlock`` components.
+        copyable_code_blocks: When ``True`` alongside ``code_blocks``,
+            render replaced ``CodeBlock`` components with copy-to-clipboard
+            controls.
         classes: Mapping of HTML tag names to CSS classes applied to the
             matching rendered elements.
 
@@ -134,7 +138,7 @@ def render_markdown(
         if heading_ids:
             apply_heading_ids_to_roots(elements)
         if code_blocks:
-            replace_code_blocks_in_roots(elements)
+            replace_code_blocks_in_roots(elements, copyable=copyable_code_blocks)
         if classes is not None:
             apply_class_map_to_roots(elements, classes)
 

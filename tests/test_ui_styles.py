@@ -216,6 +216,15 @@ def test_prose_css_declares_layer_order() -> None:
 def test_code_block_css_in_components_layer() -> None:
     css = _css_text("code-block.css")
     assert "@layer components" in css, "code-block.css must be wrapped in @layer components"
+    assert ".code-block-container" in css
+    assert ".code-block-copy" in css
+
+
+def test_prose_css_code_block_container_and_heading_anchors() -> None:
+    css = _css_text("prose.css")
+    assert ".prose .code-block-container" in css
+    assert ".prose .heading-anchor" in css
+    assert ":not(:has(> .heading-anchor)):hover::after" in css
 
 
 def test_prose_css_overflow_and_responsive_media_rules() -> None:

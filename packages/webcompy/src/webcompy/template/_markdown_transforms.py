@@ -13,6 +13,7 @@ from webcompy.template._markdown_document import HeadingInfo
 from webcompy.ui.code_block import CodeBlock
 
 _HEADING_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
+_ANCHOR_HEADING_TAGS = frozenset({"h2", "h3", "h4", "h5", "h6"})
 _WHITESPACE_RUN_RE = re.compile(r"\s+")
 _LANGUAGE_CLASS_RE = re.compile(r"(?:^|\s)language-([^\s]+)")
 
@@ -47,9 +48,18 @@ def _walk_elements(roots: list[Any], visit: Visitor) -> None:
             _walk_elements(lst, visit)
 
 
+def _is_heading_anchor(element: Any) -> bool:
+    if not isinstance(element, Element) or element._tag_name != "a":
+        return False
+    raw_class = element._attrs.get("class")
+    return isinstance(raw_class, str) and "heading-anchor" in raw_class.split()
+
+
 def _resolve_text(element: Any) -> str:
     if isinstance(element, TextElement):
         return element._get_text()
+    if _is_heading_anchor(element):
+        return ""
     parts: list[str] = []
     for lst in _child_lists(element):
         for child in lst:
@@ -118,7 +128,7 @@ def _collect_headings_visit_factory(
     return visit
 
 
-def _code_block_visit() -> Visitor:
+def _code_block_visit(*, copyable: bool = False) -> Visitor:
     def visit(child: Any, lst: list[Any], i: int) -> Any | None:
         if not isinstance(child, Element) or child._tag_name != "pre":
             return None
@@ -134,7 +144,33 @@ def _code_block_visit() -> Visitor:
         m = _LANGUAGE_CLASS_RE.search(class_attr)
         if m is None:
             return None
-        return CodeBlock({"code": _resolve_text(code), "lang": m.group(1)})
+        props: dict[str, Any] = {"code": _resolve_text(code), "lang": m.group(1)}
+        if copyable:
+            props["copyable"] = True
+        return CodeBlock(props)  # type: ignore[arg-type]
+
+    return visit
+
+
+def _heading_anchor_visit() -> Visitor:
+    def visit(child: Any, lst: list[Any], i: int) -> Any | None:
+        if isinstance(child, Element) and child._tag_name in _ANCHOR_HEADING_TAGS:
+            heading_id = child._attrs.get("id")
+            if not isinstance(heading_id, str) or not heading_id:
+                return None
+            if any(_is_heading_anchor(existing) for existing in child._children):
+                return None
+            heading_text = _resolve_text(child).strip()
+            label = f"Permalink to {heading_text}" if heading_text else "Permalink"
+            anchor = Element(
+                "a",
+                {"class": "heading-anchor", "href": f"#{heading_id}", "aria-label": label},
+                {},
+                None,
+                ["#"],
+            )
+            child._append_child(anchor)
+        return None
 
     return visit
 
@@ -179,13 +215,29 @@ def collect_headings(root: ElementAbstract, *, heading_ids: bool = True) -> tupl
     return tuple(result)
 
 
-def replace_code_blocks(root: ElementAbstract) -> None:
+def replace_code_blocks(root: ElementAbstract, *, copyable: bool = False) -> None:
     """Replace ``<pre><code class="language-*">`` subtrees with CodeBlock.
 
     The root element itself is not replaced; use ``render_markdown`` with
     ``code_blocks=True`` for full coverage of root-level fenced blocks.
+
+    Args:
+        root: Root element tree to transform in-place.
+        copyable: When ``True``, pass ``copyable=True`` to replaced
+            ``CodeBlock`` components.
+
     """
-    _walk_elements([root], _code_block_visit())
+    _walk_elements([root], _code_block_visit(copyable=copyable))
+
+
+def apply_heading_anchors(root: ElementAbstract) -> None:
+    """Append clickable permalink anchors to ``<h2>``-``<h6>`` headings carrying an ``id``.
+
+    Args:
+        root: Root element tree to transform in-place.
+
+    """
+    _walk_elements([root], _heading_anchor_visit())
 
 
 def apply_class_map(root: ElementAbstract, classes: Mapping[str, str]) -> None:
@@ -197,8 +249,8 @@ def apply_heading_ids_to_roots(roots: list[ElementAbstract]) -> None:
     _walk_elements(roots, _heading_id_visit_factory(_SlugDeduplicator()))
 
 
-def replace_code_blocks_in_roots(roots: list[ElementAbstract]) -> None:
-    _walk_elements(roots, _code_block_visit())
+def replace_code_blocks_in_roots(roots: list[ElementAbstract], *, copyable: bool = False) -> None:
+    _walk_elements(roots, _code_block_visit(copyable=copyable))
 
 
 def apply_class_map_to_roots(roots: list[ElementAbstract], classes: Mapping[str, str]) -> None:

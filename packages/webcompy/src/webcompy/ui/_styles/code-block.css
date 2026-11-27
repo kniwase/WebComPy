@@ -32,4 +32,45 @@
   @scope (.code-block) to (.code-block *) {
     .tok-comment { font-style: italic; }
   }
+
+  .code-block-container {
+    position: relative;
+  }
+
+  .code-block-container > .code-block {
+    padding-right: 4.75rem;
+  }
+
+  .code-block-copy {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    z-index: 1;
+    padding: 0.2rem 0.55rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-fg);
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .code-block-copy:hover {
+    border-color: var(--color-link);
+    color: var(--color-link);
+  }
+
+  .code-block-copy[data-copied="true"] {
+    color: var(--color-success);
+    border-color: var(--color-success);
+  }
+
+  .code-block-copy:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }

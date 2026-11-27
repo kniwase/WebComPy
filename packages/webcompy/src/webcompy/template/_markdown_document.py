@@ -51,7 +51,9 @@ async def load_markdown_document(
     source: str | Path,
     *,
     heading_ids: bool = True,
+    heading_anchors: bool = False,
     code_blocks: bool = True,
+    copyable_code_blocks: bool = False,
     classes: Mapping[str, str] | None = None,
     wrap_tables: bool = True,
     context: Mapping[str, Any] | None = None,
@@ -66,8 +68,12 @@ async def load_markdown_document(
         source: Resource path or file path of the Markdown source.
         heading_ids: Whether heading elements receive slug ``id``
             attributes.
+        heading_anchors: Whether ``<h2>``-``<h6>`` headings with an ``id``
+            receive a clickable ``<a class="heading-anchor">`` permalink.
         code_blocks: Whether fenced code blocks are replaced with
             ``CodeBlock`` components.
+        copyable_code_blocks: Whether replaced ``CodeBlock`` components
+            render a copy-to-clipboard button.
         classes: Optional mapping from tag name to CSS class applied to
             matching elements.
         wrap_tables: Whether ``<table>`` elements are wrapped in
@@ -81,7 +87,7 @@ async def load_markdown_document(
     """
     from webcompy.template import render_markdown
     from webcompy.template._frontmatter import split_frontmatter
-    from webcompy.template._markdown_transforms import collect_headings
+    from webcompy.template._markdown_transforms import apply_heading_anchors, collect_headings
     from webcompy.template._markdown_transforms import wrap_tables as _wrap_tables
 
     text = await load_text(source)
@@ -91,9 +97,12 @@ async def load_markdown_document(
         context,
         heading_ids=heading_ids,
         code_blocks=code_blocks,
+        copyable_code_blocks=copyable_code_blocks,
         classes=classes,
     )
     if wrap_tables:
         content = _wrap_tables(content)
     toc = collect_headings(content, heading_ids=heading_ids)
+    if heading_anchors:
+        apply_heading_anchors(content)
     return MarkdownDocument(content=content, metadata=metadata, toc=toc)

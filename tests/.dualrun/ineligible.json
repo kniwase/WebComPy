@@ -24,7 +24,7 @@
   "tests/test_build_wheels.py": "top-level import from 'webcompy_cli._lockfile' at line 8",
   "tests/test_check_browser_imports.py": "module-scope side-effecting call at line 5",
   "tests/test_cli_resource_endpoint.py": "top-level import from 'webcompy_cli._build' at line 9",
-  "tests/test_code_block_component.py": "top-level import of 'webcompy_testing._ports.FakeBrowserDOMPort' at line 26",
+  "tests/test_code_block_component.py": "top-level import of 'webcompy_testing._ports.FakeBrowserDOMPort' at line 27",
   "tests/test_config_dataclasses.py": "top-level import from 'webcompy_cli.config._build_config' at line 6",
   "tests/test_config_discovery.py": "top-level import from 'webcompy_cli._exception' at line 6",
   "tests/test_custom_element_components.py": "module-scope side-effecting call at line 21",

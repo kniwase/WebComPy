@@ -1064,13 +1064,13 @@ Key: `webcompy.ui.code_block._component:CodeBlock` · Exports: `from webcompy.ui
 
 Render source code with syntax highlighting inside `pre`/`code`.
 
-Tokenizes the code with the lexer registered for `lang` and renders one `<span>` per token as a direct child of the `<code>` element. When the language is unknown or tokenization produces no tokens, the whole code is rendered as a single `tok-ident` span. Empty code renders no token spans. When `code` is a `Signal`, the spans re-render from a reactive token list whenever the signal value changes.
+Tokenizes the code with the lexer registered for `lang` and renders one `<span>` per token as a direct child of the `<code>` element. When the language is unknown or tokenization produces no tokens, the whole code is rendered as a single `tok-ident` span. Empty code renders no token spans. When `code` is a `Signal`, the spans re-render from a reactive token list whenever the signal value changes. When `copyable` is `True`, the block is wrapped in a container with a copy-to-clipboard button alongside the `<pre>` element.
 
 **Args:**
 
-- `context`: Component context carrying the `code` and `lang` props.
+- `context`: Component context carrying the `code`, `lang`, and optional `copyable` props.
 
-**Returns:** The rendered element tree: a `pre.code-block` wrapping a `code.language-{lang}` element whose direct children are the token spans.
+**Returns:** The rendered element tree: a `pre.code-block` wrapping a `code.language-{lang}` element whose direct children are the token spans, or a `div.code-block-container` containing a copy button and `pre.code-block` when `copyable` is `True`.
 
 ### get_lexer
 
