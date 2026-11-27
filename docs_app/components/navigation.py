@@ -8,12 +8,18 @@ from webcompy.router import RouterLink
 from webcompy.signal import Signal, use_computed, use_state
 from webcompy.ui import Dropdown
 
+from .docs_search import DocsSearch
 from .theme_toggle import ThemeToggle
 
 
 class _SubPage(TypedDict):
     title: str
     to: str
+
+
+class _NavGroup(TypedDict):
+    title: str
+    items: list[_SubPage]
 
 
 class _PageRequired(TypedDict):
@@ -23,6 +29,7 @@ class _PageRequired(TypedDict):
 class Page(_PageRequired, total=False):
     to: str
     children: list[_SubPage]
+    groups: list[_NavGroup]
 
 
 @define_component()
@@ -76,33 +83,54 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
             _remove_click()
 
     def _generate_navitem(page: Page, idx: int):
-        if "children" in page:
+        if "groups" in page or "children" in page:
             main = (
                 [
                     html.LI(
-                        {},
+                        {"role": "none"},
                         RouterLink(
                             to=page["to"],
                             text=[page["title"]],
-                            attrs={"role": "menuitem"},
+                            attrs={"role": "menuitem", "@click": lambda _ev: _close_all()},
                         ),
                     ),
-                    html.LI({}, html.HR({})),
+                    html.LI({"role": "separator"}, html.HR({})),
                 ]
                 if "to" in page
                 else []
             )
-            items = tuple(
-                html.LI(
-                    {},
-                    RouterLink(
-                        to=sub["to"],
-                        text=[sub["title"]],
-                        attrs={"role": "menuitem", "@click": lambda ev: _close_all()},
-                    ),
-                )
-                for sub in page["children"]
-            )
+            items: list[Any] = []
+            if "groups" in page:
+                for group in page["groups"]:
+                    items.append(
+                        html.LI(
+                            {"class": "navbar-dropdown-section", "role": "presentation"},
+                            group["title"],
+                        )
+                    )
+                    for sub in group["items"]:
+                        items.append(
+                            html.LI(
+                                {"role": "none"},
+                                RouterLink(
+                                    to=sub["to"],
+                                    text=[sub["title"]],
+                                    attrs={"role": "menuitem", "@click": lambda ev: _close_all()},
+                                ),
+                            )
+                        )
+            else:
+                for sub in page["children"]:
+                    items.append(
+                        html.LI(
+                            {"role": "none"},
+                            RouterLink(
+                                to=sub["to"],
+                                text=[sub["title"]],
+                                attrs={"role": "menuitem", "@click": lambda ev: _close_all()},
+                            ),
+                        )
+                    )
             return html.LI(
                 {"class": "navbar-item-dropdown"},
                 Dropdown(
@@ -132,10 +160,15 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
         return None
 
     return html.NAV(
-        {"class": "navbar"},
+        {"class": "navbar", "aria-label": "Primary navigation"},
         html.DIV(
             {"class": "navbar-inner"},
-            html.SPAN({"class": "navbar-brand"}, "WebComPy"),
+            RouterLink(
+                to="/",
+                text=["WebComPy"],
+                attrs={"class": "navbar-brand", "@click": lambda _ev: _close_all()},
+                active_class="",
+            ),
             html.DIV(
                 {"class": "navbar-right"},
                 html.DIV(
@@ -148,6 +181,7 @@ def DocsNavbar(context: ComponentContext[list[Page]]):
                         *tuple(_generate_navitem(page, idx) for idx, page in enumerate(context.props)),
                     ),
                 ),
+                DocsSearch(None),
                 html.BUTTON(
                     {
                         "type": "button",
@@ -190,6 +224,7 @@ DocsNavbar.scoped_style = {
         "color": "var(--color-fg)",
         "margin-right": "var(--space-6)",
         "letter-spacing": "-0.02em",
+        "text-decoration": "none",
     },
     " .navbar-right": {
         "display": "flex",

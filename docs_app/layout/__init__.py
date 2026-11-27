@@ -1,23 +1,28 @@
-from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.components import ComponentContext, define_component
 from webcompy.di import inject
+from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements import html
-from webcompy.ports import ASYNC_SCHEDULER_PORT_KEY, RESOURCE_PORT_KEY
 from webcompy.router import RouterView
+from webcompy.signal import use_computed
 
 from ..components.navigation import DocsNavbar, Page
-from ..docs_manifest import flatten_pages, route_pages
+from ..docs_manifest import DOCS_SECTIONS
 
 
 @define_component()
 def DocsRoot(_: ComponentContext[None]):
-    @on_mounted
-    def _prefetch_docs_resources():
-        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY, default=None)
-        port = inject(RESOURCE_PORT_KEY, default=None)
-        if scheduler is None or port is None:
-            return
-        sources = [page["source"] for page in route_pages() if "source" in page]
-        scheduler.schedule(port.preload(sources), render=False)
+    router = inject(_ROUTER_KEY, default=None)
+
+    def _skip_href() -> str:
+        if router is None:
+            return "#main-content"
+        match = router.current_match.value
+        if match is None:
+            return "#main-content"
+        path = match.path if match.path.startswith("/") else "/" + match.path
+        return f"{path}#main-content"
+
+    skip_href = use_computed(_skip_href)
 
     pages: list[Page] = [
         {
@@ -27,20 +32,27 @@ def DocsRoot(_: ComponentContext[None]):
         {
             "title": "Documents",
             "to": "/documents",
-            "children": [
+            "groups": [
                 {
-                    "title": page["label"],
-                    "to": page["path"],
+                    "title": section["title"],
+                    "items": [
+                        {
+                            "title": page["label"],
+                            "to": page["path"],
+                        }
+                        for page in section["pages"]
+                    ],
                 }
-                for page in flatten_pages()
+                for section in DOCS_SECTIONS
             ],
         },
     ]
     return html.DIV(
         {},
+        html.A({"class": "skip-link", "href": skip_href}, "Skip to main content"),
         DocsNavbar(pages),
         html.MAIN(
-            {},
+            {"id": "main-content", "tabindex": "-1"},
             html.ARTICLE(
                 {},
                 RouterView(),

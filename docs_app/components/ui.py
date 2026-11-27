@@ -40,7 +40,7 @@ class SectionProps(TypedDict, total=False):
 def DocsSection(context: ComponentContext[SectionProps]):
     return html.SECTION(
         {"class": "ui-section"},
-        html.H3({"class": "ui-section-heading"}, context.props.get("heading", "")),
+        html.H2({"class": "ui-section-heading"}, context.props.get("heading", "")),
         html.DIV({"class": "ui-section-body"}, context.slots("default")),
     )
 
@@ -114,6 +114,8 @@ def DocsButton(context: ComponentContext[ButtonProps]):
             active_class="",
         )
     tag = html.A if "href" in props else html.BUTTON
+    if tag is html.A:
+        attrs.pop("type", None)
     return tag(
         attrs,
         props.get("text", ""),

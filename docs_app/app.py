@@ -8,6 +8,7 @@ app = WebComPyApp(
     router=router,
     config=WebComPyAppConfig(base_url="/", plugins=["docs_app.plugins:ErudaPlugin"]),
 )
+app.set_html_attr("lang", "en")
 app.set_head(
     {
         "title": "WebComPy - Python Frontend Framework",

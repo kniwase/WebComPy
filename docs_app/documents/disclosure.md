@@ -92,6 +92,10 @@ Progress({"value": progress, "min": 0, "max": 100, "aria_label": "Upload progres
 
 Every component above has a matching headless export under `webcompy.ui.headless` (`from webcompy.ui.headless import Tabs, Collapse, Accordion, Alert, Progress, Badge, Skeleton, Card`) carrying the same behavior, keyboard shortcuts, and ARIA contracts with zero visual CSS, driven through `data-state` attributes and part class hooks.
 
+## Live example
+
+Interact with the live `Tabs`, `Collapse`, `Accordion`, `Alert`, `Progress`, `Badge`, `Skeleton`, and `Card` examples below.
+
 ## Notes & caveats
 
 - Keep `Tabs` and `Accordion` item definitions static during a mount — update item contents via reactive signals inside each `content` generator instead of mutating `tabs` / `items` in place.

@@ -89,3 +89,91 @@ class TestExamplesPageTemplate:
             assert [frame.getAttribute("title") for frame in iframes] == ["Window A", "Window B"]
             assert 'href="/documents/examples/storage-sync"' in rendered
             assert "Open demo in new tab" in rendered
+
+
+class TestHeadingAnchorsAndTemplatePlacement:
+    def test_docs_page_template_normalizes_heading_anchor_hrefs(self) -> None:
+        from docs_app.components.docs_page import docs_page_template
+        from webcompy.components import ComponentContext, define_component
+        from webcompy.elements import html
+        from webcompy.elements.types._fragment import FragmentElement
+        from webcompy.template import HeadingInfo, MarkdownDocument
+        from webcompy_testing import TestRenderer
+
+        content = FragmentElement(
+            [
+                html.H1({"id": "title"}, "Title"),
+                html.H2(
+                    {"id": "sub-heading"},
+                    "Sub Heading",
+                    html.A({"class": "heading-anchor", "href": "#sub-heading"}, "#"),
+                ),
+            ]
+        )
+        doc = MarkdownDocument(
+            content=content,
+            metadata={"title": "Title"},
+            toc=(
+                HeadingInfo(level=1, text="Title", id="title"),
+                HeadingInfo(level=2, text="Sub Heading", id="sub-heading"),
+            ),
+        )
+
+        @define_component()
+        def AnchoredHost(_: ComponentContext[None]):
+            return docs_page_template(doc, "/documents/basic/components/")
+
+        with TestRenderer.render(AnchoredHost) as result:
+            rendered = result.to_html()
+            assert 'href="/documents/basic/components/#sub-heading"' in rendered
+
+    def test_docs_page_template_before_heading_id_places_extra_before_notes_and_next_steps(self) -> None:
+        from docs_app.components.docs_page import docs_page_template
+        from webcompy.components import ComponentContext, define_component
+        from webcompy.elements import html
+        from webcompy.elements.types._fragment import FragmentElement
+        from webcompy.template import HeadingInfo, MarkdownDocument
+        from webcompy_testing import TestRenderer
+
+        content = FragmentElement(
+            [
+                html.H1({"id": "overlay"}, "Overlay"),
+                html.H2({"id": "live-example"}, "Live example"),
+                html.H2({"id": "notes--caveats"}, "Notes & caveats"),
+                html.H2({"id": "next-steps"}, "Next steps"),
+            ]
+        )
+        doc = MarkdownDocument(
+            content=content,
+            metadata={"title": "Overlay"},
+            toc=(
+                HeadingInfo(level=1, text="Overlay", id="overlay"),
+                HeadingInfo(level=2, text="Live example", id="live-example"),
+                HeadingInfo(level=2, text="Notes & caveats", id="notes--caveats"),
+                HeadingInfo(level=2, text="Next steps", id="next-steps"),
+            ),
+        )
+
+        @define_component()
+        def OrderedHost(_: ComponentContext[None]):
+            return docs_page_template(
+                doc,
+                "/documents/basic/overlay",
+                extra_content=html.DIV({"class": "overlay-demo"}, "Demo body"),
+                before_heading_id="notes--caveats",
+            )
+
+        with TestRenderer.render(OrderedHost) as result:
+            rendered = result.to_html()
+            assert rendered.index("Live example") < rendered.index("Demo body")
+            assert rendered.index("Demo body") < rendered.index("Notes &amp; caveats")
+            assert rendered.index("Notes &amp; caveats") < rendered.index("Next steps")
+
+    def test_docs_page_components_do_not_duplicate_docs_page_style(self) -> None:
+        from docs_app.pages.document.installation import InstallationPage
+        from docs_app.pages.document.overlay import OverlayPage
+        from docs_app.pages.document.ui_primitives import UiPrimitivesPage
+
+        assert InstallationPage.scoped_style == ""
+        assert UiPrimitivesPage.scoped_style == ""
+        assert OverlayPage.scoped_style == ""

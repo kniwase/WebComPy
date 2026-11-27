@@ -3,12 +3,14 @@ from webcompy.router import RouterContext
 from webcompy.template import load_markdown_document
 
 from ...components.demo_display import DemoDisplay
-from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
+from ...components.docs_page import docs_page_template
 
 
 @define_component()
 async def GuidesStep5RemoteDataPage(context: ComponentContext[RouterContext]):
-    doc = await load_markdown_document("documents/guides_step5_remote_data.md")
+    doc = await load_markdown_document(
+        "documents/guides_step5_remote_data.md", copyable_code_blocks=True, heading_anchors=True
+    )
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
     return docs_page_template(
         doc,
@@ -21,6 +23,3 @@ async def GuidesStep5RemoteDataPage(context: ComponentContext[RouterContext]):
             }
         ),
     )
-
-
-GuidesStep5RemoteDataPage.scoped_style = DOCS_PAGE_SCOPED_STYLE
