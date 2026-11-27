@@ -121,12 +121,13 @@ def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
             promise = write_text(code_text)
         except Exception:
             return
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY, default=None)
+        if scheduler is None:
+            return
         copied.value = True
         reset_gen[0] += 1
         gen = reset_gen[0]
-        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY, default=None)
-        if scheduler is not None:
-            scheduler.schedule(_finalize(promise, gen), render=False)
+        scheduler.schedule(_finalize(promise, gen), render=False)
 
     copy_btn = create_element(
         "button",

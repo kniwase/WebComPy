@@ -684,3 +684,50 @@ class TestElementIntegration:
         html = ServerDOMPort().render_html(node)
         assert 'value="a"' in html
         assert ":bind" not in html
+
+
+def test_bind_type_check_does_not_subscribe_enclosing_computed():
+    from webcompy.signal import Computed
+
+    text_sig = Signal("hello")
+    textarea_sig = Signal("area")
+    num_sig = Signal(1)
+    check_sig = Signal(False)
+    select_sig = Signal("a")
+    runs = 0
+
+    def _build() -> list[Element]:
+        nonlocal runs
+        runs += 1
+        return [
+            Element("input", {"type": "text", ":bind": text_sig}, {}, None, None),
+            Element("textarea", {":bind": textarea_sig}, {}, None, None),
+            Element("input", {"type": "number", ":bind": num_sig}, {}, None, None),
+            Element("input", {"type": "checkbox", ":bind": check_sig}, {}, None, None),
+            Element(
+                "select",
+                {":bind": select_sig},
+                {},
+                None,
+                [
+                    Element("option", {"value": "a"}, {}, None, None),
+                    Element("option", {"value": "b"}, {}, None, None),
+                ],
+            ),
+        ]
+
+    comp = Computed(_build)
+    first = comp.value
+    assert len(first) == 5
+    assert runs == 1
+
+    text_sig.value = "world"
+    textarea_sig.value = "updated"
+    num_sig.value = 42
+    check_sig.value = True
+    select_sig.value = "b"
+
+    assert not comp.dirty
+    second = comp.value
+    assert second is first
+    assert runs == 1

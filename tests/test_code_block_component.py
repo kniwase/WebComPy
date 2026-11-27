@@ -346,3 +346,31 @@ def test_codeblock_copyable_renders_button_and_preserves_direct_token_spans() ->
         run_sync(scheduler.drain())
         buttons[1].dispatchEvent(VirtualDOMEvent("click"))
         assert fake_host.copied_texts == ["def foo(): pass", "y = 42"]
+
+
+def test_codeblock_copyable_does_not_stick_without_scheduler(monkeypatch: pytest.MonkeyPatch) -> None:
+    import webcompy.ui.code_block._component as cb_mod
+
+    @define_component()
+    def NoSchedulerHost(context):
+        return CodeBlock({"code": "print(1)", "lang": "python", "copyable": True})
+
+    with TestRenderer.render(NoSchedulerHost) as result:
+        fake_host = _FakeClipboardHostPort()
+        orig_inject = cb_mod.inject
+
+        def _fake_inject(key: Any, default: Any = None) -> Any:
+            if key == HOST_PORT_KEY:
+                return fake_host
+            if key == ASYNC_SCHEDULER_PORT_KEY:
+                return None
+            return orig_inject(key, default=default)
+
+        monkeypatch.setattr(cb_mod, "inject", _fake_inject)
+
+        btn = result.query_selector("button")
+        assert btn is not None
+        btn.dispatchEvent(VirtualDOMEvent("click"))
+        assert fake_host.copied_texts == ["print(1)"]
+        assert btn.textContent == "Copy"
+        assert btn.getAttribute("data-copied") == "false"

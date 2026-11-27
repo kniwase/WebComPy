@@ -32,12 +32,17 @@ def overlay_dom_id(kind: str, context: Any) -> str:
     return component_dom_id(kind, context)
 
 
-def _get_document_active_element() -> DOMNode | None:
-    """Return ``document.activeElement`` via the Host port or ``None`` on the server."""
+def _resolve_port(key: Any, fallback: Any) -> Any:
     try:
-        port: HostPort | None = inject(HOST_PORT_KEY, default=None)
+        found = inject(key, default=None)
     except Exception:
-        return None
+        found = None
+    return found if found is not None else fallback
+
+
+def _get_document_active_element(*, host: HostPort | None = None) -> DOMNode | None:
+    """Return ``document.activeElement`` via the Host port or ``None`` on the server."""
+    port: HostPort | None = _resolve_port(HOST_PORT_KEY, host)
     if port is None:
         return None
     try:
@@ -57,14 +62,17 @@ def _get_document_active_element() -> DOMNode | None:
         return None
 
 
-def capture_active_element() -> DOMNode | None:
+def capture_active_element(*, host: HostPort | None = None) -> DOMNode | None:
     """Capture the currently focused element for later restoration.
+
+    Args:
+        host: Optional fallback Host port when no DI scope is active.
 
     Returns:
         The active element, or ``None`` when not in a browser environment.
 
     """
-    return _get_document_active_element()
+    return _get_document_active_element(host=host)
 
 
 def restore_focus(captured: DOMNode | None) -> None:
@@ -90,23 +98,28 @@ def restore_focus(captured: DOMNode | None) -> None:
         logging.warning("overlay focus restore failed", exc_info=True)
 
 
+def _get_attr(node: DOMNode, name: str) -> str | None:
+    raw = node.getAttribute(name)
+    return raw if isinstance(raw, str) else None
+
+
 def _node_is_focusable(node: DOMNode) -> bool:
     """Return whether ``node`` is focusable per the overlay trap definition."""
     tag = node.nodeName.upper()
-    if tag == "BUTTON" and node.getAttribute("disabled") is not None:
+    if tag == "BUTTON" and _get_attr(node, "disabled") is not None:
         return False
-    if tag in ("INPUT", "SELECT", "TEXTAREA") and node.getAttribute("disabled") is not None:
+    if tag in ("INPUT", "SELECT", "TEXTAREA") and _get_attr(node, "disabled") is not None:
         return False
-    tab_index_raw = node.getAttribute("tabindex")
+    tab_index_raw = _get_attr(node, "tabindex")
     if tab_index_raw is not None and tab_index_raw.strip() == "-1":
         return False
-    if tag == "A" and node.getAttribute("href") is not None:
+    if tag == "A" and _get_attr(node, "href") is not None:
         return True
     if tag in ("BUTTON", "SELECT", "TEXTAREA", "INPUT"):
         return True
-    if tag in ("AUDIO", "VIDEO") and node.getAttribute("controls") is not None:
+    if tag in ("AUDIO", "VIDEO") and _get_attr(node, "controls") is not None:
         return True
-    if node.getAttribute("contenteditable") == "true":
+    if _get_attr(node, "contenteditable") == "true":
         return True
     if tab_index_raw is not None:
         stripped = tab_index_raw.strip()
@@ -118,11 +131,12 @@ def _node_is_focusable(node: DOMNode) -> bool:
     return False
 
 
-def get_focusable_elements(root: DOMNode | None) -> list[DOMNode]:
+def get_focusable_elements(root: DOMNode | None, *, dom: DOMPort | None = None) -> list[DOMNode]:
     """Return focusable descendants of ``root`` in document order.
 
     Args:
         root: Overlay root node to search within.
+        dom: Optional fallback DOM port when no DI scope is active.
 
     Returns:
         Focusable element nodes found inside ``root``.
@@ -130,14 +144,11 @@ def get_focusable_elements(root: DOMNode | None) -> list[DOMNode]:
     """
     if root is None:
         return []
-    try:
-        dom: DOMPort | None = inject(DOM_PORT_KEY, default=None)
-    except Exception:
-        dom = None
-    if dom is None:
+    resolved_dom: DOMPort | None = _resolve_port(DOM_PORT_KEY, dom)
+    if resolved_dom is None:
         return _collect_focusable_direct(root)
     try:
-        candidates = dom.query_selector_all("*", root=root)
+        candidates = resolved_dom.query_selector_all("*", root=root)
     except Exception:
         candidates = _collect_focusable_direct(root)
         return [n for n in candidates if _node_is_focusable(n)]
@@ -159,14 +170,15 @@ def _collect_focusable_direct(root: DOMNode) -> list[DOMNode]:
     return collected
 
 
-def focus_initial(root: DOMNode) -> None:
+def focus_initial(root: DOMNode, *, dom: DOMPort | None = None) -> None:
     """Move focus into ``root``: first focusable element, or the panel itself.
 
     Args:
         root: Overlay panel node.
+        dom: Optional fallback DOM port when no DI scope is active.
 
     """
-    focusable = get_focusable_elements(root)
+    focusable = get_focusable_elements(root, dom=dom)
     if focusable:
         try:
             focusable[0].focus()
@@ -174,11 +186,49 @@ def focus_initial(root: DOMNode) -> None:
             logging.warning("overlay focus initial failed", exc_info=True)
         return
     try:
-        if root.getAttribute("tabindex") is None:
+        if _get_attr(root, "tabindex") is None:
             root.setAttribute("tabindex", "-1")
         root.focus()
     except Exception:
         logging.warning("overlay focus initial fallback failed", exc_info=True)
+
+
+def _schedule_overlay_focus(
+    panel_id: str,
+    get_dom: Callable[[], DOMPort | None],
+    get_host: Callable[[], HostPort | None],
+    should_focus: Callable[[], bool],
+    attempts: int = 5,
+) -> None:
+    if attempts <= 0 or not should_focus():
+        return
+
+    def _try_focus(remaining: int = attempts) -> None:
+        if not should_focus():
+            return
+        try:
+            dom = get_dom()
+            panel = None
+            if dom is not None:
+                panel = dom.get_element_by_id(panel_id)
+                if panel is None:
+                    with contextlib.suppress(Exception):
+                        panel = dom.query_selector(f"#{panel_id}")
+            if panel is not None:
+                focus_initial(panel, dom=dom)
+                return
+            if remaining > 1:
+                next_host = get_host()
+                if next_host is not None:
+                    next_host.schedule_macro_task(lambda: _try_focus(remaining - 1))
+        except Exception:
+            logging.warning("overlay scheduled focus failed", exc_info=True)
+
+    host = get_host()
+    if host is not None:
+        host.schedule_macro_task(_try_focus)
+    else:
+        _try_focus()
 
 
 def trap_focus(root: DOMNode) -> Callable[[], None]:
