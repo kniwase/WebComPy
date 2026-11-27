@@ -295,6 +295,31 @@ def test_docs_search_filters_and_navigates(docs_app_page, assert_no_console_erro
     docs_app_page.keyboard.type("modal")
     modal_link = docs_app_page.locator(".docs-search-result-link").filter(has_text="Overlay Components").first
     expect(modal_link).to_be_visible()
+    layout = docs_app_page.evaluate(
+        "() => {"
+        "  const panel = document.querySelector('.docs-search-panel');"
+        "  const results = document.querySelector('.docs-search-results');"
+        "  const item = document.querySelector('.docs-search-result');"
+        "  const meta = item ? item.querySelector('.docs-search-result-meta') : null;"
+        "  if (!panel || !results || !item || !meta) return null;"
+        "  const pr = panel.getBoundingClientRect();"
+        "  const ir = item.getBoundingClientRect();"
+        "  const mr = meta.getBoundingClientRect();"
+        "  return {"
+        "    scrollW: results.scrollWidth,"
+        "    clientW: results.clientWidth,"
+        "    panelRight: pr.right,"
+        "    itemRight: ir.right,"
+        "    metaRight: mr.right,"
+        "    metaW: mr.width,"
+        "  };"
+        "}"
+    )
+    assert layout is not None
+    assert layout["scrollW"] <= layout["clientW"] + 1
+    assert layout["itemRight"] <= layout["panelRight"] + 1
+    assert layout["metaRight"] <= layout["panelRight"] + 1
+    assert layout["metaW"] > 0
     modal_link.click()
     expect(search_input).not_to_be_visible()
     assert "/documents/basic/overlay" in docs_app_page.url
