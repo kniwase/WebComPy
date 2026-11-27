@@ -291,10 +291,34 @@ def test_docs_search_filters_and_navigates(docs_app_page, assert_no_console_erro
     docs_app_page.keyboard.press("/")
     search_input = docs_app_page.locator("#docs-search-input")
     expect(search_input).to_be_visible()
-    search_input.fill("hydration")
+    expect(search_input).to_be_focused()
+    docs_app_page.keyboard.type("modal")
+    modal_link = docs_app_page.locator(".docs-search-result-link").filter(has_text="Overlay Components").first
+    expect(modal_link).to_be_visible()
+    modal_link.click()
+    expect(search_input).not_to_be_visible()
+    assert "/documents/basic/overlay" in docs_app_page.url
+
+    docs_app_page.keyboard.press("/")
+    expect(search_input).to_be_visible()
+    expect(search_input).to_be_focused()
+    expect(search_input).to_have_value("")
+    docs_app_page.keyboard.type("router")
+    router_link = docs_app_page.locator(".docs-search-result-link").filter(has_text="Routing").first
+    expect(router_link).to_be_visible()
+    close_btn = docs_app_page.locator(".docs-search-close")
+    expect(close_btn.locator("svg")).to_be_visible()
+    assert close_btn.inner_text().strip() == ""
+    close_btn.click()
+    expect(search_input).not_to_be_visible()
+
+    docs_app_page.keyboard.press("/")
+    expect(search_input).to_be_visible()
+    expect(search_input).to_be_focused()
+    docs_app_page.keyboard.type("hydration")
     match_link = docs_app_page.locator(".docs-search-result-link").filter(has_text="Hydration & Data Transfer").first
     expect(match_link).to_be_visible()
-    match_link.click()
+    docs_app_page.keyboard.press("Enter")
     expect(search_input).not_to_be_visible()
     assert "/documents/advanced/hydration-and-transfer" in docs_app_page.url
     expect(docs_app_page.locator("article.prose h1")).to_have_text("Hydration & Data Transfer")

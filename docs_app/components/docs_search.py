@@ -11,6 +11,7 @@ from webcompy.signal import Computed, Signal, use_computed
 from webcompy.ui import Modal
 
 from ..docs_manifest import DOCS_SECTIONS
+from ..docs_search_index import DOCS_SEARCH_METADATA
 
 _SEARCH_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" '
@@ -21,12 +22,23 @@ _SEARCH_SVG = (
     "</svg>"
 )
 
+_CLOSE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" '
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+    'stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M18 6 6 18"></path>'
+    '<path d="m6 6 12 12"></path>'
+    "</svg>"
+)
+
 
 class SearchEntry(TypedDict):
     label: str
     section: str
     group: str
     path: str
+    description: str
+    headings_text: str
     haystack: str
 
 
@@ -37,14 +49,19 @@ def _build_search_index() -> tuple[SearchEntry, ...]:
         for page in section["pages"]:
             group = page.get("group", "")
             path = page["path"]
+            meta_entry = DOCS_SEARCH_METADATA.get(path)
+            description = meta_entry["description"] if meta_entry is not None else ""
+            headings_text = " ".join(meta_entry["headings"]) if meta_entry is not None else ""
             slug_words = path.removeprefix("/documents/").replace("/", " ").replace("-", " ")
-            haystack = " ".join((page["label"], section_title, group, slug_words)).lower()
+            haystack = " ".join((page["label"], section_title, group, slug_words, headings_text, description)).lower()
             entries.append(
                 {
                     "label": page["label"],
                     "section": section_title,
                     "group": group,
                     "path": path,
+                    "description": description,
+                    "headings_text": headings_text,
                     "haystack": haystack,
                 }
             )
@@ -66,14 +83,24 @@ def _filter_entries(raw_query: str) -> list[SearchEntry]:
         if not all(term in haystack for term in terms):
             continue
         label_lower = entry["label"].lower()
+        slug = entry["path"].removeprefix("/documents/").replace("/", " ").replace("-", " ")
+        headings_slug = f"{entry['headings_text']} {slug}".lower()
+        title_and_headings = f"{label_lower} {headings_slug}"
+        desc_lower = entry["description"].lower()
         if label_lower.startswith(joined):
             rank = 0
         elif joined in label_lower:
             rank = 1
         elif all(term in label_lower for term in terms):
             rank = 2
-        else:
+        elif joined in headings_slug:
             rank = 3
+        elif all(term in title_and_headings for term in terms):
+            rank = 4
+        elif joined in desc_lower:
+            rank = 5
+        else:
+            rank = 6
         scored.append((rank, idx, entry))
     scored.sort(key=lambda item: (item[0], item[1]))
     return [item[2] for item in scored[:12]]
@@ -186,14 +213,19 @@ def DocsSearch(_: ComponentContext[None]):
         item_class = Computed(
             lambda: "docs-search-result active" if active_path.value == path else "docs-search-result"
         )
-        return html.LI(
-            {"class": item_class, "@click": lambda _ev: _close()},
+        main_children: list[Any] = [
             RouterLink(
                 to=path,
                 text=[entry["label"]],
                 attrs={"class": "docs-search-result-link"},
                 active_class="",
             ),
+        ]
+        if entry["description"]:
+            main_children.append(html.SPAN({"class": "docs-search-result-desc"}, entry["description"]))
+        return html.LI(
+            {"class": item_class, "@click": lambda _ev: _close()},
+            html.DIV({"class": "docs-search-result-main"}, *main_children),
             html.SPAN({"class": "docs-search-result-meta"}, meta),
         )
 
@@ -221,7 +253,7 @@ def DocsSearch(_: ComponentContext[None]):
                         "aria-label": "Close search",
                         "@click": lambda _ev: _close(),
                     },
-                    "Esc",
+                    raw_html(_CLOSE_SVG, wrapper="span"),
                 ),
             ),
             switch(
