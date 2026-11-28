@@ -234,12 +234,14 @@ DocsNavbar.scoped_style = {
     },
     " .navbar-mobile-toggle": {
         "display": "none",
+        "align-items": "center",
+        "justify-content": "center",
         "background": "none",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-sm)",
-        "padding": "var(--space-2)",
-        "width": "2.5rem",
-        "height": "2.5rem",
+        "padding": "0",
+        "width": "2.25rem",
+        "height": "2.25rem",
         "font-size": "var(--font-size-lg)",
         "cursor": "pointer",
         "color": "var(--color-fg)",
@@ -249,6 +251,10 @@ DocsNavbar.scoped_style = {
     },
     " .navbar-mobile-toggle:hover": {
         "background-color": "var(--color-bg-elevated)",
+    },
+    " .navbar-mobile-toggle:focus-visible": {
+        "outline": "2px solid var(--color-accent)",
+        "outline-offset": "2px",
     },
     " .navbar-list": {
         "display": "flex",
@@ -293,7 +299,7 @@ DocsNavbar.scoped_style = {
             "order": "2",
         },
         " .navbar-mobile-toggle": {
-            "display": "block",
+            "display": "inline-flex",
         },
         " .navbar-nav": {
             "display": "none",

@@ -325,6 +325,9 @@ DocsSearch.scoped_style = {
         "display": "inline-flex",
         "align-items": "center",
     },
+    ".docs-search-trigger svg": {
+        "display": "block",
+    },
     ".docs-search-trigger:hover": {
         "border-color": "var(--color-link)",
         "background-color": "var(--color-bg-card)",
@@ -351,7 +354,9 @@ DocsSearch.scoped_style = {
             "display": "none",
         },
         ".docs-search-trigger": {
-            "padding": "0 var(--space-2)",
+            "width": "2.25rem",
+            "padding": "0",
+            "justify-content": "center",
         },
     },
 }
