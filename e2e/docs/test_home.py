@@ -357,3 +357,47 @@ def test_root_accessibility_semantics(docs_app_page, assert_no_console_errors):
     assert info["headings"][0] == 1
     for prev, nxt in itertools.pairwise(info["headings"]):
         assert nxt <= prev + 1, f"Skipped heading level on Home: {info['headings']}"
+
+
+@pytest.mark.e2e
+def test_mobile_navbar_icon_buttons_have_consistent_size(docs_app_page, assert_no_console_errors):
+    search_btn = docs_app_page.locator("button.docs-search-trigger")
+    menu_btn = docs_app_page.locator("button.navbar-mobile-toggle")
+    theme_btn = docs_app_page.locator("button.theme-toggle")
+    search_label = docs_app_page.locator(".docs-search-trigger-label")
+
+    docs_app_page.set_viewport_size({"width": 390, "height": 844})
+    expect(search_label).to_be_hidden()
+    for btn in (search_btn, menu_btn, theme_btn):
+        expect(btn).to_be_visible()
+
+    mobile_boxes = [box for box in (btn.bounding_box() for btn in (search_btn, menu_btn, theme_btn)) if box is not None]
+    assert len(mobile_boxes) == 3
+    for box in mobile_boxes:
+        assert abs(box["width"] - 36) <= 1, f"expected 36px width at 390px viewport, got {box}"
+        assert abs(box["height"] - 36) <= 1, f"expected 36px height at 390px viewport, got {box}"
+        assert abs(box["width"] - box["height"]) <= 1, f"expected square mobile button, got {box}"
+
+    ref_width = mobile_boxes[0]["width"]
+    ref_height = mobile_boxes[0]["height"]
+    ref_mid_y = mobile_boxes[0]["y"] + mobile_boxes[0]["height"] / 2
+    for box in mobile_boxes[1:]:
+        assert abs(box["width"] - ref_width) <= 1
+        assert abs(box["height"] - ref_height) <= 1
+        assert abs((box["y"] + box["height"] / 2) - ref_mid_y) <= 1
+
+    docs_app_page.set_viewport_size({"width": 640, "height": 800})
+    expect(search_label).to_be_visible()
+    for btn in (search_btn, menu_btn, theme_btn):
+        expect(btn).to_be_visible()
+
+    tablet_boxes = [box for box in (btn.bounding_box() for btn in (search_btn, menu_btn, theme_btn)) if box is not None]
+    assert len(tablet_boxes) == 3
+    tablet_mid_y = tablet_boxes[0]["y"] + tablet_boxes[0]["height"] / 2
+    for box in tablet_boxes:
+        assert abs(box["height"] - 36) <= 1, f"expected 36px height at 640px viewport, got {box}"
+        assert abs((box["y"] + box["height"] / 2) - tablet_mid_y) <= 1
+
+    assert tablet_boxes[0]["width"] > 36
+    for square_box in tablet_boxes[1:]:
+        assert abs(square_box["width"] - 36) <= 1, f"expected 36px square width at 640px viewport, got {square_box}"
