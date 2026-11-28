@@ -573,18 +573,17 @@ def run_server(app: WebComPyApp | None = None):
                 os.environ.pop(_DEV_SERVER_ARGS_ENV, None)
             else:
                 os.environ[_DEV_SERVER_ARGS_ENV] = prev_env
-        return
+    else:
+        if is_dev:
+            _logger.warning(
+                "File-watch reload is unavailable when passing a non-importable WebComPyApp directly to run_server(); "
+                "starting dev server with reload=False."
+            )
 
-    if is_dev:
-        _logger.warning(
-            "File-watch reload is unavailable when passing a non-importable WebComPyApp directly to run_server(); "
-            "starting dev server with reload=False."
-        )
+        mode: Literal["prod", "dev"] = "dev" if is_dev else "prod"
+        serving = create_asgi_app(app, build_config, mode=mode)
 
-    mode: Literal["prod", "dev"] = "dev" if is_dev else "prod"
-    serving = create_asgi_app(app, build_config, mode=mode)
+        if app.router_mode != "history":
+            asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
 
-    if app.router_mode != "history":
-        asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
-
-    uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=False)
+        uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=False)
