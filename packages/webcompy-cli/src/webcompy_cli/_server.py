@@ -1,9 +1,13 @@
 """ASGI application factory and development server runner."""
 
 import asyncio
+import json
+import logging
 import mimetypes
+import os
 import sys
 from functools import partial
+from importlib import import_module
 from operator import truth
 from re import compile as re_compile
 from re import escape as re_escape
@@ -42,6 +46,9 @@ from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server._context import ServerRenderContext
 from webcompy_server._html import PYSCRIPT_VERSION, generate_html, get_runtime_asset_prefix
+
+_DEV_SERVER_ARGS_ENV = "_WEBCOMPY_DEV_SERVER_ARGS"
+_logger = logging.getLogger(__name__)
 
 
 class _ServingApp:
@@ -457,37 +464,7 @@ def _read_initial_theme(cookie_header: str) -> Any:
     return read_theme_from_cookie({"cookie": cookie_header})
 
 
-def run_server(app: WebComPyApp | None = None):
-    """Run the development or production ASGI server.
-
-    Args:
-        app: Application instance to serve. When ``None``, the
-            configuration is discovered via ``discover_config`` and CLI
-            flags override the build and server options.
-
-    """
-    _, args = get_params()
-    if app is None:
-        build_config = discover_config(args.get("config"))
-        app = build_config.app
-    else:
-        import types as _types
-
-        app_module = None
-        for mod in sys.modules.values():
-            if isinstance(mod, _types.ModuleType) and mod.__name__ == app.__class__.__module__:
-                continue
-            if isinstance(mod, _types.ModuleType) and hasattr(mod, "app") and mod.app is app:
-                app_module = mod
-                break
-        if app_module is None:
-            from pathlib import Path as _Path
-
-            app_module = _types.ModuleType("_webcompy_app")
-            app_module.__file__ = str(_Path.cwd())
-            cast("Any", app_module).app = app
-        build_config = WebComPyBuildConfig(app_module)
-
+def _apply_cli_overrides(build_config: WebComPyBuildConfig, args: dict[str, Any]) -> None:
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
         build_config.serve_all_deps = serve_all_deps
@@ -507,12 +484,106 @@ def run_server(app: WebComPyApp | None = None):
         build_config.wheel_mode = wheel_mode
     build_config.resolve_standalone()
 
-    port = args.get("port") or build_config.server.port
-    assert app is not None
-    mode = "dev" if args.get("dev") else "prod"
-    serving = create_asgi_app(app, build_config, mode=mode)
 
+def _create_dev_asgi_app() -> ASGIApp:
+    raw = os.environ.get(_DEV_SERVER_ARGS_ENV)
+    if not raw:
+        raise WebComPyException(f"Missing {_DEV_SERVER_ARGS_ENV} environment variable for dev server factory")
+    payload: dict[str, Any] = json.loads(raw)
+    app_module_name = payload.get("app_module")
+    if app_module_name:
+        mod = import_module(app_module_name)
+        build_config = WebComPyBuildConfig(mod)
+    else:
+        build_config = discover_config(payload.get("config"))
+    app = build_config.app
+    _apply_cli_overrides(build_config, payload)
+    assert app is not None
+    serving = create_asgi_app(app, build_config, mode="dev")
     if app.router_mode != "history":
         asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
+    return serving.asgi
 
-    uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
+
+def run_server(app: WebComPyApp | None = None):
+    """Run the development or production ASGI server.
+
+    Args:
+        app: Application instance to serve. When ``None``, the
+            configuration is discovered via ``discover_config`` and CLI
+            flags override the build and server options.
+
+    """
+    _, args = get_params()
+    app_was_none = app is None
+    importable_app_module: str | None = None
+    if app is None:
+        build_config = discover_config(args.get("config"))
+        app = build_config.app
+    else:
+        import types as _types
+
+        app_module = None
+        for mod in sys.modules.values():
+            if isinstance(mod, _types.ModuleType) and mod.__name__ == app.__class__.__module__:
+                continue
+            if isinstance(mod, _types.ModuleType) and hasattr(mod, "app") and mod.app is app:
+                app_module = mod
+                break
+        if app_module is None:
+            from pathlib import Path as _Path
+
+            app_module = _types.ModuleType("_webcompy_app")
+            app_module.__file__ = str(_Path.cwd())
+            cast("Any", app_module).app = app
+        elif app_module.__name__ != "__main__":
+            importable_app_module = app_module.__name__
+        build_config = WebComPyBuildConfig(app_module)
+
+    _apply_cli_overrides(build_config, args)
+
+    port = args.get("port") or build_config.server.port
+    assert app is not None
+    is_dev = bool(args.get("dev") or build_config.server.dev)
+
+    if is_dev and (app_was_none or importable_app_module is not None):
+        payload = {
+            "config": args.get("config") if app_was_none else None,
+            "app_module": importable_app_module,
+            "serve_all_deps": args.get("serve_all_deps"),
+            "wasm_serving": args.get("wasm_serving"),
+            "runtime_serving": args.get("runtime_serving"),
+            "standalone": args.get("standalone"),
+            "wheel_mode": args.get("wheel_mode"),
+        }
+        prev_env = os.environ.get(_DEV_SERVER_ARGS_ENV)
+        os.environ[_DEV_SERVER_ARGS_ENV] = json.dumps(payload)
+        try:
+            uvicorn.run(
+                "webcompy_cli._server:_create_dev_asgi_app",
+                host="0.0.0.0",
+                port=port,
+                reload=True,
+                reload_dirs=[str(build_config.app_package_path)],
+                app_dir=os.getcwd(),
+                factory=True,
+            )
+        finally:
+            if prev_env is None:
+                os.environ.pop(_DEV_SERVER_ARGS_ENV, None)
+            else:
+                os.environ[_DEV_SERVER_ARGS_ENV] = prev_env
+    else:
+        if is_dev:
+            _logger.warning(
+                "File-watch reload is unavailable when passing a non-importable WebComPyApp directly to run_server(); "
+                "starting dev server with reload=False."
+            )
+
+        mode: Literal["prod", "dev"] = "dev" if is_dev else "prod"
+        serving = create_asgi_app(app, build_config, mode=mode)
+
+        if app.router_mode != "history":
+            asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
+
+        uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=False)
