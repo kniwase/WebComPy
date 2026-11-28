@@ -325,9 +325,11 @@ def test_root_accessibility_semantics(docs_app_page, assert_no_console_errors):
         "  const toggle = document.querySelector('button.theme-toggle');"
         "  const headings = [...document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6')]"
         "    .map(h => parseInt(h.tagName.slice(1), 10));"
+        "  const skipUnfocusedBottom = skip ? Math.round(skip.getBoundingClientRect().bottom) : null;"
         "  return {"
         "    htmlLang,"
         "    skipHref: skip ? skip.getAttribute('href') : null,"
+        "    skipUnfocusedBottom,"
         "    hasMain: !!main,"
         "    hasPrimaryNav: !!primaryNav,"
         "    toggleRole: toggle ? toggle.getAttribute('role') : 'missing',"
@@ -338,6 +340,16 @@ def test_root_accessibility_semantics(docs_app_page, assert_no_console_errors):
     )
     assert info["htmlLang"] == "en"
     assert info["skipHref"] == "/#main-content"
+    assert info["skipUnfocusedBottom"] is not None and info["skipUnfocusedBottom"] <= 0
+    skip_loc = docs_app_page.locator("a.skip-link")
+    skip_loc.focus()
+    docs_app_page.wait_for_function(
+        "() => document.querySelector('a.skip-link').getBoundingClientRect().top >= 0",
+        timeout=2000,
+    )
+    focused_box = skip_loc.bounding_box()
+    assert focused_box is not None and focused_box["y"] >= 0
+    skip_loc.evaluate("el => el.blur()")
     assert info["hasMain"] is True
     assert info["hasPrimaryNav"] is True
     assert info["toggleRole"] is None

@@ -7,6 +7,7 @@
   "tests/test_app_instance.py": "module-scope side-effecting call at line 13",
   "tests/test_asgi_embed.py": "top-level import from 'webcompy_cli._build' at line 12",
   "tests/test_asgi_mount.py": "top-level import from 'webcompy_cli._build' at line 15",
+  "tests/test_asset_cache_busting.py": "top-level import from 'webcompy_cli._build' at line 18",
   "tests/test_async_component_setup.py": "top-level import of unmounted module 'tests.conftest' at line 7",
   "tests/test_base_elements.py": "top-level import of unmounted module 'tests.conftest' at line 1",
   "tests/test_bind.py": "top-level import of unmounted module 'tests.conftest' at line 8",

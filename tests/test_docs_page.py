@@ -223,3 +223,40 @@ class TestDocsSearch:
             assert 'aria-label="Close search"' in body_html
             assert "<svg" in body_html
             assert ">Esc<" not in body_html
+
+
+class TestDocsRootInlineSkipLinkAndHeaders:
+    def test_skip_link_styles_inlined_on_docs_root_and_removed_from_external_css(self) -> None:
+        from pathlib import Path
+
+        from docs_app.app import app
+        from docs_app.layout import DocsRoot
+        from webcompy_testing import render_app_html
+
+        assert ".skip-link" in DocsRoot.scoped_style
+        assert ".skip-link:focus" in DocsRoot.scoped_style
+        assert ".skip-link:focus-visible" in DocsRoot.scoped_style
+
+        components_css = Path("docs_app/static/styles/components.css").read_text(encoding="utf-8")
+        assert ".skip-link" not in components_css
+
+        html_str = render_app_html(
+            app,
+            path="/",
+            app_package_name="docs_app",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="docs_app-0+sha.12345678-py3-none-any.whl",
+        )
+        assert f'data-webcompy-cid="{DocsRoot._id}"' in html_str
+        assert f".skip-link[webcompy-cid-{DocsRoot._id}]" in html_str
+
+    def test_cloudflare_headers_file_marks_immutable_prefixes(self) -> None:
+        from pathlib import Path
+
+        headers_path = Path("docs_app/static/_headers")
+        assert headers_path.is_file()
+        content = headers_path.read_text(encoding="utf-8")
+        assert "/_webcompy-assets/*" in content
+        assert "/_webcompy-app-package/*" in content
+        assert "Cache-Control: public, max-age=31536000, immutable" in content

@@ -59,3 +59,31 @@ def DocsRoot(_: ComponentContext[None]):
             ),
         ),
     )
+
+
+DocsRoot.scoped_style = {
+    ".skip-link": {
+        "position": "fixed",
+        "top": "var(--space-3)",
+        "left": "var(--space-3)",
+        "z-index": "2000",
+        "padding": "var(--space-2) var(--space-4)",
+        "background-color": "var(--color-accent)",
+        "color": "var(--color-on-accent)",
+        "border-radius": "var(--radius-sm)",
+        "font-weight": "600",
+        "text-decoration": "none",
+        "transform": "translateY(-200%)",
+        "transition": "transform 0.15s ease",
+    },
+    ".skip-link:focus": {
+        "transform": "translateY(0)",
+        "outline": "2px solid var(--color-fg)",
+        "outline-offset": "2px",
+    },
+    ".skip-link:focus-visible": {
+        "transform": "translateY(0)",
+        "outline": "2px solid var(--color-fg)",
+        "outline-offset": "2px",
+    },
+}
