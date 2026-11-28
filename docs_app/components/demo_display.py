@@ -92,14 +92,14 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
 
     return html.DIV(
         {"class": "demo-display-root"},
-        html.H3({"class": "demo-display-title"}, context.props["title"]),
+        html.H2({"class": "demo-display-title"}, context.props["title"]),
         DocsCard(
             {"title": "Demo"},
             slots={"default": _render_demo_body},
         ),
         DocsCard(
             {"title": "Code"},
-            slots={"default": lambda: CodeBlock({"code": source_code, "lang": "python"})},
+            slots={"default": lambda: CodeBlock({"code": source_code, "lang": "python", "copyable": True})},
         ),
     )
 

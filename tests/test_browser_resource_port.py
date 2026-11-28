@@ -149,6 +149,16 @@ class TestBrowserResourcePortFetchFallback:
         assert fetch_port.calls[0] == "/_webcompy-resource/late.html"
 
     @pytest.mark.asyncio
+    async def test_fetch_caches_result_for_subsequent_loads(self, scope_with_fake_fetch):
+        _, fetch_port = scope_with_fake_fetch
+        port = BrowserResourcePort(base_url="/")
+        first = await port.load_text("late.html")
+        second = await port.load_text("late.html")
+        assert first == "from network"
+        assert second == "from network"
+        assert len(fetch_port.calls) == 1
+
+    @pytest.mark.asyncio
     async def test_fetch_url_uses_configured_base_url(self, scope_with_fake_fetch):
         _, fetch_port = scope_with_fake_fetch
         port = BrowserResourcePort(base_url="/myapp")

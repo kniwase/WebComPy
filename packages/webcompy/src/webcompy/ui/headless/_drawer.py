@@ -12,9 +12,12 @@ from webcompy.elements import Teleport, Transition, create_element
 from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import use_computed
 from webcompy.signal._base import SignalBase
+from webcompy.signal._graph import set_active_consumer
 from webcompy.ui.headless._overlay_utils import (
+    _get_document_active_element,
+    _resolve_port,
+    _schedule_overlay_focus,
     capture_active_element,
-    focus_initial,
     get_focusable_elements,
     overlay_dom_id,
     restore_focus,
@@ -83,7 +86,21 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
         is_open_computed = None
         is_open = lambda: bool(open_raw)
 
-    slot_content = context.slots("default", fallback=lambda: None)
+    try:
+        setup_dom = inject(DOM_PORT_KEY, default=None)
+    except Exception:
+        setup_dom = None
+    try:
+        setup_host = inject(HOST_PORT_KEY, default=None)
+    except Exception:
+        setup_host = None
+
+    def _get_dom() -> Any:
+        return _resolve_port(DOM_PORT_KEY, setup_dom)
+
+    def _get_host() -> Any:
+        return _resolve_port(HOST_PORT_KEY, setup_host)
+
     captured: list[Any] = [None]
     cleanups: list[Callable[[], None]] = []
     destroyed: list[bool] = [False]
@@ -98,10 +115,7 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
         _clear()
         if not is_open():
             return
-        try:
-            dom = inject(DOM_PORT_KEY, default=None)
-        except Exception:
-            dom = None
+        dom = _get_dom()
         if dom is None:
             return
         if close_on_escape and on_close is not None:
@@ -150,29 +164,20 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
             if key != "Tab":
                 return
             try:
+                current_dom = _get_dom()
                 panel = None
                 try:
-                    panel = dom.get_element_by_id(panel_id) if dom else None
-                    if panel is None:
-                        panel = dom.query_selector(f"#{panel_id}") if dom else None
+                    panel = current_dom.get_element_by_id(panel_id) if current_dom else None
+                    if panel is None and current_dom is not None:
+                        panel = current_dom.query_selector(f"#{panel_id}")
                 except Exception:
                     panel = None
                 if panel is None:
                     return
-                focusable = get_focusable_elements(panel)
+                focusable = get_focusable_elements(panel, dom=current_dom)
                 if not focusable:
                     return
-                try:
-                    host = inject(HOST_PORT_KEY, default=None)
-                    active = None
-                    if host is not None:
-                        getter = host.create_js_global_getter(
-                            "document",
-                            wrapper=lambda doc: getattr(doc, "activeElement", None) if doc is not None else None,
-                        )
-                        active = getter()
-                except Exception:
-                    active = None
+                active = _get_document_active_element(host=_get_host())
                 shift = bool(getattr(event, "shiftKey", False) or (isinstance(event, dict) and event.get("shiftKey")))
                 first = focusable[0]
                 last = focusable[-1]
@@ -202,28 +207,14 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
         except Exception:
             pass
 
+    def _should_focus() -> bool:
+        return not destroyed[0] and is_open()
+
     def _on_open_change(new_val: bool) -> None:
         if new_val:
-            captured[0] = capture_active_element()
+            captured[0] = capture_active_element(host=_get_host())
             _setup_listeners()
-            try:
-                host = inject(HOST_PORT_KEY, default=None)
-                if host is not None:
-
-                    def _do_focus() -> None:
-                        if destroyed[0] or not is_open():
-                            return
-                        try:
-                            dom = inject(DOM_PORT_KEY, default=None)
-                            panel = dom.get_element_by_id(panel_id) if dom else None
-                            if panel is not None:
-                                focus_initial(panel)
-                        except Exception:
-                            pass
-
-                    host.schedule_macro_task(_do_focus)
-            except Exception:
-                pass
+            _schedule_overlay_focus(panel_id, _get_dom, _get_host, _should_focus)
         else:
             _clear()
             restore_focus(captured[0])
@@ -232,33 +223,29 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
     if is_open_computed is not None:
         is_open_computed.on_after_updating(_on_open_change)
         if is_open():
-            captured[0] = capture_active_element()
-            try:
-                host = inject(HOST_PORT_KEY, default=None)
-                if host is not None:
-
-                    def _deferred() -> None:
-                        if destroyed[0] or not is_open():
-                            return
-                        _setup_listeners()
-
-                    host.schedule_macro_task(_deferred)
-            except Exception:
-                pass
-    elif is_open():
-        captured[0] = capture_active_element()
-        try:
-            host = inject(HOST_PORT_KEY, default=None)
+            captured[0] = capture_active_element(host=_get_host())
+            host = _get_host()
             if host is not None:
 
-                def _deferred_nr() -> None:
+                def _deferred() -> None:
                     if destroyed[0] or not is_open():
                         return
                     _setup_listeners()
+                    _schedule_overlay_focus(panel_id, _get_dom, _get_host, _should_focus)
 
-                host.schedule_macro_task(_deferred_nr)
-        except Exception:
-            pass
+                host.schedule_macro_task(_deferred)
+    elif is_open():
+        captured[0] = capture_active_element(host=_get_host())
+        host = _get_host()
+        if host is not None:
+
+            def _deferred_nr() -> None:
+                if destroyed[0] or not is_open():
+                    return
+                _setup_listeners()
+                _schedule_overlay_focus(panel_id, _get_dom, _get_host, _should_focus)
+
+            host.schedule_macro_task(_deferred_nr)
 
     from webcompy.components._hooks import _register_before_destroy_chained
 
@@ -277,7 +264,11 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
             "data-state": "open",
             "data-edge": edge,
         }
-        inner = slot_content
+        prev_consumer = set_active_consumer(None)
+        try:
+            inner = context.slots("default", fallback=lambda: None)
+        finally:
+            set_active_consumer(prev_consumer)
         children: list[Any] = []
         if inner is not None:
             if isinstance(inner, list):

@@ -8,7 +8,7 @@ from webcompy.template import load_markdown_document
 from webcompy.ui import Drawer, Dropdown, Modal, ToastHost
 from webcompy.ui.composables import use_toast
 
-from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
+from ...components.docs_page import docs_page_template
 
 
 @define_component()
@@ -78,9 +78,15 @@ OverlayDemo.scoped_style = {
 
 @define_component()
 async def OverlayPage(context: ComponentContext[RouterContext]):
-    doc = await load_markdown_document("documents/overlay.md")
+    doc = await load_markdown_document(
+        "documents/overlay.md",
+        copyable_code_blocks=True,
+        heading_anchors=True,
+    )
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
-    return docs_page_template(doc, context.props.path, extra_content=OverlayDemo({}))
-
-
-OverlayPage.scoped_style = DOCS_PAGE_SCOPED_STYLE
+    return docs_page_template(
+        doc,
+        context.props.path,
+        extra_content=OverlayDemo({}),
+        before_heading_id="notes--caveats",
+    )

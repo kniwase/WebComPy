@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from webcompy.components._generator import define_component
-from webcompy.di._keys import _HEAD_PROPS_KEY
+from webcompy.components._component import HeadPropsStore
+from webcompy.components._generator import ComponentStore, define_component
+from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import create_element
 from webcompy.elements.types._element import Element
@@ -42,6 +43,8 @@ def _document_di_scope(resource_port):
     scope = DIScope()
     scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
     scope.provide(RESOURCE_PORT_KEY, resource_port)
+    scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+    scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
     token = _active_di_scope.set(scope)
     try:
         yield scope
@@ -139,6 +142,43 @@ class TestLoadMarkdownDocumentPipeline:
                 ),
             )
             assert unwrapped_wrappers == []
+
+    @pytest.mark.asyncio
+    async def test_heading_anchors_and_copyable_code_blocks_opt_in(self) -> None:
+        md = "# Intro\n\n## Reactive Signals\n\n```python\nx = 1\n```"
+        port = _FakeResourcePort({"docs/anchored.md": md})
+        with _document_di_scope(port):
+            plain_doc = await load_markdown_document("docs/anchored.md")
+            assert _walk(plain_doc.content, lambda n: isinstance(n, Element) and n._tag_name == "a") == []
+
+            anchored_doc = await load_markdown_document(
+                "docs/anchored.md",
+                heading_anchors=True,
+                copyable_code_blocks=True,
+            )
+        assert [(h.level, h.text, h.id) for h in anchored_doc.toc] == [
+            (1, "Intro", "intro"),
+            (2, "Reactive Signals", "reactive-signals"),
+        ]
+        anchors = _walk(
+            anchored_doc.content,
+            lambda n: (
+                isinstance(n, Element)
+                and n._tag_name == "a"
+                and "heading-anchor" in str(n._attrs.get("class", "")).split()
+            ),
+        )
+        assert len(anchors) == 1
+        assert anchors[0]._attrs.get("href") == "#reactive-signals"
+        assert "copyable" in str(
+            next(
+                c._render_state.context.props
+                for c in _walk(
+                    anchored_doc.content,
+                    lambda n: hasattr(n, "_property") and n._property.get("component_name") == "CodeBlock",
+                )
+            )
+        )
 
 
 class TestSSRResourceRecording:

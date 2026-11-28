@@ -49,6 +49,14 @@
     margin: var(--space-4) 0;
   }
 
+  .prose .code-block-container {
+    margin: var(--space-4) 0;
+  }
+
+  .prose .code-block-container > pre {
+    margin: 0;
+  }
+
   .prose a {
     color: var(--color-link);
   }
@@ -134,9 +142,32 @@
     margin: var(--space-5) 0;
   }
 
-  .prose :is(h1, h2, h3, h4, h5, h6)[id]:hover::after {
+  .prose :is(h1, h2, h3, h4, h5, h6)[id]:not(:has(> .heading-anchor)):hover::after {
     content: "#";
     color: var(--color-fg-subtle);
     margin-left: var(--space-2);
+  }
+
+  .prose .heading-anchor {
+    margin-left: var(--space-2);
+    color: var(--color-fg-subtle);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+
+  .prose :is(h2, h3, h4, h5, h6):is(:hover, :focus-within) > .heading-anchor,
+  .prose .heading-anchor:focus-visible {
+    opacity: 1;
+  }
+
+  .prose .heading-anchor:hover {
+    color: var(--color-link);
+  }
+
+  .prose .heading-anchor:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
 }

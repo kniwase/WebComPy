@@ -86,7 +86,7 @@ The themed `Spinner` draws a token-colored ring and animates it with a CSS rotat
 
 ## Live example
 
-The showcase at the end of this article is rendered by the page component itself — the themed spinners are the real framework components, and the bottom row is the headless `Spinner` styled entirely by external CSS through `class_name` and `data-state`.
+The showcase below is rendered by the page component itself — the themed spinners are the real framework components, and the bottom row is the headless `Spinner` styled entirely by external CSS through `class_name` and `data-state`.
 
 ## Notes & caveats
 

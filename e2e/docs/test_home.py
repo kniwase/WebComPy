@@ -1,3 +1,5 @@
+import itertools
+
 import pytest
 from playwright.sync_api import expect
 
@@ -122,7 +124,7 @@ def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_erro
 @pytest.mark.e2e
 def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/examples/hello-world")
-    home_link = page.locator("nav a[href='/']")
+    home_link = page.locator("nav .navbar-list a[href='/']")
     home_link.click()
     assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
     heading = page.get_by_role("heading", name="Build Frontend in Python", level=1)
@@ -257,3 +259,89 @@ def test_navbar_dropdown_links_crawlable_in_initial_html(
         "n => n.nodeType === 8 && n.data.startsWith('wc-teleport-block')).length"
     )
     assert leftover == 0
+
+
+@pytest.mark.e2e
+def test_navbar_brand_is_home_link_and_navigates(docs_page_on, assert_no_console_errors):
+    page = docs_page_on("/documents/getting-started/what-is-webcompy")
+    brand = page.locator("nav a.navbar-brand")
+    expect(brand).to_be_visible()
+    expect(brand).to_have_attribute("href", "/")
+    brand.click()
+    expect(page.get_by_role("heading", name="Build Frontend in Python", level=1)).to_be_visible()
+
+
+@pytest.mark.e2e
+def test_navbar_dropdown_grouped_and_scrollable(docs_app_page, assert_no_console_errors):
+    docs_toggle = docs_app_page.locator("nav li button[aria-haspopup='menu']").filter(has_text="Documents")
+    docs_toggle.click()
+    dropdown = docs_app_page.locator("ul.navbar-dropdown:not([hidden])")
+    expect(dropdown).to_be_visible()
+    sections = [text.strip() for text in dropdown.locator("li.navbar-dropdown-section").all_text_contents()]
+    assert "Getting Started" in sections
+    assert "Guides" in sections
+    assert "API Reference" in sections
+    metrics = dropdown.evaluate(
+        "el => ({ ch: el.clientHeight, sh: el.scrollHeight, oy: getComputedStyle(el).overflowY })"
+    )
+    assert metrics["ch"] <= 525
+    assert metrics["sh"] > metrics["ch"]
+    assert metrics["oy"] in ("auto", "scroll")
+
+
+@pytest.mark.e2e
+def test_home_feature_cards_balanced_and_zero_card_margin(docs_app_page, assert_no_console_errors):
+    cards = docs_app_page.locator(".feature-cards .ui-card")
+    expect(cards).to_have_count(6)
+    for width, expected_cols in [(1280, 3), (900, 2), (390, 1)]:
+        docs_app_page.set_viewport_size({"width": width, "height": 900})
+        metrics = docs_app_page.evaluate(
+            "() => {"
+            "  const cards = [...document.querySelectorAll('.feature-cards .ui-card')];"
+            "  return {"
+            "    scrollWidth: document.documentElement.scrollWidth,"
+            "    clientWidth: document.documentElement.clientWidth,"
+            "    boxes: cards.map(c => {"
+            "      const r = c.getBoundingClientRect();"
+            "      return { top: Math.round(r.top), left: Math.round(r.left), marginTop: getComputedStyle(c).marginTop };"
+            "    }),"
+            "  };"
+            "}"
+        )
+        assert metrics["scrollWidth"] <= metrics["clientWidth"]
+        assert all(b["marginTop"] == "0px" for b in metrics["boxes"])
+        first_row_tops = {b["top"] for b in metrics["boxes"][:expected_cols]}
+        assert len(first_row_tops) == 1
+
+
+@pytest.mark.e2e
+def test_root_accessibility_semantics(docs_app_page, assert_no_console_errors):
+    info = docs_app_page.evaluate(
+        "() => {"
+        "  const htmlLang = document.documentElement.getAttribute('lang');"
+        "  const skip = document.querySelector('a.skip-link');"
+        "  const main = document.querySelector('main#main-content');"
+        "  const primaryNav = document.querySelector('nav[aria-label=\"Primary navigation\"]');"
+        "  const toggle = document.querySelector('button.theme-toggle');"
+        "  const headings = [...document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6')]"
+        "    .map(h => parseInt(h.tagName.slice(1), 10));"
+        "  return {"
+        "    htmlLang,"
+        "    skipHref: skip ? skip.getAttribute('href') : null,"
+        "    hasMain: !!main,"
+        "    hasPrimaryNav: !!primaryNav,"
+        "    toggleRole: toggle ? toggle.getAttribute('role') : 'missing',"
+        "    hasToggleSvg: toggle ? !!toggle.querySelector('svg') : false,"
+        "    headings,"
+        "  };"
+        "}"
+    )
+    assert info["htmlLang"] == "en"
+    assert info["skipHref"] == "/#main-content"
+    assert info["hasMain"] is True
+    assert info["hasPrimaryNav"] is True
+    assert info["toggleRole"] is None
+    assert info["hasToggleSvg"] is True
+    assert info["headings"][0] == 1
+    for prev, nxt in itertools.pairwise(info["headings"]):
+        assert nxt <= prev + 1, f"Skipped heading level on Home: {info['headings']}"

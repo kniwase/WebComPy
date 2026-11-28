@@ -6,7 +6,7 @@ config = WebComPyBuildConfig(
     dependencies=[],
     standalone=True,
     wheel_mode="split",
-    resource_transfer="all-text",
+    resource_transfer="used",
     dist="dist",
     static_files_dir="static",
     lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),

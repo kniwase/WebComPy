@@ -64,7 +64,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/signal/_readonly.py` | `readonly-signal/spec.md`, `reactive/spec.md` |
 | `webcompy/events/` | `readonly-signal/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
-| `webcompy/ui/_styles/` | `css-architecture/spec.md`, `design-tokens/spec.md`, `markdown-document/spec.md`, `ui-overlay/spec.md` |
+| `webcompy/ui/_styles/` | `css-architecture/spec.md`, `design-tokens/spec.md`, `markdown-document/spec.md`, `ui-overlay/spec.md`, `code-block/spec.md` |
 | `webcompy/ui/theme/` | `theme-system/spec.md`, `design-tokens/spec.md` |
 | `webcompy/ui/headless/`, `webcompy/ui/components/` | `ui-primitives/spec.md` |
 | `webcompy/ui/headless/_overlay_utils.py`, `webcompy/ui/headless/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/components/_modal.py`, `_drawer.py`, `_dropdown.py`, `_toast.py`, `webcompy/ui/composables/_toast.py` | `ui-overlay/spec.md`, `ui-primitives/spec.md` |
@@ -103,7 +103,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_websocket.py`, `webcompy/ports/_browser/_websocket.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `websocket-composable/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md`, `custom-element-components/spec.md`, `fetch-middleware/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
-| `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
+| `webcompy/ports/_resource.py`, `webcompy/ports/_browser/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md`, `pwa/spec.md` |
@@ -150,7 +150,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `composables` | Reusable stateful logic functions for function-style component setup |
 | `i18n` | Reactive internationalization core: DI-managed `I18nManager` with locale Signal and `use_i18n` controller, dot-path catalogs with `{param}` interpolation, CLDR plurals via a built-in table with pipe shorthand and opt-in Babel adapter, fallback chain, and cookie-only locale persistence with deterministic SSR/hydration parity |
 | `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
-| `markdown-document` | Markdown frontmatter parsing, `load_markdown_document` (with scrollable table wrapping), TOC extraction, opt-in `prose.css` typography preset and overflow containment |
+| `markdown-document` | Markdown frontmatter parsing, `load_markdown_document` (with scrollable table wrapping and opt-in heading permalinks), TOC extraction (excluding anchor glyphs), opt-in `prose.css` typography preset and overflow containment |
 | `markdown-conformance` | Byte-exact cmark-gfm compatibility of `DefaultMarkdownParser` HTML output, strict-xfail suite |
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
 | `list-reconciliation` | Key-based reconciliation for efficient DOM reuse |
@@ -186,8 +186,8 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `dependency-resolver` | Classification of app dependencies for browser deployment |
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
-| `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, feature cards, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
-| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` with orientation pages / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `Migration` / `API Reference` with category-prefixed URLs), manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template + `examples_page_template` (narrative + live demo iframe + source, mocked networking, retired `/sample/*` & `fizzbuzz`), TOC anchors, rendered-site body cross-links, and current `@define_component()` example convention |
+| `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, balanced feature-card grid without margin drift, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `Migration` / `API Reference`), manifest-driven routes and grouped scrollable dropdown, deduplicated layout CSS, viewport-bounded sticky sidebar and TOC, Prev/Next paging, `resource_transfer="used"` payload minimization, client-side search, ARIA landmarks/controls/`404` recovery layout, copyable `CodeBlock` and heading permalinks, and current `@define_component()` example convention |
 | `docs-migration-guide` | Migration guides under `/documents/migration/`: FastAPI + Jinja2 architecture shift, ASGI strangler strategies, live mocked before/after comparison, conversion tables, exact template compatibility/error matrix, and phased exit-criteria checklist |
 | `docs-api-reference` | Generated-plus-authored `/documents/api/` reference skeletons (`scripts/_api_surface.py`, `scripts/generate_api_reference.py`, `--check` CI drift gate, full public API coverage across all four packages, author-region preservation, and non-duplication with conceptual guides) |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
@@ -238,7 +238,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `browser-test-harness` | PyScript-native in-browser unit testing: harness server (runtime assets, py-config, manifest, harness page), in-page runner with `app`/`dom_root` fixtures and per-test isolation, pytest dispatch over `window.__webcompy_test__.run_one`, wheel vs source-mount supply modes, crash containment, and console-error capture |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 | `api-docstrings` | Docstring coverage and Google-style structure for public interfaces of all four packages; ban on OpenSpec artifact references in docstrings and comments; stdlib-only strict checker with migration baseline (`scripts/check-docstrings.py`); same-PR docstring-implementation sync with must-fix inconsistency blocking approval |
-| `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
+| `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), opt-in `copyable` clipboard button, plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `ui-primitives` | Two-layer first-party UI components: headless contract (behavior-only with structural CSS, `data-state` vocabularies, `class_name` pass-through), themed composition with token-based defaults, three import paths, stylesheet delivery through `/_webcompy-ui/`, and the Spinner pair |
 | `ui-form-controls` | First-party form controls (Input, Textarea, Select, Checkbox, Switch, Radio/RadioGroup, FormField) as headless/themed pairs: Field/raw binding via `:bind` (including select support), native elements in custom-element wrappers, Switch ARIA pattern, RadioGroup shared generated name, FormField DI-confined association ids with `aria-invalid`/`aria-describedby`/`data-state` touched-invalid gating, and themed defaults in the primitives stylesheet |
 | `ui-overlay` | First-party overlay components (Modal, Drawer, Dropdown, Toast) as headless/themed pairs: dialog accessibility contract, dimmed dark backdrop scrim, tokenized panel surfaces/elevation (`--shadow-lg`), menu button keyboard model with propagation-owned toggle and capture-phase outside close, per-instance hydration-stable DOM ids, optional `render_closed` static menu mode, trigger-anchored menu positioning (`align`, `positioning` escape hatch) with scroll/resize re-measurement, and the toast queue with live region and auto-dismiss |

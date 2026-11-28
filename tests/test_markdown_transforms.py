@@ -19,6 +19,7 @@ from webcompy.template._cache import clear_cache
 from webcompy.template._markdown_default import DefaultMarkdownParser
 from webcompy.template._markdown_transforms import (
     apply_class_map,
+    apply_heading_anchors,
     apply_heading_ids,
     collect_headings,
     replace_code_blocks,
@@ -279,6 +280,62 @@ class TestReplaceCodeBlocks:
             assert isinstance(result, Element) and result._tag_name == "pre"
             replace_code_blocks(result)
             assert isinstance(result, Element) and result._tag_name == "pre"
+
+    def test_copyable_option_forwarded_when_enabled(self) -> None:
+        with _markdown_component_di_scope():
+            plain = render_markdown("Intro.\n\n```python\nx = 1\n```")
+            replace_code_blocks(plain)
+            plain_comp = _find_all(
+                plain, lambda n: isinstance(n, Component) and n._property.get("component_name") == "CodeBlock"
+            )[0]
+            assert "copyable" not in plain_comp._render_state.context.props
+
+            copyable = render_markdown("Intro.\n\n```python\nx = 1\n```")
+            replace_code_blocks(copyable, copyable=True)
+            copyable_comp = _find_all(
+                copyable, lambda n: isinstance(n, Component) and n._property.get("component_name") == "CodeBlock"
+            )[0]
+            assert copyable_comp._render_state.context.props.get("copyable") is True
+
+
+class TestApplyHeadingAnchors:
+    def test_adds_anchors_to_h2_through_h6_and_skips_h1(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# Top\n\n## Section\n\n### Subsection", heading_ids=True)
+        apply_heading_anchors(result)
+        headings = _heading_elements(result)
+        assert _find_all(headings[0], lambda n: isinstance(n, Element) and n._tag_name == "a") == []
+        for heading, expected_href in ((headings[1], "#section"), (headings[2], "#subsection")):
+            anchors = [
+                c
+                for c in heading._children
+                if isinstance(c, Element)
+                and c._tag_name == "a"
+                and "heading-anchor" in str(c._attrs.get("class", "")).split()
+            ]
+            assert len(anchors) == 1
+            assert anchors[0]._attrs.get("href") == expected_href
+            assert _extract_text(anchors[0]) == "#"
+
+    def test_idempotent_and_excluded_from_collect_headings(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# Top\n\n## Reactive Signals", heading_ids=True)
+        apply_heading_anchors(result)
+        apply_heading_anchors(result)
+        h2 = _heading_elements(result)[1]
+        anchors = [
+            c
+            for c in h2._children
+            if isinstance(c, Element)
+            and c._tag_name == "a"
+            and "heading-anchor" in str(c._attrs.get("class", "")).split()
+        ]
+        assert len(anchors) == 1
+        toc = collect_headings(result, heading_ids=True)
+        assert [(h.level, h.text, h.id) for h in toc] == [
+            (1, "Top", "top"),
+            (2, "Reactive Signals", "reactive-signals"),
+        ]
 
 
 class TestApplyClassMap:

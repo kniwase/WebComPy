@@ -1,7 +1,7 @@
 # code-block Specification
 
 ## Purpose
-TBD - created by archiving change feat-ui-toolkit-foundation. Update Purpose after archive.
+Provides syntax-highlighted code rendering via the framework-managed CodeBlock component (with optional copy-to-clipboard support), the highlight() HTML-string API, token types, and the pluggable lexer registry.
 ## Requirements
 ### Requirement: The framework SHALL provide a `CodeBlock` component
 
@@ -164,4 +164,19 @@ The framework SHALL provide a file at `packages/webcompy/src/webcompy/ui/code_bl
 - **WHEN** an application installs Pygments and calls `from webcompy.ui.code_block.lexers._adapters._pygments import register_pygments_lexer; register_pygments_lexer("javascript")`
 - **THEN** a JavaScript lexer backed by Pygments SHALL be available via `get_lexer("javascript")`
 - **AND** no changes to the `CodeBlock` public API SHALL be required
+
+### Requirement: CodeBlock SHALL support an opt-in copy-to-clipboard action
+
+`webcompy.ui.code_block.CodeBlock` SHALL accept an optional `copyable: bool = False` prop. When `copyable` is `False` (default), the component SHALL preserve its existing `<pre><code class="language-{lang}">...</code></pre>` DOM output unchanged. When `copyable` is `True`, the component SHALL render a wrapper containing an accessible copy button (`type="button"`, descriptive `aria-label`) alongside the `<pre><code class="language-{lang}">...</code></pre>` block; activating the button in the browser SHALL copy the raw `code` string via `navigator.clipboard` and provide brief visual/accessible feedback (`Copied`), while keeping `<span class="tok-*">` elements as direct children of `<code>`.
+
+#### Scenario: Default CodeBlock omits copy chrome
+
+- **WHEN** `CodeBlock({"code": "x = 1", "lang": "python"})` renders without `copyable=True`
+- **THEN** no copy button is rendered and existing SSR/CSR markup expectations remain unchanged
+
+#### Scenario: Copyable CodeBlock renders button and preserves direct token spans
+
+- **WHEN** `CodeBlock({"code": "x = 1", "lang": "python", "copyable": True})` renders
+- **THEN** an accessible copy button is rendered outside `<pre>` and clicking it copies `"x = 1"` while displaying copied feedback
+- **AND** `<code>` still contains direct `<span class="tok-*">` children with no intermediate wrapper inside `<code>`
 

@@ -66,7 +66,7 @@ def DocsSidebar(_: ComponentContext[None]):
         )
         for idx, section in enumerate(DOCS_SECTIONS)
     )
-    return html.NAV({"class": "docs-sidebar-nav", "aria-label": "Documentation"}, *sections)
+    return html.NAV({"class": "docs-sidebar-nav", "aria-label": "Documentation navigation"}, *sections)
 
 
 DocsSidebar.scoped_style = {

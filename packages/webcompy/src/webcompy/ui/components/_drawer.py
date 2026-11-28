@@ -42,7 +42,6 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
 
     """
     props = context.props or {}
-    slot_content = context.slots("default", fallback=lambda: None)
     headless_props: HeadlessDrawerProps = {
         "open": props.get("open", False),  # type: ignore[typeddict-item]
         "on_close": props.get("on_close"),  # type: ignore[typeddict-item]
@@ -56,11 +55,5 @@ def Drawer(context: ComponentContext[DrawerProps]) -> Any:
         "class_backdrop": _compose_class("webcompy-drawer-backdrop", props.get("class_backdrop", "")),
         "class_panel": _compose_class("webcompy-drawer-panel", props.get("class_panel", "")),
     }
-    slots: dict[str, Any] = {}
-    try:
-        inner = slot_content
-        if inner is not None:
-            slots["default"] = lambda: inner
-    except Exception:
-        pass
+    slots: dict[str, Any] = {"default": lambda: context.slots("default", fallback=lambda: None)}
     return HeadlessDrawer(headless_props, slots=slots)  # type: ignore[call-arg, arg-type]

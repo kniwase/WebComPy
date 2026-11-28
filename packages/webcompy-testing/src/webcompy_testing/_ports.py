@@ -398,6 +398,8 @@ def _fake_simple_attr_match(node: FakeDOMNode, expr: str) -> bool:
     expr = expr.strip()
     if not expr:
         return False
+    if expr == "*":
+        return True
     tag: str | None = None
     tag_m = re.match(r"^([a-zA-Z][a-zA-Z0-9]*)", expr)
     rest = expr

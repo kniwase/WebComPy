@@ -52,8 +52,8 @@ def DocsLayout(context: ComponentContext[RouterContext]):
         html.DIV(
             {"class": "docs-main"},
             RouterView(),
-            html.FOOTER(
-                {"class": "docs-pager"},
+            html.NAV(
+                {"class": "docs-pager", "aria-label": "Page navigation"},
                 switch(
                     {
                         "case": use_computed(lambda: pager.value[0] is not None),
@@ -98,6 +98,10 @@ DocsLayout.scoped_style = {
     " .docs-sidebar": {
         "position": "sticky",
         "top": "var(--space-4)",
+        "max-height": "calc(100vh - 2rem)",
+        "overflow-y": "auto",
+        "overscroll-behavior": "contain",
+        "padding-right": "var(--space-2)",
     },
     " .docs-sidebar-toggle": {
         "display": "none",
@@ -145,6 +149,9 @@ DocsLayout.scoped_style = {
         " .docs-sidebar": {
             "position": "static",
             "display": "none",
+            "max-height": "none",
+            "overflow-y": "visible",
+            "padding-right": "0",
         },
         " .docs-sidebar.open": {
             "display": "block",

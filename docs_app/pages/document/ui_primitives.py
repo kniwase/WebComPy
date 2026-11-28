@@ -5,7 +5,7 @@ from webcompy.template import load_markdown_document
 from webcompy.ui import Spinner
 from webcompy.ui.headless import Spinner as HeadlessSpinner
 
-from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
+from ...components.docs_page import docs_page_template
 
 
 @define_component()
@@ -76,9 +76,15 @@ SpinnerShowcase.scoped_style = {
 
 @define_component()
 async def UiPrimitivesPage(context: ComponentContext[RouterContext]):
-    doc = await load_markdown_document("documents/ui_primitives.md")
+    doc = await load_markdown_document(
+        "documents/ui_primitives.md",
+        copyable_code_blocks=True,
+        heading_anchors=True,
+    )
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
-    return docs_page_template(doc, context.props.path, extra_content=SpinnerShowcase({}))
-
-
-UiPrimitivesPage.scoped_style = DOCS_PAGE_SCOPED_STYLE
+    return docs_page_template(
+        doc,
+        context.props.path,
+        extra_content=SpinnerShowcase({}),
+        before_heading_id="notes--caveats",
+    )

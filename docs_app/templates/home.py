@@ -89,6 +89,21 @@ def HomeContent(_: ComponentContext[None]):
                     )
                 },
             ),
+            DocsCard(
+                {"title": "Accessible UI & Themes"},
+                slots={
+                    "default": lambda: html.DIV(
+                        {},
+                        "Headless and token-themed dialogs, forms, and disclosures with built-in light and dark modes. ",
+                        DocsLink(
+                            {
+                                "to": "/documents/basic/ui-primitives",
+                                "text": "Explore UI Primitives →",
+                            }
+                        ),
+                    )
+                },
+            ),
         ),
         DocsSection(
             {"heading": "Try it in a minute"},
@@ -190,8 +205,19 @@ HomeContent.scoped_style = {
     },
     ".feature-cards": {
         "display": "grid",
-        "grid-template-columns": "repeat(auto-fit, minmax(240px, 1fr))",
+        "grid-template-columns": "repeat(3, minmax(0, 1fr))",
         "gap": "var(--space-4)",
+        "align-items": "stretch",
+    },
+    "@media (max-width: 1024px)": {
+        ".feature-cards": {
+            "grid-template-columns": "repeat(2, minmax(0, 1fr))",
+        },
+    },
+    "@media (max-width: 640px)": {
+        ".feature-cards": {
+            "grid-template-columns": "minmax(0, 1fr)",
+        },
     },
     ".footer-strip": {
         "display": "flex",

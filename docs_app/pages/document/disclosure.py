@@ -7,7 +7,7 @@ from webcompy.signal import use_state
 from webcompy.template import load_markdown_document
 from webcompy.ui import Accordion, Alert, Badge, Card, Collapse, Progress, Skeleton, Tabs
 
-from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
+from ...components.docs_page import docs_page_template
 
 
 @define_component()
@@ -108,9 +108,15 @@ DisclosureDemo.scoped_style = {
 
 @define_component()
 async def DisclosurePage(context: ComponentContext[RouterContext]):
-    doc = await load_markdown_document("documents/disclosure.md")
+    doc = await load_markdown_document(
+        "documents/disclosure.md",
+        copyable_code_blocks=True,
+        heading_anchors=True,
+    )
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
-    return docs_page_template(doc, context.props.path, extra_content=DisclosureDemo({}))
-
-
-DisclosurePage.scoped_style = DOCS_PAGE_SCOPED_STYLE
+    return docs_page_template(
+        doc,
+        context.props.path,
+        extra_content=DisclosureDemo({}),
+        before_heading_id="notes--caveats",
+    )

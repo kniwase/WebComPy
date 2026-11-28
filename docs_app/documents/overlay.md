@@ -58,6 +58,10 @@ push("Saved!", "success", 3.0)
 ToastHost({"toasts": toast_state.toasts, "on_dismiss": toast_state.dismiss, "on_remove": toast_state._remove})
 ```
 
+## Live example
+
+Use the buttons and menu trigger below to test live `Modal`, `Drawer`, `Dropdown`, and `ToastHost` instances rendered on this page.
+
 ## Notes & caveats
 
 - Always supply either `aria_label` or `aria_labelledby` on `Modal` and `Drawer` so screen readers announce the dialog's accessible name.

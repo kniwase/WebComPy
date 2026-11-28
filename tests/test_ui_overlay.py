@@ -257,6 +257,172 @@ class TestModal:
         finally:
             _active_app_context.reset(token)
 
+    def test_reopen_evaluates_fresh_slot_and_preserves_reactivity(self, overlay_env):
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ui import Modal
+        from webcompy_testing import VirtualDOMEvent, run_sync
+
+        open_sig = Signal(False)
+        query_sig = Signal("")
+        renders: list[int] = [0]
+
+        def _render_slot():
+            renders[0] += 1
+            return html.INPUT({"id": "modal-reopen-input", "type": "search", ":bind": query_sig})
+
+        @define_component(custom_element_name="test-modal-reopen")
+        def Page(ctx):
+            return Modal(
+                {
+                    "open": open_sig,
+                    "on_close": lambda: setattr(open_sig, "value", False),
+                    "aria_label": "Search",
+                },
+                slots={"default": _render_slot},
+            )
+
+        with TestRenderer.render(Page) as result:
+            sched = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            assert _find_all(result.body_node, lambda n: n.getAttribute("id") == "modal-reopen-input") == []
+
+            open_sig.value = True
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            inputs = _find_all(result.body_node, lambda n: n.getAttribute("id") == "modal-reopen-input")
+            assert len(inputs) == 1
+            assert renders[0] == 1
+            inputs[0].value = "first"
+            inputs[0].dispatchEvent(VirtualDOMEvent("input"))
+            assert query_sig.value == "first"
+            assert renders[0] == 1
+
+            open_sig.value = False
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            assert _find_all(result.body_node, lambda n: n.getAttribute("id") == "modal-reopen-input") == []
+
+            query_sig.value = ""
+            open_sig.value = True
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            inputs2 = _find_all(result.body_node, lambda n: n.getAttribute("id") == "modal-reopen-input")
+            assert len(inputs2) == 1
+            assert renders[0] == 2
+            assert inputs2[0] is not inputs[0]
+            inputs2[0].value = "second"
+            inputs2[0].dispatchEvent(VirtualDOMEvent("input"))
+            assert query_sig.value == "second"
+            assert renders[0] == 2
+
+    def test_focus_initial_runs_when_macrotask_has_no_active_di_scope(self, overlay_env, monkeypatch):
+        from webcompy.di._scope import _active_di_scope
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
+        from webcompy.ui import Modal
+        from webcompy_testing import FakeBrowserHostPort, run_sync
+
+        open_sig = Signal(False)
+        queued: list[object] = []
+        orig_schedule = FakeBrowserHostPort.schedule_macro_task
+
+        def _capture_macro(self, callback):
+            queued.append(callback)
+
+        @define_component(custom_element_name="test-modal-deferred-focus")
+        def Page(ctx):
+            return Modal(
+                {"open": open_sig, "aria_label": "Search"},
+                slots={"default": lambda: html.INPUT({"id": "modal-focus-target", "type": "search"})},
+            )
+
+        with TestRenderer.render(Page) as result:
+            dom_port = result._scope.inject(DOM_PORT_KEY)
+            sched = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            monkeypatch.setattr(FakeBrowserHostPort, "schedule_macro_task", _capture_macro)
+
+            open_sig.value = True
+            run_sync(sched.drain())
+            assert len(queued) >= 1
+
+            monkeypatch.setattr(FakeBrowserHostPort, "schedule_macro_task", orig_schedule)
+            token = _active_di_scope.set(None)
+            try:
+                while queued:
+                    cb = queued.pop(0)
+                    cb()  # type: ignore[operator]
+            finally:
+                _active_di_scope.reset(token)
+
+            target_inputs = _find_all(result.body_node, lambda n: n.getAttribute("id") == "modal-focus-target")
+            assert len(target_inputs) == 1
+            assert getattr(dom_port._html, "_fake_active_element", None) is target_inputs[0]  # type: ignore[attr-defined]
+
+    def test_focus_initial_handles_jsnull_absent_attributes(self):
+        from webcompy.ui.headless._overlay_utils import _node_is_focusable, focus_initial
+
+        class _FakeJsNull:
+            def __bool__(self) -> bool:
+                return False
+
+        js_null = _FakeJsNull()
+
+        class _FakeNodeList:
+            def __init__(self, items: list[object]) -> None:
+                self._items = items
+
+            @property
+            def length(self) -> int:
+                return len(self._items)
+
+            def __getitem__(self, idx: int) -> object:
+                return self._items[idx]
+
+        class _JsNullNode:
+            def __init__(
+                self,
+                node_name: str,
+                attrs: dict[str, str] | None = None,
+                children: list[_JsNullNode] | None = None,
+            ) -> None:
+                self.nodeName = node_name
+                self.nodeType = 1
+                self._attrs = dict(attrs or {})
+                self._children = list(children or [])
+                self.childNodes = _FakeNodeList(list(self._children))
+                self.focused = False
+
+            def getAttribute(self, name: str) -> object:
+                return self._attrs.get(name, js_null)
+
+            def setAttribute(self, name: str, value: str) -> None:
+                self._attrs[name] = value
+
+            def focus(self) -> None:
+                self.focused = True
+
+        div_node = _JsNullNode("DIV")
+        anchor_no_href = _JsNullNode("A")
+        input_node = _JsNullNode("INPUT", {"type": "search"})
+        button_node = _JsNullNode("BUTTON")
+        disabled_input = _JsNullNode("INPUT", {"disabled": ""})
+        disabled_button = _JsNullNode("BUTTON", {"disabled": ""})
+
+        assert not _node_is_focusable(div_node)  # type: ignore[arg-type]
+        assert not _node_is_focusable(anchor_no_href)  # type: ignore[arg-type]
+        assert _node_is_focusable(input_node)  # type: ignore[arg-type]
+        assert _node_is_focusable(button_node)  # type: ignore[arg-type]
+        assert not _node_is_focusable(disabled_input)  # type: ignore[arg-type]
+        assert not _node_is_focusable(disabled_button)  # type: ignore[arg-type]
+
+        panel = _JsNullNode("DIV", children=[div_node, input_node])
+        focus_initial(panel)  # type: ignore[arg-type]
+        assert input_node.focused
+        assert not panel.focused
+
+        empty_panel = _JsNullNode("DIV")
+        focus_initial(empty_panel)  # type: ignore[arg-type]
+        assert empty_panel.getAttribute("tabindex") == "-1"
+        assert empty_panel.focused
+
 
 class TestDrawer:
     """Drawer 6.2: edge prop, shared a11y contract."""
@@ -367,6 +533,48 @@ class TestDrawer:
             assert len(backdrops) == 1
             dom_port.dispatch_document_event("click", {"target": backdrops[0]})
             assert called2 == []
+
+    def test_reopen_drawer_evaluates_fresh_slot(self, overlay_env):
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ui import Drawer
+        from webcompy_testing import VirtualDOMEvent, run_sync
+
+        open_sig = Signal(False)
+        text_sig = Signal("")
+        renders: list[int] = [0]
+
+        def _render_slot():
+            renders[0] += 1
+            return html.INPUT({"id": "drawer-reopen-input", "type": "text", ":bind": text_sig})
+
+        @define_component(custom_element_name="test-drawer-reopen")
+        def Page(ctx):
+            return Drawer(
+                {"open": open_sig, "edge": "right", "aria_label": "Drawer reopen"},
+                slots={"default": _render_slot},
+            )
+
+        with TestRenderer.render(Page) as result:
+            sched = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            open_sig.value = True
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            assert renders[0] == 1
+
+            open_sig.value = False
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            assert _find_all(result.body_node, lambda n: n.getAttribute("id") == "drawer-reopen-input") == []
+
+            open_sig.value = True
+            run_sync(sched.drain())
+            result.transition_port.flush_frame()
+            inputs = _find_all(result.body_node, lambda n: n.getAttribute("id") == "drawer-reopen-input")
+            assert len(inputs) == 1
+            assert renders[0] == 2
+            inputs[0].value = "drawer-updated"
+            inputs[0].dispatchEvent(VirtualDOMEvent("input"))
+            assert text_sig.value == "drawer-updated"
 
 
 class TestDropdown:

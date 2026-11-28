@@ -12,7 +12,7 @@ from webcompy.di._scope import _active_di_scope
 from webcompy.elements import create_element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import Computed, Signal, SignalBase, use_state
 from webcompy.ui.code_block._component import CodeBlock
 from webcompy.ui.code_block._highlight import highlight
@@ -22,8 +22,9 @@ from webcompy.ui.code_block.lexers._registry import (
     register_lexer,
     reset_lexer_registry,
 )
+from webcompy_server.ports._virtual_dom import VirtualDOMEvent
 from webcompy_testing import TestRenderer, run_sync
-from webcompy_testing._ports import FakeBrowserDOMPort
+from webcompy_testing._ports import FakeBrowserDOMPort, FakeBrowserHostPort
 
 _SPAN_RE = re.compile(r'<span class="([^"]+)">(.*?)</span>', re.DOTALL)
 
@@ -271,3 +272,105 @@ def test_codeblock_spans_match_highlight_output_other_langs(code: str, lang: str
     highlight_spans = _SPAN_RE.findall(highlight(code, lang))
     assert component_classes == [cls for cls, _ in highlight_spans]
     assert component_texts == [html_module.unescape(txt) for _, txt in highlight_spans]
+
+
+class _FakeClipboardHostPort(FakeBrowserHostPort):
+    def __init__(self, dom_port: FakeBrowserDOMPort | None = None) -> None:
+        super().__init__(dom_port)
+        self.copied_texts: list[str] = []
+
+    def create_js_global_getter(self, name: str, *, wrapper: Any = None, default: Any = None) -> Any:
+        if name == "navigator":
+            copied = self.copied_texts
+
+            class _Clipboard:
+                def writeText(self, text: str) -> None:
+                    copied.append(text)
+
+            nav = type("FakeNavigator", (), {"clipboard": _Clipboard()})()
+            return lambda: wrapper(nav) if wrapper is not None else nav
+        return super().create_js_global_getter(name, wrapper=wrapper, default=default)
+
+
+def test_codeblock_default_omits_copy_chrome() -> None:
+    @define_component()
+    def DefaultHost(context):
+        return CodeBlock({"code": "x = 1", "lang": "python"})
+
+    with TestRenderer.render(DefaultHost) as result:
+        assert result.query_selector("button") is None
+        pre = result.query_selector("pre")
+        assert pre is not None
+        assert "code-block" in (pre.getAttribute("class") or "").split()
+
+
+def test_codeblock_copyable_renders_button_and_preserves_direct_token_spans() -> None:
+    sig = Signal("x = 1")
+
+    @define_component()
+    def CopyableHost(context):
+        return create_element(
+            "div",
+            {},
+            CodeBlock({"code": "def foo(): pass", "lang": "python", "copyable": True}),
+            CodeBlock({"code": sig, "lang": "python", "copyable": True}),
+        )
+
+    with TestRenderer.render(CopyableHost) as result:
+        fake_host = _FakeClipboardHostPort()
+        result._scope.provide(HOST_PORT_KEY, fake_host)
+
+        buttons = result.query_selector_all("button")
+        assert len(buttons) == 2
+        assert buttons[0].getAttribute("class") == "code-block-copy"
+        assert buttons[0].getAttribute("aria-label") == "Copy code"
+        assert buttons[0].getAttribute("data-copied") == "false"
+        assert buttons[0].textContent == "Copy"
+
+        codes = result.query_selector_all("code")
+        assert len(codes) == 2
+        for code_el in codes:
+            assert len(code_el.childNodes) > 0
+            for child in code_el.childNodes:
+                assert child.nodeName.lower() == "span"
+                assert "tok-" in (child.getAttribute("class") or "")
+
+        buttons[0].dispatchEvent(VirtualDOMEvent("click"))
+        assert fake_host.copied_texts == ["def foo(): pass"]
+        assert buttons[0].textContent == "Copied"
+        assert buttons[0].getAttribute("aria-label") == "Copied to clipboard"
+        assert buttons[0].getAttribute("data-copied") == "true"
+
+        sig.value = "y = 42"
+        scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+        run_sync(scheduler.drain())
+        buttons[1].dispatchEvent(VirtualDOMEvent("click"))
+        assert fake_host.copied_texts == ["def foo(): pass", "y = 42"]
+
+
+def test_codeblock_copyable_does_not_stick_without_scheduler(monkeypatch: pytest.MonkeyPatch) -> None:
+    import webcompy.ui.code_block._component as cb_mod
+
+    @define_component()
+    def NoSchedulerHost(context):
+        return CodeBlock({"code": "print(1)", "lang": "python", "copyable": True})
+
+    with TestRenderer.render(NoSchedulerHost) as result:
+        fake_host = _FakeClipboardHostPort()
+        orig_inject = cb_mod.inject
+
+        def _fake_inject(key: Any, default: Any = None) -> Any:
+            if key == HOST_PORT_KEY:
+                return fake_host
+            if key == ASYNC_SCHEDULER_PORT_KEY:
+                return None
+            return orig_inject(key, default=default)
+
+        monkeypatch.setattr(cb_mod, "inject", _fake_inject)
+
+        btn = result.query_selector("button")
+        assert btn is not None
+        btn.dispatchEvent(VirtualDOMEvent("click"))
+        assert fake_host.copied_texts == ["print(1)"]
+        assert btn.textContent == "Copy"
+        assert btn.getAttribute("data-copied") == "false"

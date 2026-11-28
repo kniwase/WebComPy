@@ -12,6 +12,7 @@ from webcompy.exception import WebComPyException
 from webcompy.forms._field import Field
 from webcompy.signal import Signal, SignalBase
 from webcompy.signal._computed import _OwnedComputed
+from webcompy.signal._graph import set_active_consumer
 
 _TEXT_TYPES = {"text", "email", "password", "search", "tel", "url"}
 _SUPPORTED_ELEMENTS = "input[type=text|email|password|search|tel|url|number|checkbox|radio], textarea, and select"
@@ -20,6 +21,14 @@ _SUPPORTED_ELEMENTS = "input[type=text|email|password|search|tel|url|number|chec
 def is_bind_target(value: Any) -> bool:
     """Return True only for a plain writable Signal instance (not subclasses)."""
     return type(value) is Signal
+
+
+def _peek_signal_value(signal: Signal[Any]) -> Any:
+    prev = set_active_consumer(None)
+    try:
+        return signal.value
+    finally:
+        set_active_consumer(prev)
 
 
 def _chain_handlers(binding_handler: EventHandler, user_handler: EventHandler) -> EventHandler:
@@ -69,9 +78,10 @@ def _expand_text_bind(
     events: dict[str, EventHandler],
     dirty: Signal[bool] | None = None,
 ) -> None:
-    if not isinstance(signal.value, str):
+    current = _peek_signal_value(signal)
+    if not isinstance(current, str):
         raise WebComPyException(
-            f":bind on a text input or textarea requires a str-valued Signal (got {type(signal.value).__name__})"
+            f":bind on a text input or textarea requires a str-valued Signal (got {type(current).__name__})"
         )
     if "value" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
@@ -93,9 +103,10 @@ def _expand_textarea_bind(
     children: list[ElementChildren],
     dirty: Signal[bool] | None = None,
 ) -> None:
-    if not isinstance(signal.value, str):
+    current = _peek_signal_value(signal)
+    if not isinstance(current, str):
         raise WebComPyException(
-            f":bind on a text input or textarea requires a str-valued Signal (got {type(signal.value).__name__})"
+            f":bind on a text input or textarea requires a str-valued Signal (got {type(current).__name__})"
         )
     if "value" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
@@ -118,7 +129,7 @@ def _expand_number_bind(
     events: dict[str, EventHandler],
     dirty: Signal[bool] | None = None,
 ) -> None:
-    current = signal.value
+    current = _peek_signal_value(signal)
     if not isinstance(current, (int, float)) or isinstance(current, bool):
         raise WebComPyException(
             f":bind on input[type=number] requires an int or float-valued Signal (got {type(current).__name__})"
@@ -149,10 +160,9 @@ def _expand_checkbox_bind(
     events: dict[str, EventHandler],
     dirty: Signal[bool] | None = None,
 ) -> None:
-    if not isinstance(signal.value, bool):
-        raise WebComPyException(
-            f":bind on a checkbox requires a bool-valued Signal (got {type(signal.value).__name__})"
-        )
+    current = _peek_signal_value(signal)
+    if not isinstance(current, bool):
+        raise WebComPyException(f":bind on a checkbox requires a bool-valued Signal (got {type(current).__name__})")
     if "checked" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'checked' attribute")
     attrs["checked"] = signal
@@ -195,8 +205,9 @@ def _expand_select_bind(
     events: dict[str, EventHandler],
     dirty: Signal[bool] | None = None,
 ) -> None:
-    if not isinstance(signal.value, str):
-        raise WebComPyException(f":bind on a select requires a str-valued Signal (got {type(signal.value).__name__})")
+    current = _peek_signal_value(signal)
+    if not isinstance(current, str):
+        raise WebComPyException(f":bind on a select requires a str-valued Signal (got {type(current).__name__})")
     if "value" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
     attrs["value"] = signal

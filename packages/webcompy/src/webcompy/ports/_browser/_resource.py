@@ -64,6 +64,7 @@ class BrowserResourcePort(ResourcePort):
                 "browser",
                 reason=(f"payload miss and fetch returned HTTP {response.status_code}"),
             )
+        self._preloaded[path] = response.content
         return response.content
 
     async def load_text(self, path: str) -> str:

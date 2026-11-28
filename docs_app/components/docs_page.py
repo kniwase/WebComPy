@@ -13,6 +13,20 @@ def _toc_href(current_path: str, heading_id: str) -> str:
     return f"{path}#{heading_id}"
 
 
+def _normalize_heading_anchors(node: Any, current_path: str) -> None:
+    if isinstance(node, Element) and node._tag_name == "a":
+        raw_class = node._attrs.get("class")
+        if isinstance(raw_class, str) and "heading-anchor" in raw_class.split():
+            href = node._attrs.get("href")
+            if isinstance(href, str) and href.startswith("#"):
+                node._attrs["href"] = _toc_href(current_path, href[1:])
+            return
+    for lst in (getattr(node, "_children", None), getattr(node, "_pending_children", None)):
+        if isinstance(lst, list):
+            for child in lst:
+                _normalize_heading_anchors(child, current_path)
+
+
 def _split_lead_and_body(content: Any) -> tuple[Any, Any | None]:
     if isinstance(content, FragmentElement):
         children = content._pending_children or content._children
@@ -36,6 +50,8 @@ def _split_before_heading_id(content: Any, heading_id: str) -> tuple[Any | None,
 
 
 def _render_docs_page(doc: MarkdownDocument, current_path: str, article_children: list[Any]):
+    for child in article_children:
+        _normalize_heading_anchors(child, current_path)
     children: list[Any] = [html.ARTICLE({"class": "prose"}, *article_children)]
     if doc.toc:
         children.append(
@@ -59,8 +75,23 @@ def _render_docs_page(doc: MarkdownDocument, current_path: str, article_children
     return html.DIV({"class": "docs-page"}, *children)
 
 
-def docs_page_template(doc: MarkdownDocument, current_path: str, extra_content: Any = None):
-    article_children: list[Any] = [doc.content]
+def docs_page_template(
+    doc: MarkdownDocument,
+    current_path: str,
+    extra_content: Any = None,
+    *,
+    before_heading_id: str | None = None,
+):
+    if extra_content is not None and before_heading_id is not None:
+        head, tail = _split_before_heading_id(doc.content, before_heading_id)
+        article_children: list[Any] = []
+        if head is not None:
+            article_children.append(head)
+        article_children.append(extra_content)
+        if tail is not None:
+            article_children.append(tail)
+        return _render_docs_page(doc, current_path, article_children)
+    article_children = [doc.content]
     if extra_content is not None:
         article_children.append(extra_content)
     return _render_docs_page(doc, current_path, article_children)
@@ -111,58 +142,3 @@ def examples_page_template(
     if body is not None:
         article_children.append(body)
     return _render_docs_page(doc, current_path, article_children)
-
-
-DOCS_PAGE_SCOPED_STYLE = {
-    " .docs-page": {
-        "display": "grid",
-        "grid-template-columns": "minmax(0, 1fr) 14rem",
-        "gap": "var(--space-6)",
-        "align-items": "start",
-    },
-    " .docs-page > *": {
-        "min-width": "0",
-    },
-    " .prose": {
-        "min-width": "0",
-        "max-width": "100%",
-    },
-    " .docs-toc": {
-        "position": "sticky",
-        "top": "var(--space-4)",
-        "min-width": "0",
-        "font-size": "var(--font-size-sm)",
-    },
-    " .docs-toc-list": {
-        "list-style": "none",
-        "margin": "0",
-        "padding": "0",
-        "border-left": "1px solid var(--color-border)",
-    },
-    " .docs-toc-list a": {
-        "display": "block",
-        "padding": "var(--space-1) var(--space-3)",
-        "color": "var(--color-fg-muted)",
-        "text-decoration": "none",
-    },
-    " .docs-toc-list a:hover": {
-        "color": "var(--color-link)",
-    },
-    " .docs-toc-level-3": {
-        "padding-left": "var(--space-3)",
-    },
-    " .docs-toc-level-4": {
-        "padding-left": "var(--space-5)",
-    },
-    " .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6": {
-        "scroll-margin-top": "5rem",
-    },
-    " @media (max-width: 1024px)": {
-        " .docs-page": {
-            "grid-template-columns": "minmax(0, 1fr)",
-        },
-        " .docs-toc": {
-            "display": "none",
-        },
-    },
-}
