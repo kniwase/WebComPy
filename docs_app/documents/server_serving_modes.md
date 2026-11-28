@@ -42,7 +42,7 @@ Common deployment profiles:
 | Minimal app wheel (rely on Pyodide CDN for pure-Python deps) | `serve_all_deps=False` (`--no-serve-all-deps`) | Yes (PyScript CDN + Pyodide CDN pure-Python & WASM) |
 | Full self-hosted / zero-CDN deploy | `standalone=True` (`--standalone`) | **No** (all HTML, runtime, WASM, UI CSS, and wheels served from same origin) |
 
-In production mode (`mode="prod"`), locally served runtime assets carry `Cache-Control: public, max-age=31536000, immutable` keyed under the pinned `pyscript_version` prefix (`/_webcompy-assets/{pyscript_version}/`).
+In production mode (`mode="prod"`), locally served runtime assets carry `Cache-Control: public, max-age=31536000, immutable` keyed under the pinned `pyscript_version` prefix (`/_webcompy-assets/{pyscript_version}/`). Locally served WASM wheels (`/_webcompy-assets/packages/`) and content-hashed browser wheels (`/_webcompy-app-package/`) also emit `Cache-Control: public, max-age=31536000, immutable` in production mode, while framework UI stylesheets (`/_webcompy-ui/`) and static files receive deterministic `?v=<hash>` cache-busting query parameters in production SSR and SSG HTML (and inside `/_webcompy-ui/index.css`'s `@import` rules).
 
 ## Wheel modes: `bundled` vs `split`
 

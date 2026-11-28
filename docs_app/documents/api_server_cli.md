@@ -97,6 +97,7 @@ async def generate_html(
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
     pwa_enabled: bool = False,
+    asset_hashes: dict[str, str] | None = None,
 )
 ```
 
@@ -118,6 +119,7 @@ Generate the full HTML document for the application.
 - `extra_wheel_filenames`: Additional wheel filenames to preload.
 - `app_package_path`: Filesystem path of the app package for template resolution.
 - `pwa_enabled`: Whether to inject PWA manifest and worker registration.
+- `asset_hashes`: Optional mapping of relative asset paths (without leading slash) to short content hashes appended as `?v=<hash>` to matching same-origin `<link href>` and `<script src>` URLs.
 
 **Returns:** Rendered HTML string for the document.
 

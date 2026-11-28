@@ -145,6 +145,8 @@ async def generate_static_site(app: WebComPyApp | None = None):
     framework_ui_dir = dist_dir / "_webcompy-ui"
     framework_ui_dir.mkdir(exist_ok=True)
     for filename, content in get_styles_files().items():
+        if filename == "index.css" and artifacts.framework_ui_index_css is not None:
+            content = artifacts.framework_ui_index_css
         (framework_ui_dir / filename).write_bytes(content)
     print(framework_ui_dir)
 

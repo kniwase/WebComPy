@@ -8,6 +8,7 @@ import re
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias, cast
+from urllib.parse import parse_qsl
 
 from webcompy.app._config import _LOADING_DEFAULTS, PluginScript
 from webcompy.components._component import Component, _active_app_context, _set_app_instance
@@ -462,28 +463,115 @@ def _loading_controller_script(loading: dict, mode: str, selector: str) -> str:
     )
 
 
-def _load_scripts(scripts: Scripts):
+_SPECIAL_SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+_LINK_TAG_RE = re.compile(r"<link\b[^>]*>", re.IGNORECASE)
+_HREF_ATTR_RE = re.compile(r'(\bhref\s*=\s*)(["\'])([^"\']*)\2', re.IGNORECASE)
+
+
+def _append_asset_version(
+    url: str,
+    base_url: str,
+    asset_hashes: dict[str, str] | None,
+) -> str:
+    if not asset_hashes or not url:
+        return url
+    url_no_frag, frag_sep, fragment = url.partition("#")
+    path_part, _qsep, query = url_no_frag.partition("?")
+    if not path_part or path_part.startswith("//") or _SPECIAL_SCHEME_RE.match(path_part):
+        return url
+    if query and any(k == "v" for k, _ in parse_qsl(query, keep_blank_values=True)):
+        return url
+    stripped_base = base_url.strip("/")
+    normalized_base = f"/{stripped_base}/" if stripped_base else "/"
+    if path_part.startswith(normalized_base):
+        rel = path_part[len(normalized_base) :]
+    elif path_part.startswith("/"):
+        rel = path_part[1:]
+    else:
+        rel = path_part
+        while rel.startswith("./"):
+            rel = rel[2:]
+    digest = asset_hashes.get(rel)
+    if digest is None:
+        return url
+    new_query = f"{query}&v={digest}" if query else f"v={digest}"
+    return f"{path_part}?{new_query}{frag_sep}{fragment}"
+
+
+def _rewrite_head_link_hrefs(
+    head_html: str,
+    base_url: str,
+    asset_hashes: dict[str, str] | None,
+) -> str:
+    if not asset_hashes or not head_html:
+        return head_html
+
+    def _rewrite_link_tag(tag_match: re.Match[str]) -> str:
+        tag = tag_match.group(0)
+
+        def _rewrite_href(attr_match: re.Match[str]) -> str:
+            prefix, quote, raw_href = attr_match.groups()
+            unescaped = html_module.unescape(raw_href)
+            rewritten = _append_asset_version(unescaped, base_url, asset_hashes)
+            if rewritten == unescaped:
+                return attr_match.group(0)
+            escaped = html_module.escape(rewritten, quote=True)
+            return f"{prefix}{quote}{escaped}{quote}"
+
+        return _HREF_ATTR_RE.sub(_rewrite_href, tag, count=1)
+
+    return _LINK_TAG_RE.sub(_rewrite_link_tag, head_html)
+
+
+def _rewrite_script_attrs(
+    attrs: dict[str, str],
+    base_url: str,
+    asset_hashes: dict[str, str] | None,
+) -> dict[str, str]:
+    if not asset_hashes or "src" not in attrs:
+        return attrs
+    src = attrs["src"]
+    rewritten = _append_asset_version(src, base_url, asset_hashes)
+    if rewritten == src:
+        return attrs
+    updated = dict(attrs)
+    updated["src"] = rewritten
+    return updated
+
+
+def _load_scripts(
+    scripts: Scripts,
+    *,
+    base_url: str = "",
+    asset_hashes: dict[str, str] | None = None,
+):
     return [
         _HtmlElement(
             "script",
-            attrs,
+            _rewrite_script_attrs(attrs, base_url, asset_hashes),
             script,
         )
         for attrs, script in scripts
     ]
 
 
-def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
+def _render_plugin_script(
+    ps: PluginScript,
+    *,
+    base_url: str = "",
+    asset_hashes: dict[str, str] | None = None,
+) -> _HtmlElement:
+    attrs = _rewrite_script_attrs(ps.attrs, base_url, asset_hashes)
     if ps.condition is None:
-        return _HtmlElement("script", ps.attrs, ps.script)
+        return _HtmlElement("script", attrs, ps.script)
     target = "document.head" if ps.in_head else "document.body"
-    if "src" in ps.attrs:
+    if "src" in attrs:
         js_parts: list[str] = [
             "(function(){",
             f"  if ({ps.condition}) {{",
             "    var __wc_s = document.createElement('script');",
         ]
-        for key, value in ps.attrs.items():
+        for key, value in attrs.items():
             escaped = json.dumps(value)
             js_parts.append(f"    __wc_s.setAttribute({json.dumps(key)}, {escaped});")
         if ps.script:
@@ -516,6 +604,7 @@ async def generate_html(
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
     pwa_enabled: bool = False,
+    asset_hashes: dict[str, str] | None = None,
 ):
     """Generate the full HTML document for the application.
 
@@ -532,6 +621,9 @@ async def generate_html(
         extra_wheel_filenames: Additional wheel filenames to preload.
         app_package_path: Filesystem path of the app package for template resolution.
         pwa_enabled: Whether to inject PWA manifest and worker registration.
+        asset_hashes: Optional mapping of relative asset paths (without
+            leading slash) to short content hashes appended as ``?v=<hash>``
+            to matching same-origin ``<link href>`` and ``<script src>`` URLs.
 
     Returns:
         Rendered HTML string for the document.
@@ -553,15 +645,25 @@ async def generate_html(
             extra_wheel_filenames,
             app_package_path,
             pwa_enabled,
+            asset_hashes,
         )
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         await scheduler.await_pending()
         assert ctx._root is not None
-        head_content_html = ctx._root._head_element.get_head_content_html()
+        head_content_html = _rewrite_head_link_hrefs(
+            ctx._root._head_element.get_head_content_html(),
+            ctx.config.base_url,
+            asset_hashes,
+        )
         scoped_styles_html = ctx._root._head_element.get_scoped_styles_html()
         html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
         if scoped_styles_html:
-            index_css_link_html = f'<link rel="stylesheet" href="{html_module.escape(ctx.config.base_url, quote=True)}_webcompy-ui/index.css">'
+            index_css_href = _append_asset_version(
+                f"{ctx.config.base_url}_webcompy-ui/index.css",
+                ctx.config.base_url,
+                asset_hashes,
+            )
+            index_css_link_html = f'<link rel="stylesheet" href="{html_module.escape(index_css_href, quote=True)}">'
             assert index_css_link_html in html_output
             html_output = html_output.replace(
                 index_css_link_html,
@@ -600,6 +702,7 @@ async def _generate_html_impl(
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
     pwa_enabled: bool = False,
+    asset_hashes: dict[str, str] | None = None,
 ):
     app = ctx._app
     base_url = ctx.config.base_url
@@ -674,9 +777,13 @@ async def _generate_html_impl(
     plugin_head_scripts: list[_HtmlElement] = []
     plugin_body_scripts: list[_HtmlElement] = []
     for ps in ctx.config.scripts:
-        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(
+            _render_plugin_script(ps, base_url=base_url, asset_hashes=asset_hashes)
+        )
     for ps in app._plugin_manager.scripts:
-        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(
+            _render_plugin_script(ps, base_url=base_url, asset_hashes=asset_hashes)
+        )
     if dev_mode:
         scripts_body.append(
             (
@@ -724,6 +831,8 @@ async def _generate_html_impl(
     if pwa_enabled:
         pwa_head_links.append(_HtmlElement("link", {"rel": "manifest", "href": f"{base_url}manifest.webmanifest"}))
 
+    index_css_href = _append_asset_version(f"{base_url}_webcompy-ui/index.css", base_url, asset_hashes)
+
     document = _HtmlElement(
         "html",
         ctx._root.html_attrs,
@@ -734,14 +843,14 @@ async def _generate_html_impl(
             _HtmlElement("meta", {"name": "color-scheme", "content": "light dark"}),
             _HtmlElement(
                 "link",
-                {"rel": "stylesheet", "href": f"{base_url}_webcompy-ui/index.css"},
+                {"rel": "stylesheet", "href": index_css_href},
             ),
             _HtmlElement(
                 "link",
                 {"rel": "stylesheet", "href": core_css_url},
             ),
             *pwa_head_links,
-            *_load_scripts(scripts_head),
+            *_load_scripts(scripts_head, base_url=base_url, asset_hashes=asset_hashes),
             *plugin_head_scripts,
         ),
         _HtmlElement(
@@ -754,7 +863,7 @@ async def _generate_html_impl(
                 _loading_controller_script(loading_config, loading_mode, ctx.config.selector),
             ),
             app_root,
-            *_load_scripts(scripts_body),
+            *_load_scripts(scripts_body, base_url=base_url, asset_hashes=asset_hashes),
             *plugin_body_scripts,
         ),
     )

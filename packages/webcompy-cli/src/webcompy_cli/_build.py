@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -96,6 +98,41 @@ def _detect_resources(
     return frozenset(found)
 
 
+_CSS_IMPORT_RE = re.compile(r'(@import\s+url\(\s*)(["\'])\./([^"\'?#)]+)(\2\s*\)\s*;)')
+
+
+def _compute_asset_hashes(static_files_dir: pathlib.Path | None) -> tuple[dict[str, str], bytes]:
+    from webcompy.ui._styles import get_styles_files
+    from webcompy_cli._static_files import get_static_files
+
+    hashes: dict[str, str] = {}
+    styles_files = get_styles_files()
+    for name, content in styles_files.items():
+        if name == "index.css":
+            continue
+        hashes[f"_webcompy-ui/{name}"] = hashlib.sha256(content).hexdigest()[:8]
+
+    raw_index = styles_files.get("index.css", b"").decode("utf-8")
+
+    def _rewrite_import(match: re.Match[str]) -> str:
+        prefix, quote, target, suffix = match.groups()
+        digest = hashes.get(f"_webcompy-ui/{target}")
+        if digest is None:
+            return match.group(0)
+        return f"{prefix}{quote}./{target}?v={digest}{suffix}"
+
+    rewritten_index_bytes = _CSS_IMPORT_RE.sub(_rewrite_import, raw_index).encode("utf-8")
+    if "index.css" in styles_files:
+        hashes["_webcompy-ui/index.css"] = hashlib.sha256(rewritten_index_bytes).hexdigest()[:8]
+
+    if static_files_dir is not None and static_files_dir.is_dir():
+        for rel_path in get_static_files(static_files_dir):
+            file_bytes = (static_files_dir / rel_path).read_bytes()
+            hashes[rel_path.lstrip("/")] = hashlib.sha256(file_bytes).hexdigest()[:8]
+
+    return hashes, rewritten_index_bytes
+
+
 @dataclass
 class BuildArtifacts:
     app_version: str
@@ -110,6 +147,8 @@ class BuildArtifacts:
     wasm_asset_files: dict[str, pathlib.Path] | None = None
     runtime_asset_files: dict[str, pathlib.Path] | None = None
     resource_allow_list: frozenset[str] | None = None
+    asset_hashes: dict[str, str] | None = None
+    framework_ui_index_css: bytes | None = None
     dist_dir: pathlib.Path | None = None
     dev_mode: bool = False
     cdn_temp_dir_obj: TemporaryDirectory | None = None
@@ -298,6 +337,13 @@ def resolve_build_artifacts(
         cdn_temp_dir_obj.__exit__(None, None, None)
         cdn_temp_dir_obj = None
 
+    if not dev_mode:
+        static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
+        asset_hashes, framework_ui_index_css = _compute_asset_hashes(static_files_dir)
+    else:
+        asset_hashes = None
+        framework_ui_index_css = None
+
     return BuildArtifacts(
         app_version=app_version,
         wheel_filename=app_wheel_filename,
@@ -311,6 +357,8 @@ def resolve_build_artifacts(
         wasm_asset_files=wasm_asset_files or None,
         runtime_asset_files=runtime_asset_files or None,
         resource_allow_list=resource_allow_list,
+        asset_hashes=asset_hashes,
+        framework_ui_index_css=framework_ui_index_css,
         dist_dir=dist_dir,
         dev_mode=dev_mode,
         cdn_temp_dir_obj=cdn_temp_dir_obj,

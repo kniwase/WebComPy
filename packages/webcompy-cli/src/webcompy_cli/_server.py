@@ -159,6 +159,8 @@ def create_asgi_app(
                     headers["Cache-Control"] = "max-age=86400, must-revalidate"
                 else:
                     headers["Cache-Control"] = "no-cache"
+            else:
+                headers["Cache-Control"] = "public, max-age=31536000, immutable"
             return Response(content, media_type=media_type, headers=headers)
         else:
             raise HTTPException(404)
@@ -176,7 +178,14 @@ def create_asgi_app(
             filename: str = request.path_params.get("filename", "")  # type: ignore
             if filename in wasm_asset_files:
                 asset_path = wasm_asset_files[filename]
-                return FileResponse(asset_path, media_type="application/octet-stream")
+                headers = {
+                    "Cache-Control": (
+                        "max-age=86400, must-revalidate"
+                        if artifacts.dev_mode
+                        else "public, max-age=31536000, immutable"
+                    )
+                }
+                return FileResponse(asset_path, media_type="application/octet-stream", headers=headers)
             else:
                 raise HTTPException(404)
 
@@ -255,10 +264,18 @@ def create_asgi_app(
         filename: str = request.path_params.get("filename", "")  # type: ignore
         if "/" in filename or "\\" in filename or filename.startswith("."):
             raise HTTPException(404)
-        content = get_styles_file(filename)
+        if filename == "index.css" and not artifacts.dev_mode and artifacts.framework_ui_index_css is not None:
+            content: bytes | None = artifacts.framework_ui_index_css
+        else:
+            content = get_styles_file(filename)
         if content is None:
             raise HTTPException(404)
-        return Response(content, media_type="text/css")
+        headers = {
+            "Cache-Control": (
+                "no-cache, must-revalidate" if artifacts.dev_mode else "public, max-age=0, must-revalidate"
+            )
+        }
+        return Response(content, media_type="text/css", headers=headers)
 
     framework_ui_routes: list[Route] = [
         Route("/_webcompy-ui/{filename:path}", send_framework_ui_css),
@@ -304,6 +321,7 @@ def create_asgi_app(
         extra_wheel_filenames=artifacts.extra_wheel_filenames,
         app_package_path=build_config.app_package_path,
         pwa_enabled=pwa_enabled,
+        asset_hashes=None if artifacts.dev_mode else artifacts.asset_hashes,
     )
 
     # Mutable cache for hash-mode pre-rendered HTML
