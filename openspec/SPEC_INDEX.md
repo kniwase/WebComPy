@@ -106,7 +106,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_resource.py`, `webcompy/ports/_browser/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
-| `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md`, `pwa/spec.md` |
+| `webcompy_server/_context.py`, `webcompy_server/_html.py`, `webcompy_server/_teleport_emission.py` | `teleport/spec.md`, `virtual-dom/spec.md`, `elements/spec.md`, `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md`, `pwa/spec.md`, `cli/spec.md`, `css-architecture/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
 | `webcompy_server/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md`, `rpc-streaming/spec.md` |
 | `webcompy_server/rpc/_dispatcher.py` | `json-rpc/spec.md`, `rpc-streaming/spec.md` |
@@ -168,7 +168,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `app-config` | AppConfig, ServerConfig, GenerateConfig dataclasses |
 | `config-separation` | Separation of browser-relevant config from server-only build config |
 | `project-config` | Two-file project configuration |
-| `cli` | Dev server, SSG, project scaffolding, configuration |
+| `cli` | Dev server, SSG, project scaffolding, configuration, prod/SSG static and UI CSS cache busting (`?v=<hash>`), and immutable wheel/WASM cache headers |
 | `browser-api` | Browser environment detection and API abstraction |
 | `port-abstraction` | Typed, injectable port ABCs replacing monolithic `browser` |
 | `fetch-middleware` | Stackable `FetchMiddleware` chains around `FetchPort.fetch/stream`: registries on DI, plugin hooks, `next(response=...)` interception with hydration/blocked-path delegation, header-commit-time streaming resolution |
@@ -187,7 +187,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
 | `docs-site-home` | docs_app Home landing page: four-band landing layout (hero, balanced feature-card grid without margin drift, quick-start teaser, footer), deduplication from installation guides, and symmetric CodeBlock vertical spacing via docs_app stylesheet |
-| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `Migration` / `API Reference`), manifest-driven routes and grouped scrollable dropdown, deduplicated layout CSS, viewport-bounded sticky sidebar and TOC, Prev/Next paging, `resource_transfer="used"` payload minimization, client-side search, ARIA landmarks/controls/`404` recovery layout, copyable `CodeBlock` and heading permalinks, and current `@define_component()` example convention |
+| `docs-site-documents` | docs_app documentation section: category section model manifest (`Getting Started` / `Guides` / `Basic Usage` / `Advanced Usage` / `Server & Tooling` / `Examples` / `Migration` / `API Reference`), manifest-driven routes and grouped scrollable dropdown, deduplicated layout CSS, inline `DocsRoot` skip-link styling, viewport-bounded sticky sidebar and TOC, Prev/Next paging, `resource_transfer="used"` payload minimization, Cloudflare Pages immutable `_headers`, client-side search, ARIA landmarks/controls/`404` recovery layout, copyable `CodeBlock` and heading permalinks, and current `@define_component()` example convention |
 | `docs-migration-guide` | Migration guides under `/documents/migration/`: FastAPI + Jinja2 architecture shift, ASGI strangler strategies, live mocked before/after comparison, conversion tables, exact template compatibility/error matrix, and phased exit-criteria checklist |
 | `docs-api-reference` | Generated-plus-authored `/documents/api/` reference skeletons (`scripts/_api_surface.py`, `scripts/generate_api_reference.py`, `--check` CI drift gate, full public API coverage across all four packages, author-region preservation, and non-duplication with conceptual guides) |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
@@ -210,7 +210,7 @@ Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architec
 | `loading-screen` | Boot-time loading experience: presentation modes, interaction policies, staged progress, grace period and fade-out timing, dormant/wake-up treatment, stall watchdog, accessibility, custom-template toolkit contract |
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
-| `css-architecture` | Fixed CSS `@layer` order (`reset, tokens, components, prose, webcompy-scope`), layered reset/components/code-block stylesheets, unlayered dynamic styles |
+| `css-architecture` | Fixed CSS `@layer` order (`reset, tokens, components, prose, webcompy-scope`), layered reset/components/code-block stylesheets, unlayered dynamic styles, and versioned `index.css` link placement before scoped styles |
 | `design-tokens` | Light/dark CSS custom property token system (`tokens.css` / `_tokens.py`), WCAG 2.1 AA contrast, `:root` `color-scheme` and native form control defaults |
 | `theme-system` | Reactive `ThemeManager`, explicit `color-scheme` declarations, `webcompy-theme` cookie persistence, static/SSG theme hydration parity |
 | `testing-module` | TestRenderer, fake ports, scope helpers for browserless testing |
